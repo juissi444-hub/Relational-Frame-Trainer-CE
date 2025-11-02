@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Relational Frame Trainer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { margin: 0; font-family: system-ui, -apple-system, sans-serif; overflow: hidden; position: fixed; width: 100%; height: 100%; }
+        button { cursor: pointer; touch-action: manipulation; border: none; outline: none; }
+        button:active { transform: scale(0.95); transition: transform 0.1s; }
+        @media (max-width: 640px) {
+            button { min-height: 48px; min-width: 48px; }
+            .answer-button { min-height: 56px !important; font-size: 18px !important; }
+        }
+    </style>
+</head>
+<body>
+    <div id="app"></div>
+    <script>
+        const state = {
+            timePerQuestion: 30, networkComplexity: 0.5, darkMode: false, useLetters: true, useEmojis: false,
+            autoProgressEnabled: true, universalAutoProgress: true, targetPremiseCount: 40, targetAccuracy: 95,
+            recentAnswers: [], showSettings: false, isPaused: false, currentTrial: null, timeLeft: 30,
+            score: { correct: 0, incorrect: 0, missed: 0 }, feedback: null, history: [],
+            enabledRelationModes: { equality: true, temporal: false, spatial: false, containment: false },
+            premiseCounts: { equality: 3, temporal: 3, spatial: 3, containment: 3 },
+            modeProgress: {
+                equality: { recentAnswers: [], timePerQuestion: 30 },
+                temporal: { recentAnswers: [], timePerQuestion: 30 },
+                spatial: { recentAnswers: [], timePerQuestion: 30 },
+                containment: { recentAnswers: [], timePerQuestion: 30 }
+            }, showResetConfirm: false
+        };
+
+        const relationSets = {
+            equality: ['SAME', 'OPPOSITE', 'DIFFERENT'],
+            temporal: ['BEFORE', 'AFTER', 'AT'],
+            spatial: ['NORTH', 'SOUTH', 'EAST', 'WEST'],
+            containment: ['CONTAINS', 'WITHIN']
+        };
+
+        let timerId = null;
+
+        function saveToStorage() {
+            try { localStorage.setItem('rft-data', JSON.stringify(state)); } catch (e) { }
+        }
+
+        function loadFromStorage() {
+            try {
+                const data = localStorage.getItem('rft-data');
+                if (data) Object.assign(state, JSON.parse(data));
+            } catch (e) { }
+        }
+
+        function deriveRelation(r1, r2) {
+            if (r1 === 'SAME') return r2;
+            if (r2 === 'SAME') return r1;
+            if (r1 === 'OPPOSITE' && r2 === 'OPPOSITE') return 'SAME';
+            if (r1 === 'AT') return r2;
+            if (r2 === 'AT') return r1;
+            if (r1 === r2) return r1;
+            return 'AMBIGUOUS';
+        }
+
+        function generateStimulus() {
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+            return chars.charAt(Math.random() * chars.length | 0) + chars.charAt(Math.random() * chars.length | 0) + chars.charAt(Math.random() * chars.length | 0);
+        }
+
+        function generateTrial() {
+            const modes = Object.keys(state.enabledRelationModes).filter(m => state.enabledRelationModes[m]);
+            const mode = modes[Math.random() * modes.length | 0] || 'equality';
+            const rels = relationSets[mode];
+            const pCount = state.premiseCounts[mode];
+            const stimuli = [generateStimulus(), generateStimulus(), generateStimulus()];
+            const premises = [];
+            
+            for (let p = 0; p < pCount; p++) {
+                const s1 = stimuli[Math.random() * stimuli.length | 0];
+                const s2 = stimuli[Math.random() * stimuli.length | 0];
+                premises.push({ stimulus1: s1, relation: rels[Math.random() * rels.length | 0], stimulus2: s2 });
+            }
+            
+            const qRel = rels[Math.random() * rels.length | 0];
+            const correct = Math.random() < 0.5 ? true : false;
+
+            return {
+                premises,
+                question: { stimulus1: stimuli[0], relation: qRel, stimulus2: stimuli[1] },
+                correctAnswer: correct,
+                mode
+            };
+        }
+
+        function startNewTrial() {
+            state.currentTrial = generateTrial();
+            state.timeLeft = state.modeProgress[state.currentTrial.mode].timePerQuestion;
+            state.feedback = null;
+            render();
+            startTimer();
+        }
+
+        function startTimer() {
+            if (timerId) clearInterval(timerId);
+            timerId = setInterval(() => {
+                if (!state.isPaused && !state.feedback && state.timeLeft > 0) {
+                    state.timeLeft = Math.max(0, state.timeLeft - 0.1);
+                    render();
+                    if (state.timeLeft <= 0) handleTimeout();
+                }
+            }, 100);
+        }
+
+        function handleTimeout() {
+            state.score.missed++;
+            state.feedback = 'missed';
+            state.recentAnswers.push(false);
+            render();
+            saveToStorage();
+            setTimeout(() => startNewTrial(), 1500);
+        }
+
+        function handleAnswer(ans) {
+            if (state.isPaused || state.feedback) return;
+            const correct = ans === state.currentTrial.correctAnswer;
+            if (correct) state.score.correct++; else state.score.incorrect++;
+            state.feedback = correct ? 'correct' : 'incorrect';
+            state.recentAnswers.push(correct);
+            render();
+            saveToStorage();
+            setTimeout(() => startNewTrial(), 1500);
+        }
+
+        function togglePause() {
+            state.isPaused = !state.isPaused;
+            if (!state.isPaused) startNewTrial();
+            render();
+        }
+
+        function resetGame() {
+            state.showResetConfirm = false;
+            state.score = { correct: 0, incorrect: 0, missed: 0 };
+            state.history = [];
+            state.recentAnswers = [];
+            startNewTrial();
+            saveToStorage();
+        }
+
+        function render() {
+            const dark = state.darkMode;
+            document.getElementById('app').innerHTML = `
+                <div class="h-screen flex flex-col ${dark ? 'bg-slate-900 text-white' : 'bg-slate-100 text-gray-900'}">
+                    ${state.showResetConfirm ? `
+                        <div style="position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5)">
+                            <div class="max-w-md mx-4 rounded-2xl p-6 ${dark ? 'bg-slate-800' : 'bg-white'}">
+                                <h2 class="text-2xl font-bold mb-4">Reset Game?</h2>
+                                <p class="mb-6">This will reset all progress.</p>
+                                <div class="flex gap-3">
+                                    <button type="button" onclick="resetGame()" class="flex-1 px-6 py-3 text-white font-bold rounded-lg bg-red-600">Yes</button>
+                                    <button type="button" onclick="state.showResetConfirm=false;render()" class="flex-1 px-6 py-3 font-bold rounded-lg bg-gray-300">Cancel</button>
+                                </div>
+                            </div>
+                        </div>
+                    ` : ''}
+                    
+                    ${state.showSettings ? `
+                        <div style="position:fixed;inset:0;z-index:50;background:rgba(0,0,0,0.5)" onclick="if(event.target===this){state.showSettings=false;render()}">
+                            <div class="w-96 h-full ml-auto p-4 overflow-y-auto ${dark ? 'bg-slate-800' : 'bg-white'}">
+                                <div class="flex justify-between mb-4">
+                                    <h2 class="text-xl font-bold">Settings</h2>
+                                    <button type="button" onclick="state.showSettings=false;render()" class="p-2">✕</button>
+                                </div>
+                                
+                                <div class="space-y-6">
+                                    <div>
+                                        <label class="block mb-2">Dark Mode</label>
+                                        <button type="button" onclick="state.darkMode=!state.darkMode;render();saveToStorage()" class="w-full flex justify-between items-center">
+                                            <div class="relative w-14 h-7 rounded-full ${dark ? 'bg-indigo-600' : 'bg-gray-300'}">
+                                                <div class="absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full transition-transform ${dark ? 'translate-x-7' : ''}"></div>
+                                            </div>
+                                            <span>${dark ? 'On' : 'Off'}</span>
+                                        </button>
+                                    </div>
+                                    
+                                    <div>
+                                        <h3 class="font-bold mb-2">Relation Modes</h3>
+                                        ${Object.keys(state.enabledRelationModes).map(mode => `
+                                            <label class="flex items-center mb-2">
+                                                <input type="checkbox" ${state.enabledRelationModes[mode] ? 'checked' : ''} 
+                                                    onchange="state.enabledRelationModes['${mode}']=this.checked;render();saveToStorage()" 
+                                                    class="w-5 h-5 mr-2">
+                                                <span>${mode === 'spatial' ? 'Space 2D' : mode.charAt(0).toUpperCase() + mode.slice(1)}</span>
+                                            </label>
+                                            ${state.enabledRelationModes[mode] ? `
+                                                <div class="ml-7 mb-3">
+                                                    <label class="text-sm">Premises: ${state.premiseCounts[mode]}</label>
+                                                    <input type="range" min="1" max="20" value="${state.premiseCounts[mode]}" 
+                                                        oninput="state.premiseCounts['${mode}']=parseInt(this.value);render();saveToStorage()" 
+                                                        class="w-full">
+                                                </div>
+                                            ` : ''}
+                                        `).join('')}
+                                    </div>
+                                    
+                                    <div>
+                                        <label class="flex items-center mb-2">
+                                            <input type="checkbox" ${state.autoProgressEnabled ? 'checked' : ''} 
+                                                onchange="state.autoProgressEnabled=this.checked;render();saveToStorage()" 
+                                                class="w-5 h-5 mr-2">
+                                            <span>Auto-Progression</span>
+                                        </label>
+                                        ${state.autoProgressEnabled ? `
+                                            <div class="ml-7 space-y-3">
+                                                <div>
+                                                    <label class="text-sm">Target Accuracy: ${state.targetAccuracy}%</label>
+                                                    <input type="range" min="50" max="100" value="${state.targetAccuracy}" 
+                                                        oninput="state.targetAccuracy=parseInt(this.value);render();saveToStorage()" 
+                                                        class="w-full">
+                                                </div>
+                                                <div>
+                                                    <label class="text-sm">Track Last: ${state.targetPremiseCount}</label>
+                                                    <input type="range" min="10" max="100" step="5" value="${state.targetPremiseCount}" 
+                                                        oninput="state.targetPremiseCount=parseInt(this.value);render();saveToStorage()" 
+                                                        class="w-full">
+                                                </div>
+                                            </div>
+                                        ` : ''}
+                                    </div>
+                                    
+                                    <button type="button" onclick="state.showResetConfirm=true;render()" 
+                                        class="w-full px-4 py-3 rounded-lg font-bold ${dark ? 'bg-red-900/50 text-red-200' : 'bg-red-100 text-red-700'}">
+                                        Reset Game
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    ` : ''}
+                    
+                    <div class="p-3 flex justify-between items-center ${dark ? 'bg-slate-800' : 'bg-white'}">
+                        <button type="button" onclick="state.showSettings=true;render()" class="px-3 py-2 rounded-lg ${dark ? 'bg-indigo-900/50 text-indigo-200' : 'bg-indigo-100 text-indigo-900'}">Settings</button>
+                        <div class="flex items-center gap-3">
+                            <div class="text-xl font-bold">${state.timeLeft.toFixed(1)}s</div>
+                            <button type="button" onclick="togglePause()" class="text-white p-2 rounded-lg ${state.isPaused ? 'bg-green-500' : 'bg-yellow-500'}">
+                                ${state.isPaused ? '▶' : '⏸'}
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="p-2">
+                        <div class="h-3 rounded-full ${dark ? 'bg-slate-700' : 'bg-gray-300'}">
+                            <div class="h-full bg-indigo-600 rounded-full" style="width:${(state.timeLeft / state.timePerQuestion) * 100}%"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="px-3 py-2 flex gap-4 ${dark ? 'bg-slate-800/50' : 'bg-white/50'}">
+                        <div class="text-center"><div class="text-xl font-bold text-green-600">${state.score.correct}</div><div class="text-xs">Correct</div></div>
+                        <div class="text-center"><div class="text-xl font-bold text-red-600">${state.score.incorrect}</div><div class="text-xs">Incorrect</div></div>
+                        <div class="text-center"><div class="text-xl font-bold text-orange-600">${state.score.missed}</div><div class="text-xs">Missed</div></div>
+                    </div>
+                    
+                    ${state.isPaused ? `
+                        <div class="flex-1 flex items-center justify-center">
+                            <div class="text-center p-8 rounded-xl ${dark ? 'bg-slate-800' : 'bg-white'}">
+                                <h2 class="text-2xl font-bold mb-2">Paused</h2>
+                                <p>Press play to resume</p>
+                            </div>
+                        </div>
+                    ` : state.currentTrial ? `
+                        <div class="flex-1 overflow-y-auto p-4">
+                            <div class="max-w-4xl mx-auto">
+                                <div class="rounded-2xl p-6 ${dark ? 'bg-slate-800' : 'bg-white'}">
+                                    <h3 class="text-sm uppercase mb-4 ${dark ? 'text-gray-400' : 'text-gray-600'}">Given:</h3>
+                                    <div class="space-y-2 mb-8">
+                                        ${state.currentTrial.premises.map(p => `
+                                            <div class="p-4 rounded-lg text-lg ${dark ? 'bg-slate-700' : 'bg-gray-50'}">
+                                                <span class="font-bold text-indigo-600">${p.stimulus1}</span>
+                                                <span class="mx-2">is</span>
+                                                <span class="px-3 py-1 rounded border font-semibold">${p.relation}</span>
+                                                <span class="mx-2">to</span>
+                                                <span class="font-bold text-indigo-600">${p.stimulus2}</span>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                    
+                                    <div class="border-t-4 pt-8 ${state.feedback === 'correct' ? 'border-green-500' : state.feedback === 'incorrect' ? 'border-red-500' : state.feedback === 'missed' ? 'border-orange-500' : 'border-indigo-500'}">
+                                        <h3 class="text-lg font-bold mb-4 text-indigo-600">Question:</h3>
+                                        <div class="p-6 rounded-xl mb-6 text-2xl ${dark ? 'bg-indigo-900/30' : 'bg-indigo-50'}">
+                                            <span class="font-bold">Is</span>
+                                            <span class="font-bold text-indigo-600">${state.currentTrial.question.stimulus1}</span>
+                                            <span class="mx-2 px-4 py-2 rounded-lg border-2 font-bold">${state.currentTrial.question.relation}</span>
+                                            <span class="mx-2">to</span>
+                                            <span class="font-bold text-indigo-600">${state.currentTrial.question.stimulus2}</span>
+                                            <span class="font-bold">?</span>
+                                        </div>
+                                        
+                                        ${state.feedback ? `
+                                            <div class="text-center text-2xl font-bold mb-6 ${state.feedback === 'correct' ? 'text-green-600' : state.feedback === 'incorrect' ? 'text-red-600' : 'text-orange-600'}">
+                                                ${state.feedback === 'correct' ? '✓ Correct!' : state.feedback === 'incorrect' ? '✗ Incorrect' : '⏱ Time\'s Up!'}
+                                            </div>
+                                        ` : `
+                                            <div class="flex gap-4">
+                                                <button type="button" onclick="handleAnswer(true)" class="answer-button flex-1 px-6 py-4 text-white text-xl font-bold rounded-xl bg-green-600 hover:bg-green-700">
+                                                    YES <span class="text-sm">(1)</span>
+                                                </button>
+                                                <button type="button" onclick="handleAnswer(false)" class="answer-button flex-1 px-6 py-4 text-white text-xl font-bold rounded-xl bg-red-600 hover:bg-red-700">
+                                                    NO <span class="text-sm">(2)</span>
+                                                </button>
+                                                <button type="button" onclick="handleAnswer('ambiguous')" class="answer-button flex-1 px-6 py-4 text-white text-xl font-bold rounded-xl bg-gray-600 hover:bg-gray-700">
+                                                    CAN'T TELL <span class="text-sm">(3)</span>
+                                                </button>
+                                            </div>
+                                        `}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === ' ') { e.preventDefault(); togglePause(); }
+            else if (!state.isPaused && !state.feedback) {
+                if (e.key === '1') handleAnswer(true);
+                else if (e.key === '2') handleAnswer(false);
+                else if (e.key === '3') handleAnswer('ambiguous');
+            }
+        });
+
+        loadFromStorage();
+        startNewTrial();
+    </script>
+</body>
+</html>
