@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Relational Frame Trainer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { margin: 0; font-family: system-ui, -apple-system, sans-serif; overflow: hidden; position: fixed; width: 100%; height: 100%; }
+        .emoji-stimulus { font-size: 2rem; line-height: 1; }
+        input[type="range"] { -webkit-appearance: none; height: 8px; border-radius: 5px; background: #ddd; }
+        input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 24px; height: 24px; border-radius: 50%; background: #6366f1; cursor: pointer; }
+        .dark input[type="range"] { background: #475569; }
+        button:active { transform: scale(0.95); }
+        .main-content-wrapper { height: 100%; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+        .sidebar-wrapper { position: fixed; inset: 0; z-index: 40; }
+        .sidebar-content { height: 100%; overflow-y: auto; }
+        .modal-wrapper { position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; }
+        .reset-notification { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 70; padding: 1.5rem 3rem; border-radius: 1rem; font-size: 1.5rem; font-weight: bold; animation: fadeInOut 2s ease-in-out; }
+        @keyframes fadeInOut { 0%, 100% { opacity: 0; } 10%, 90% { opacity: 1; } }
+        @media (max-width: 640px) { .sidebar-content { width: 100vw !important; } button { min-height: 48px; } .emoji-stimulus { font-size: 1.5rem; } }
+    </style>
+</head>
+<body>
+    <div id="app"></div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.21/lodash.min.js"></script>
+    <script>
+        const Game = {
+            state: {
+                timePerQuestion: 30, networkComplexity: 0.5, spoilerPremises: false, darkMode: false,
+                useLetters: true, useEmojis: false, useVoronoi: false, useMandelbrot: false, letterLength: 3,
+                autoProgressEnabled: true, universalAutoProgress: true, targetPremiseCount: 40, targetAccuracy: 95,
+                recentAnswers: [], statsHistory: [], showSettings: false, showHistory: false, showStats: false,
+                showTutorial: false, isPaused: false, currentTrial: null, timeLeft: 30,
+                score: { correct: 0, incorrect: 0, missed: 0 }, feedback: null, history: [],
+                enabledRelationModes: { equality: true, temporal: false, spatial: false, containment: false },
+                premiseCounts: { equality: 3, temporal: 3, spatial: 3, containment: 3 },
+                modeProgress: {
+                    equality: { recentAnswers: [], timePerQuestion: 30 },
+                    temporal: { recentAnswers: [], timePerQuestion: 30 },
+                    spatial: { recentAnswers: [], timePerQuestion: 30 },
+                    containment: { recentAnswers: [], timePerQuestion: 30 }
+                },
+                showResetConfirm: false, showResetNotification: false
+            },
+            
+            relationSets: {
+                equality: ['SAME', 'OPPOSITE', 'DIFFERENT'],
+                temporal: ['BEFORE', 'AFTER', 'AT'],
+                spatial: ['NORTH', 'SOUTH', 'EAST', 'WEST', 'NORTHEAST', 'NORTHWEST', 'SOUTHEAST', 'SOUTHWEST'],
+                containment: ['CONTAINS', 'WITHIN']
+            },
+            
+            emojiList: ['😀','😃','😄','😁','😆','😅','🤣','😂','🙂','🙃','😉','😊','😇','🥰','😍','🤩'],
+            timerId: null,
+            saveTimer: null,
+
+            init() {
+                this.loadFromStorage();
+                this.startNewTrial();
+                this.render();
+                this.attachKeyboard();
+            },
+
+            saveToStorage() {
+                clearTimeout(this.saveTimer);
+                this.saveTimer = setTimeout(() => {
+                    try {
+                        const data = {
+                            score: this.state.score,
+                            history: this.state.history.slice(-100),
+                            statsHistory: this.state.statsHistory.slice(-100),
+                            settings: _.pick(this.state, ['timePerQuestion','networkComplexity','spoilerPremises','darkMode',
+                                'useLetters','useEmojis','useVoronoi','useMandelbrot','letterLength','autoProgressEnabled',
+                                'universalAutoProgress','targetPremiseCount','targetAccuracy','enabledRelationModes',
+                                'premiseCounts','modeProgress']),
+                            recentAnswers: this.state.recentAnswers.slice(-100)
+                        };
+                        localStorage.setItem('rft-data', JSON.stringify(data));
+                    } catch(e) { console.error('Save failed:', e); }
+                }, 500);
+            },
+
+            loadFromStorage() {
+                try {
+                    const data = JSON.parse(localStorage.getItem('rft-data'));
+                    if (data) {
+                        if (data.score) this.state.score = data.score;
+                        if (data.history) this.state.history = data.history;
+                        if (data.statsHistory) this.state.statsHistory = data.statsHistory;
+                        if (data.recentAnswers) this.state.recentAnswers = data.recentAnswers;
+                        if (data.settings) Object.assign(this.state, data.settings);
+                    }
+                } catch(e) { console.error('Load failed:', e); }
+            },
+
+            getRelationMode(rel) {
+                if (['SAME','OPPOSITE','DIFFERENT'].includes(rel)) return 'equality';
+                if (['BEFORE','AFTER','AT'].includes(rel)) return 'temporal';
+                if (['CONTAINS','WITHIN'].includes(rel)) return 'containment';
+                return 'spatial';
+            },
+
+            deriveRelation(r1, r2) {
+                const m1 = this.getRelationMode(r1), m2 = this.getRelationMode(r2);
+                if (m1 !== m2) return 'AMBIGUOUS';
+                if (m1 === 'equality') {
+                    if (r1 === 'SAME') return r2;
+                    if (r2 === 'SAME') return r1;
+                    if (r1 === 'OPPOSITE' && r2 === 'OPPOSITE') return 'SAME';
+                    return 'AMBIGUOUS';
+                } else if (m1 === 'temporal') {
+                    if (r1 === 'AT') return r2;
+                    if (r2 === 'AT') return r1;
+                    if (r1 === 'BEFORE' && r2 === 'BEFORE') return 'BEFORE';
+                    if (r1 === 'AFTER' && r2 === 'AFTER') return 'AFTER';
+                    return 'AMBIGUOUS';
+                } else if (m1 === 'containment') {
+                    if (r1 === 'CONTAINS' && r2 === 'CONTAINS') return 'CONTAINS';
+                    if (r1 === 'WITHIN' && r2 === 'WITHIN') return 'WITHIN';
+                    return 'AMBIGUOUS';
+                }
+                return r1 === r2 ? r1 : 'AMBIGUOUS';
+            },
+
+            findPaths(graph, start, end, path=[], visited=new Set(), all=[]) {
+                if (start === end && path.length > 0) { all.push([...path]); return all; }
+                visited.add(start);
+                for (const edge of graph) {
+                    let next = null, e = null;
+                    if (edge.stimulus1 === start && !visited.has(edge.stimulus2)) {
+                        next = edge.stimulus2; e = {...edge};
+                    } else if (edge.stimulus2 === start && !visited.has(edge.stimulus1)) {
+                        next = edge.stimulus1;
+                        e = {...edge, relation: edge.relation === 'CONTAINS' ? 'WITHIN' : edge.relation === 'WITHIN' ? 'CONTAINS' : edge.relation};
+                    }
+                    if (next) {
+                        path.push(e);
+                        this.findPaths(graph, next, end, path, new Set(visited), all);
+                        path.pop();
+                    }
+                }
+                return all;
+            },
+
+            deriveFromGraph(graph, start, end) {
+                if (start === end) return this.state.enabledRelationModes.equality ? 'SAME' : 'AT';
+                const paths = this.findPaths(graph, start, end);
+                if (paths.length === 0) return null;
+                const rels = paths.map(p => {
+                    let r = p[0].relation;
+                    for (let i=1; i<p.length; i++) {
+                        r = this.deriveRelation(r, p[i].relation);
+                        if (r === 'AMBIGUOUS') return 'AMBIGUOUS';
+                    }
+                    return r;
+                }).filter(r => r);
+                const clean = rels.filter(r => r !== 'AMBIGUOUS');
+                if (clean.length === 0) return 'AMBIGUOUS';
+                return clean.every(r => r === clean[0]) ? clean[0] : 'AMBIGUOUS';
+            },
+
+            generateStimulus() {
+                const types = [];
+                if (this.state.useLetters) types.push('letters');
+                if (this.state.useEmojis) types.push('emojis');
+                if (this.state.useVoronoi) types.push('voronoi');
+                if (this.state.useMandelbrot) types.push('mandelbrot');
+                if (types.length === 0) types.push('letters');
+                const type = types[Math.floor(Math.random() * types.length)];
+                if (type === 'emojis') return this.emojiList[Math.floor(Math.random() * this.emojiList.length)];
+                if (type === 'voronoi') return `voronoi_${Math.floor(Math.random() * 1000000)}`;
+                if (type === 'mandelbrot') return `mandelbrot_${Math.floor(Math.random() * 1000000)}`;
+                let r = '';
+                for (let i=0; i<this.state.letterLength; i++) r += 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'[Math.floor(Math.random()*26)];
+                return r;
+            },
+
+            generateTrial() {
+                const modes = Object.keys(this.state.enabledRelationModes).filter(m => this.state.enabledRelationModes[m]);
+                const mode = modes[Math.floor(Math.random() * modes.length)] || 'equality';
+                const rels = this.relationSets[mode];
+                const pc = this.state.premiseCounts[mode];
+                const stimuli = [this.generateStimulus()];
+                const premises = [];
+                
+                for (let p=0; p<pc; p++) {
+                    const ambig = [];
+                    for (let i=0; i<stimuli.length; i++) {
+                        for (let j=i+1; j<stimuli.length; j++) {
+                            const s1=stimuli[i], s2=stimuli[j];
+                            if (!premises.some(pr => (pr.stimulus1===s1 && pr.stimulus2===s2) || (pr.stimulus1===s2 && pr.stimulus2===s1))) {
+                                if (this.deriveFromGraph(premises, s1, s2) === 'AMBIGUOUS') ambig.push({s1,s2});
+                            }
+                        }
+                    }
+                    let pair = null;
+                    if (ambig.length > 0 && Math.random() < this.state.networkComplexity) {
+                        pair = ambig[Math.floor(Math.random() * ambig.length)];
+                    } else if (stimuli.length < pc+1) {
+                        const ns = this.generateStimulus();
+                        stimuli.push(ns);
+                        pair = {s1: stimuli[Math.floor(Math.random()*(stimuli.length-1))], s2: ns};
+                    } else {
+                        const avail = [];
+                        for (let i=0; i<stimuli.length; i++) {
+                            for (let j=i+1; j<stimuli.length; j++) {
+                                if (!premises.some(pr => (pr.stimulus1===stimuli[i] && pr.stimulus2===stimuli[j]) || 
+                                    (pr.stimulus1===stimuli[j] && pr.stimulus2===stimuli[i]))) avail.push({s1:stimuli[i],s2:stimuli[j]});
+                            }
+                        }
+                        pair = avail.length ? avail[Math.floor(Math.random()*avail.length)] : {s1:stimuli[0],s2:stimuli[1]};
+                    }
+                    if (pair) premises.push({stimulus1: pair.s1, relation: rels[Math.floor(Math.random()*rels.length)], stimulus2: pair.s2});
+                }
+                
+                const si = Math.floor(Math.random() * stimuli.length);
+                let ei = Math.floor(Math.random() * stimuli.length);
+                if (si === ei) ei = (ei + 1) % stimuli.length;
+                const derived = this.deriveFromGraph(premises, stimuli[si], stimuli[ei]);
+                let qrel, ans;
+                if (derived === 'AMBIGUOUS' || !derived) {
+                    qrel = rels[Math.floor(Math.random()*rels.length)];
+                    ans = 'ambiguous';
+                } else {
+                    if (Math.random() < 0.5) { qrel = derived; ans = true; }
+                    else {
+                        const inc = rels.filter(r => r !== derived);
+                        qrel = inc.length ? inc[Math.floor(Math.random()*inc.length)] : derived;
+                        ans = qrel === derived;
+                    }
+                }
+                return {premises, question: {stimulus1: stimuli[si], relation: qrel, stimulus2: stimuli[ei]}, 
+                    correctAnswer: ans, mode};
+            },
+
+            startNewTrial() {
+                this.state.currentTrial = this.generateTrial();
+                this.state.timeLeft = this.state.modeProgress[this.state.currentTrial.mode].timePerQuestion;
+                this.state.feedback = null;
+                this.render();
+                this.startTimer();
+            },
+
+            startTimer() {
+                clearInterval(this.timerId);
+                this.timerId = setInterval(() => {
+                    if (!this.state.isPaused && !this.state.feedback && this.state.timeLeft > 0) {
+                        this.state.timeLeft = Math.max(0, this.state.timeLeft - 0.1);
+                        this.render();
+                        if (this.state.timeLeft <= 0) this.handleTimeout();
+                    }
+                }, 100);
+            },
+
+            handleTimeout() {
+                this.state.score.missed++;
+                this.state.feedback = 'missed';
+                const mode = this.state.currentTrial.mode;
+                this.state.history.push({trial: this.state.currentTrial, userAnswer: null, isCorrect: false, 
+                    timestamp: Date.now(), timeUsed: this.state.modeProgress[mode].timePerQuestion, 
+                    premiseCount: this.state.currentTrial.premises.length});
+                this.state.statsHistory.push({timestamp: Date.now(), timeUsed: this.state.modeProgress[mode].timePerQuestion,
+                    premiseCount: this.state.currentTrial.premises.length, isCorrect: false, mode});
+                this.state.recentAnswers.push(false);
+                this.state.modeProgress[mode].recentAnswers.push(false);
+                this.checkAutoProgress(mode);
+                this.render();
+                this.saveToStorage();
+                setTimeout(() => this.startNewTrial(), 1500);
+            },
+
+            handleAnswer(ans) {
+                if (this.state.isPaused || this.state.feedback) return;
+                const correct = ans === this.state.currentTrial.correctAnswer;
+                const mode = this.state.currentTrial.mode;
+                const used = this.state.modeProgress[mode].timePerQuestion - this.state.timeLeft;
+                if (correct) this.state.score.correct++; else this.state.score.incorrect++;
+                this.state.feedback = correct ? 'correct' : 'incorrect';
+                this.state.history.push({trial: this.state.currentTrial, userAnswer: ans, isCorrect: correct,
+                    timestamp: Date.now(), timeUsed: used, premiseCount: this.state.currentTrial.premises.length});
+                this.state.statsHistory.push({timestamp: Date.now(), timeUsed: used, 
+                    premiseCount: this.state.currentTrial.premises.length, isCorrect: correct, mode});
+                this.state.recentAnswers.push(correct);
+                this.state.modeProgress[mode].recentAnswers.push(correct);
+                this.checkAutoProgress(mode);
+                this.render();
+                this.saveToStorage();
+                setTimeout(() => this.startNewTrial(), 1500);
+            },
+
+            checkAutoProgress(mode) {
+                if (!this.state.autoProgressEnabled) return;
+                if (this.state.universalAutoProgress) {
+                    if (this.state.recentAnswers.length < this.state.targetPremiseCount) return;
+                    const acc = (this.state.recentAnswers.slice(-this.state.targetPremiseCount).filter(a=>a).length / 
+                        this.state.targetPremiseCount) * 100;
+                    if (acc >= this.state.targetAccuracy) {
+                        if (this.state.timePerQuestion > 10) {
+                            this.state.timePerQuestion = Math.max(10, this.state.timePerQuestion - 5);
+                            Object.keys(this.state.modeProgress).forEach(m => 
+                                this.state.modeProgress[m].timePerQuestion = this.state.timePerQuestion);
+                        } else {
+                            Object.keys(this.state.premiseCounts).forEach(m => 
+                                this.state.premiseCounts[m] = Math.min(100, this.state.premiseCounts[m] + 1));
+                            this.state.timePerQuestion = 30;
+                            Object.keys(this.state.modeProgress).forEach(m => 
+                                this.state.modeProgress[m].timePerQuestion = 30);
+                        }
+                        this.state.recentAnswers = [];
+                    }
+                } else {
+                    const md = this.state.modeProgress[mode];
+                    if (md.recentAnswers.length < this.state.targetPremiseCount) return;
+                    const acc = (md.recentAnswers.slice(-this.state.targetPremiseCount).filter(a=>a).length / 
+                        this.state.targetPremiseCount) * 100;
+                    if (acc >= this.state.targetAccuracy) {
+                        if (md.timePerQuestion > 10) { md.timePerQuestion = Math.max(10, md.timePerQuestion - 5); }
+                        else { this.state.premiseCounts[mode] = Math.min(100, this.state.premiseCounts[mode] + 1); md.timePerQuestion = 30; }
+                        md.recentAnswers = [];
+                    }
+                }
+            },
+
+            togglePause() {
+                this.state.isPaused = !this.state.isPaused;
+                if (!this.state.isPaused && this.state.currentTrial) this.startTimer();
+                this.render();
+            },
+
+            resetGame() {
+                this.state.showResetConfirm = false;
+                this.state.score = {correct:0, incorrect:0, missed:0};
+                this.state.history = [];
+                this.state.recentAnswers = [];
+                this.state.statsHistory = [];
+                this.state.modeProgress = {
+                    equality: {recentAnswers:[], timePerQuestion:30},
+                    temporal: {recentAnswers:[], timePerQuestion:30},
+                    spatial: {recentAnswers:[], timePerQuestion:30},
+                    containment: {recentAnswers:[], timePerQuestion:30}
+                };
+                this.state.showResetNotification = true;
+                this.render();
+                setTimeout(() => { 
+                    this.state.showResetNotification = false; 
+                    this.startNewTrial(); 
+                    this.saveToStorage(); 
+                }, 1500);
+            },
+
+            renderStimulus(s) {
+                if (s.startsWith('voronoi_')) return `<div class="inline-block w-16 h-16 bg-gradient-to-br from-purple-400 to-pink-500 rounded-lg"></div>`;
+                if (s.startsWith('mandelbrot_')) return `<div class="inline-block w-16 h-16 bg-gradient-to-br from-blue-400 to-cyan-500 rounded-lg"></div>`;
+                const emoji = this.emojiList.includes(s);
+                return `<span class="font-bold ${emoji?'emoji-stimulus':''} ${this.state.darkMode?'text-indigo-400':'text-indigo-600'}">${s}</span>`;
+            },
+
+            attachKeyboard() {
+                document.addEventListener('keydown', e => {
+                    if (e.key === ' ') { e.preventDefault(); this.togglePause(); }
+                    else if (!this.state.isPaused && !this.state.feedback) {
+                        if (e.key === '1') this.handleAnswer(true);
+                        else if (e.key === '2') this.handleAnswer(false);
+                        else if (e.key === '3') this.handleAnswer('ambiguous');
+                    }
+                });
+            },
+
+            render() {
+                const s = this.state;
+                const dark = s.darkMode ? 'dark' : '';
+                
+                let modalsHTML = '';
+                
+                if (s.showResetConfirm) {
+                    modalsHTML += `<div class="modal-wrapper bg-black/50 backdrop-blur-sm" onclick="Game.state.showResetConfirm=false;Game.render()">
+                        <div class="max-w-md w-full mx-4 rounded-2xl p-6 shadow-2xl ${s.darkMode?'bg-slate-800':'bg-white'}" onclick="event.stopPropagation()">
+                            <h2 class="text-2xl font-bold mb-4 ${s.darkMode?'text-red-400':'text-red-600'}">Reset Game?</h2>
+                            <p class="mb-6 ${s.darkMode?'text-gray-300':'text-gray-700'}">This will reset all progress and statistics.</p>
+                            <div class="flex gap-3">
+                                <button onclick="Game.resetGame()" class="flex-1 px-6 py-3 text-white font-bold rounded-lg ${s.darkMode?'bg-red-600 hover:bg-red-700':'bg-red-500 hover:bg-red-600'}">Yes, Reset</button>
+                                <button onclick="Game.state.showResetConfirm=false;Game.render()" class="flex-1 px-6 py-3 font-bold rounded-lg ${s.darkMode?'bg-slate-700 text-gray-200 hover:bg-slate-600':'bg-gray-200 text-gray-800 hover:bg-gray-300'}">Cancel</button>
+                            </div>
+                        </div>
+                    </div>`;
+                }
+                
+                if (s.showTutorial) {
+                    modalsHTML += `<div class="modal-wrapper bg-black/50 backdrop-blur-sm" onclick="Game.state.showTutorial=false;Game.render()">
+                        <div class="max-w-2xl w-full mx-4 rounded-2xl p-6 shadow-2xl ${s.darkMode?'bg-slate-800':'bg-white'}" onclick="event.stopPropagation()">
+                            <div class="flex justify-between items-center mb-4">
+                                <h2 class="text-2xl font-bold ${s.darkMode?'text-indigo-400':'text-indigo-600'}">How to Play</h2>
+                                <button onclick="Game.state.showTutorial=false;Game.render()" class="p-2 rounded-lg text-2xl ${s.darkMode?'hover:bg-slate-700':'hover:bg-gray-100'}">✕</button>
+                            </div>
+                            <div class="space-y-4 ${s.darkMode?'text-gray-300':'text-gray-700'}">
+                                <p><strong>Relational Frame Training</strong> helps you practice deriving logical relationships between stimuli.</p>
+                                <div>
+                                    <h3 class="font-bold mb-2">Game Rules:</h3>
+                                    <ul class="list-disc pl-6 space-y-2">
+                                        <li>You will be given several <strong>premises</strong> that establish relationships</li>
+                                        <li>Answer whether a <strong>question relationship</strong> is true</li>
+                                        <li>Answer <strong>YES</strong> if it follows from the premises</li>
+                                        <li>Answer <strong>NO</strong> if it contradicts the premises</li>
+                                        <li>Answer <strong>CAN'T TELL</strong> if there's insufficient information</li>
+                                    </ul>
+                                </div>
+                                <div>
+                                    <h3 class="font-bold mb-2">Keyboard Shortcuts:</h3>
+                                    <ul class="list-disc pl-6 space-y-2">
+                                        <li><kbd class="px-2 py-1 rounded font-mono ${s.darkMode?'bg-slate-700':'bg-gray-200'}">1</kbd> - Answer YES</li>
+                                        <li><kbd class="px-2 py-1 rounded font-mono ${s.darkMode?'bg-slate-700':'bg-gray-200'}">2</kbd> - Answer NO</li>
+                                        <li><kbd class="px-2 py-1 rounded font-mono ${s.darkMode?'bg-slate-700':'bg-gray-200'}">3</kbd> - Answer CAN'T TELL</li>
+                                        <li><kbd class="px-2 py-1 rounded font-mono ${s.darkMode?'bg-slate-700':'bg-gray-200'}">Space</kbd> - Pause/Resume</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>`;
+                }
+                
+                if (s.showSettings) {
+                    modalsHTML += `<div class="sidebar-wrapper bg-black/30 backdrop-blur-sm" onclick="Game.state.showSettings=false;Game.render()">
+                        <div class="sidebar-content ${s.darkMode?'bg-slate-800':'bg-white'} shadow-xl w-96 max-w-full ml-auto" onclick="event.stopPropagation()">
+                            <div class="h-full flex flex-col p-4">
+                                <div class="flex items-center justify-between mb-4">
+                                    <h2 class="text-lg font-bold ${s.darkMode?'text-white':'text-gray-900'}">Settings</h2>
+                                    <button onclick="Game.state.showSettings=false;Game.render()" class="p-1 rounded text-2xl ${s.darkMode?'hover:bg-slate-700':'hover:bg-gray-100'}">✕</button>
+                                </div>
+                                <div class="flex-1 overflow-y-auto space-y-6 ${s.darkMode?'text-gray-200':'text-gray-800'}">
+                                    <div>
+                                        <label class="block text-sm font-semibold mb-2">Dark Mode</label>
+                                        <button onclick="Game.state.darkMode=!Game.state.darkMode;Game.render();Game.saveToStorage()" class="w-full flex items-center justify-between">
+                                            <div class="relative w-14 h-7 rounded-full transition-colors ${s.darkMode?'bg-indigo-600':'bg-gray-300'}">
+                                                <div class="absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full shadow-md transition-transform ${s.darkMode?'transform translate-x-7':''}"></div>
+                                            </div>
+                                            <span class="text-sm font-medium">${s.darkMode?'Enabled':'Disabled'}</span>
+                                        </button>
+                                    </div>
+                                    <div class="border-t pt-4 ${s.darkMode?'border-slate-700':'border-gray-200'}">
+                                        <h3 class="text-sm font-bold mb-3">Auto-Progression</h3>
+                                        <label class="flex items-center space-x-2 cursor-pointer mb-3">
+                                            <input type="checkbox" ${s.autoProgressEnabled?'checked':''} onchange="Game.state.autoProgressEnabled=this.checked;Game.render();Game.saveToStorage()" class="w-5 h-5">
+                                            <span class="text-sm font-semibold">Enable Auto-Progression</span>
