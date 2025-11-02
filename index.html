@@ -1,0 +1,887 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Relational Frame Trainer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * { box-sizing: border-box; }
+        body { margin: 0; font-family: system-ui, -apple-system, sans-serif; overflow: hidden; }
+        .emoji-stimulus { font-size: 2rem; line-height: 1; }
+        .transition-colors { transition: background-color 0.3s, color 0.3s, border-color 0.3s; }
+        input[type="range"] { -webkit-appearance: none; appearance: none; height: 8px; border-radius: 5px; background: #ddd; outline: none; }
+        input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 20px; height: 20px; border-radius: 50%; background: #6366f1; cursor: pointer; }
+        input[type="range"]::-moz-range-thumb { width: 20px; height: 20px; border-radius: 50%; background: #6366f1; cursor: pointer; border: none; }
+        .dark input[type="range"] { background: #475569; }
+        button { cursor: pointer; }
+        button:active { transform: scale(0.98); }
+        .premise-item:hover { transform: translateX(2px); }
+        .premise-item { transition: transform 0.2s; }
+        
+        /* Ensure proper scrolling on mobile */
+        .main-content-wrapper {
+            height: 100%;
+            overflow-y: auto;
+            overflow-x: hidden;
+            -webkit-overflow-scrolling: touch;
+        }
+        
+        /* Add padding at bottom for mobile to ensure last button is visible */
+        @media (max-width: 640px) {
+            .main-content-wrapper {
+                padding-bottom: env(safe-area-inset-bottom, 20px);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="app"></div>
+
+    <script>
+        // State management
+        const state = {
+            difficulty: 3,
+            timePerQuestion: 30,
+            networkComplexity: 0.5,
+            spoilerPremises: false,
+            darkMode: false,
+            useLetters: true,
+            useEmojis: false,
+            useVoronoi: false,
+            useMandelbrot: false,
+            letterLength: 3,
+            autoProgressEnabled: true,
+            universalAutoProgress: true,  // true = universal, false = mode-specific
+            targetPremiseCount: 40,
+            targetAccuracy: 95,
+            recentAnswers: [],
+            statsHistory: [],
+            showSettings: false,
+            showHistory: false,
+            showStats: false,
+            showTutorial: false,
+            showAuth: false,
+            authView: 'login', // 'login', 'register', 'verify'
+            isPaused: false,
+            currentTrial: null,
+            timeLeft: 30,
+            score: { correct: 0, incorrect: 0, missed: 0 },
+            feedback: null,
+            history: [],
+            hoveredPremise: null,
+            enabledRelationModes: {
+                equality: true,
+                temporal: false,
+                spatial: false,
+                containment: false
+            },
+            // Separate premise counts for each mode
+            premiseCounts: {
+                equality: 3,
+                temporal: 3,
+                spatial: 3,
+                containment: 3
+            },
+            // Separate auto-progress tracking for each mode
+            modeProgress: {
+                equality: { recentAnswers: [], timePerQuestion: 30 },
+                temporal: { recentAnswers: [], timePerQuestion: 30 },
+                spatial: { recentAnswers: [], timePerQuestion: 30 },
+                containment: { recentAnswers: [], timePerQuestion: 30 }
+            },
+            // Auth state
+            user: null,
+            authEmail: '',
+            authPassword: '',
+            authUsername: '',
+            authVerificationCode: '',
+            authError: null,
+            authLoading: false
+        };
+
+        const relationSets = {
+            equality: ['SAME', 'OPPOSITE', 'DIFFERENT'],
+            temporal: ['BEFORE', 'AFTER', 'AT'],
+            spatial: ['NORTH', 'SOUTH', 'EAST', 'WEST', 'NORTHEAST', 'NORTHWEST', 'SOUTHEAST', 'SOUTHWEST'],
+            containment: ['CONTAINS', 'WITHIN']
+        };
+
+        const emojiList = ['😀', '😃', '😄', '😁', '😆', '😅', '🤣', '😂', '🙂', '🙃', '😉', '😊', '😇', '🥰', '😍', '🤩', '😘', '😗', '😚', '😙', '🥲', '😋', '😛', '😜', '🤪', '😝', '🤑', '🤗', '🤭', '🤫', '🤔', '🤐', '🤨', '😐', '😑', '😶', '😏', '😒', '🙄', '😬', '🤥', '😌', '😔', '😪', '🤤', '😴', '😷', '🤒', '🤕', '🤢', '🤮', '🤧', '🥵', '🥶', '🥴', '😵', '🤯', '🤠', '🥳', '🥸', '😎', '🤓', '🧐'];
+
+        let timerId = null;
+
+        // Initialize Supabase client
+        const SUPABASE_URL = 'https://hpqfgumdvftrwjzuoggx.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhwcWZndW1kdmZ0cndqenVvZ2d4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIwNjE5OTQsImV4cCI6MjA3NzYzNzk5NH0.U8TLeF5D263-8rJ3dEgiukA84jWr8nwzznFKNLJB3zg';
+        const { createClient } = supabase;
+        const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // Supabase authentication backend
+        const authBackend = {
+            async sendVerificationCode(email) {
+                try {
+                    // Generate 6-digit code
+                    const code = Math.floor(100000 + Math.random() * 900000).toString();
+                    
+                    // Store verification code in database
+                    const { error } = await supabaseClient
+                        .from('verification_codes')
+                        .insert({
+                            email: email,
+                            code: code
+                        });
+                    
+                    if (error) throw error;
+                    
+                    // In production, send email via service
+                    // For now, show in alert
+                    console.log(`Verification code for ${email}: ${code}`);
+                    alert(`Verification code (in production this would be emailed): ${code}`);
+                    
+                    return { success: true };
+                } catch (error) {
+                    console.error('Send verification error:', error);
+                    return { success: false, error: error.message };
+                }
+            },
+            
+            async verifyCode(email, code) {
+                try {
+                    // Check if code exists and is not expired
+                    const { data, error } = await supabase
+                        .from('verification_codes')
+                        .select('*')
+                        .eq('email', email)
+                        .eq('code', code)
+                        .gt('expires_at', new Date().toISOString())
+                        .order('created_at', { ascending: false })
+                        .limit(1);
+                    
+                    if (error) throw error;
+                    
+                    if (!data || data.length === 0) {
+                        return { success: false, error: 'Invalid or expired verification code' };
+                    }
+                    
+                    // Delete used code
+                    await supabase
+                        .from('verification_codes')
+                        .delete()
+                        .eq('email', email);
+                    
+                    return { success: true };
+                } catch (error) {
+                    console.error('Verify code error:', error);
+                    return { success: false, error: error.message };
+                }
+            },
+            
+            async register(email, username, password) {
+                try {
+                    // Check if email already exists
+                    const { data: existingEmail } = await supabase
+                        .from('users')
+                        .select('id')
+                        .eq('email', email)
+                        .single();
+                    
+                    if (existingEmail) {
+                        return { success: false, error: 'Email already registered' };
+                    }
+                    
+                    // Check if username already exists
+                    const { data: existingUsername } = await supabase
+                        .from('users')
+                        .select('id')
+                        .eq('username', username)
+                        .single();
+                    
+                    if (existingUsername) {
+                        return { success: false, error: 'Username already taken' };
+                    }
+                    
+                    // Hash password (simple hash - in production use bcrypt)
+                    const passwordHash = btoa(password); // Base64 encoding (NOT secure for production!)
+                    
+                    // Create user
+                    const { data: newUser, error } = await supabase
+                        .from('users')
+                        .insert({
+                            email: email,
+                            username: username,
+                            password_hash: passwordHash
+                        })
+                        .select()
+                        .single();
+                    
+                    if (error) throw error;
+                    
+                    // Initialize user progress
+                    await supabase
+                        .from('user_progress')
+                        .insert({
+                            user_id: newUser.id,
+                            score: { correct: 0, incorrect: 0, missed: 0 },
+                            history: [],
+                            stats_history: [],
+                            settings: {},
+                            recent_answers: []
+                        });
+                    
+                    return { 
+                        success: true, 
+                        user: { 
+                            id: newUser.id,
+                            email: newUser.email, 
+                            username: newUser.username 
+                        } 
+                    };
+                } catch (error) {
+                    console.error('Register error:', error);
+                    return { success: false, error: error.message };
+                }
+            },
+            
+            async login(usernameOrEmail, password) {
+                try {
+                    // Hash password
+                    const passwordHash = btoa(password);
+                    
+                    // Try to find user by username or email
+                    const { data, error } = await supabase
+                        .from('users')
+                        .select('*')
+                        .or(`username.eq.${usernameOrEmail},email.eq.${usernameOrEmail}`)
+                        .eq('password_hash', passwordHash)
+                        .single();
+                    
+                    if (error || !data) {
+                        return { success: false, error: 'Invalid credentials' };
+                    }
+                    
+                    return { 
+                        success: true, 
+                        user: { 
+                            id: data.id,
+                            email: data.email, 
+                            username: data.username 
+                        } 
+                    };
+                } catch (error) {
+                    console.error('Login error:', error);
+                    return { success: false, error: 'Invalid credentials' };
+                }
+            },
+            
+            async saveProgress(userId, progressData) {
+                try {
+                    const { error } = await supabase
+                        .from('user_progress')
+                        .upsert({
+                            user_id: userId,
+                            score: progressData.score,
+                            history: progressData.history,
+                            stats_history: progressData.statsHistory,
+                            settings: progressData.settings,
+                            recent_answers: progressData.recentAnswers,
+                            last_sync: new Date().toISOString()
+                        }, {
+                            onConflict: 'user_id'
+                        });
+                    
+                    if (error) throw error;
+                    
+                    return { success: true };
+                } catch (error) {
+                    console.error('Save progress error:', error);
+                    return { success: false, error: error.message };
+                }
+            },
+            
+            async loadProgress(userId) {
+                try {
+                    const { data, error } = await supabase
+                        .from('user_progress')
+                        .select('*')
+                        .eq('user_id', userId)
+                        .single();
+                    
+                    if (error) {
+                        // If no progress found, return empty progress
+                        if (error.code === 'PGRST116') {
+                            return {
+                                success: true,
+                                data: {
+                                    score: { correct: 0, incorrect: 0, missed: 0 },
+                                    history: [],
+                                    statsHistory: [],
+                                    settings: {},
+                                    recentAnswers: []
+                                }
+                            };
+                        }
+                        throw error;
+                    }
+                    
+                    return { 
+                        success: true, 
+                        data: {
+                            score: data.score,
+                            history: data.history,
+                            statsHistory: data.stats_history,
+                            settings: data.settings,
+                            recentAnswers: data.recent_answers
+                        }
+                    };
+                } catch (error) {
+                    console.error('Load progress error:', error);
+                    return { success: false, error: error.message };
+                }
+            }
+        };
+
+        // Storage functions - using localStorage for PC compatibility
+        function saveToStorage() {
+            const progressData = {
+                score: state.score,
+                history: state.history,
+                statsHistory: state.statsHistory,
+                settings: {
+                    difficulty: state.difficulty,
+                    timePerQuestion: state.timePerQuestion,
+                    networkComplexity: state.networkComplexity,
+                    spoilerPremises: state.spoilerPremises,
+                    darkMode: state.darkMode,
+                    useLetters: state.useLetters,
+                    useEmojis: state.useEmojis,
+                    useVoronoi: state.useVoronoi,
+                    useMandelbrot: state.useMandelbrot,
+                    letterLength: state.letterLength,
+                    autoProgressEnabled: state.autoProgressEnabled,
+                    universalAutoProgress: state.universalAutoProgress,
+                    targetPremiseCount: state.targetPremiseCount,
+                    targetAccuracy: state.targetAccuracy,
+                    enabledRelationModes: state.enabledRelationModes,
+                    premiseCounts: state.premiseCounts,
+                    modeProgress: state.modeProgress
+                },
+                recentAnswers: state.recentAnswers
+            };
+            
+            try {
+                // Save locally
+                localStorage.setItem('rft-data', JSON.stringify(progressData));
+                
+                // If user is logged in, sync to their account (using user ID)
+                if (state.user && state.user.id) {
+                    authBackend.saveProgress(state.user.id, progressData);
+                }
+            } catch (error) {
+                console.error('Save failed:', error);
+            }
+        }
+
+        function loadFromStorage() {
+            try {
+                const data = localStorage.getItem('rft-data');
+                if (data) {
+                    const parsed = JSON.parse(data);
+                    if (parsed.score) state.score = parsed.score;
+                    if (parsed.history) state.history = parsed.history;
+                    if (parsed.statsHistory) state.statsHistory = parsed.statsHistory;
+                    if (parsed.recentAnswers) state.recentAnswers = parsed.recentAnswers;
+                    if (parsed.settings) {
+                        Object.keys(parsed.settings).forEach(key => {
+                            if (parsed.settings[key] !== undefined) {
+                                state[key] = parsed.settings[key];
+                            }
+                        });
+                    }
+                }
+            } catch (error) {
+                console.log('No saved data found');
+            }
+        }
+
+        async function loadUserProgress(userId) {
+            try {
+                const result = await authBackend.loadProgress(userId);
+                if (result.success && result.data) {
+                    const data = result.data;
+                    
+                    // Load score and history
+                    if (data.score) state.score = data.score;
+                    if (data.history) state.history = data.history;
+                    if (data.statsHistory) state.statsHistory = data.statsHistory;
+                    if (data.recentAnswers) state.recentAnswers = data.recentAnswers;
+                    
+                    // Load settings
+                    if (data.settings) {
+                        Object.keys(data.settings).forEach(key => {
+                            if (data.settings[key] !== undefined) {
+                                state[key] = data.settings[key];
+                            }
+                        });
+                    }
+                    
+                    // Save to local storage as well
+                    localStorage.setItem('rft-data', JSON.stringify(data));
+                    
+                    console.log('Progress loaded from cloud!');
+                }
+            } catch (error) {
+                console.error('Failed to load user progress:', error);
+            }
+        }
+
+        // Utility functions
+        function getRelationMode(relation) {
+            if (['SAME', 'OPPOSITE', 'DIFFERENT'].includes(relation)) return 'equality';
+            if (['BEFORE', 'AFTER', 'AT'].includes(relation)) return 'temporal';
+            if (['CONTAINS', 'WITHIN'].includes(relation)) return 'containment';
+            return 'spatial';
+        }
+
+        function deriveRelation(rel1, rel2) {
+            const mode1 = getRelationMode(rel1);
+            const mode2 = getRelationMode(rel2);
+            
+            if (mode1 !== mode2) return 'AMBIGUOUS';
+            
+            if (mode1 === 'equality') {
+                if (rel1 === 'SAME') return rel2;
+                if (rel2 === 'SAME') return rel1;
+                if (rel1 === 'OPPOSITE' && rel2 === 'OPPOSITE') return 'SAME';
+                // DIFFERENT combined with anything other than SAME is AMBIGUOUS
+                if (rel1 === 'DIFFERENT' || rel2 === 'DIFFERENT') return 'AMBIGUOUS';
+                return 'AMBIGUOUS';
+            } else if (mode1 === 'temporal') {
+                if (rel1 === 'AT') return rel2;
+                if (rel2 === 'AT') return rel1;
+                if (rel1 === 'BEFORE' && rel2 === 'BEFORE') return 'BEFORE';
+                if (rel1 === 'AFTER' && rel2 === 'AFTER') return 'AFTER';
+                return 'AMBIGUOUS';
+            } else if (mode1 === 'containment') {
+                if (rel1 === 'CONTAINS' && rel2 === 'CONTAINS') return 'CONTAINS';
+                if (rel1 === 'WITHIN' && rel2 === 'WITHIN') return 'WITHIN';
+                return 'AMBIGUOUS';
+            } else {
+                if (rel1 === rel2) return rel1;
+                return 'AMBIGUOUS';
+            }
+        }
+
+        function findAllPaths(graph, start, end, currentPath = [], visited = new Set(), allPaths = []) {
+            if (start === end && currentPath.length > 0) {
+                allPaths.push([...currentPath]);
+                return allPaths;
+            }
+            visited.add(start);
+            for (const edge of graph) {
+                let nextNode = null, edgeToAdd = null;
+                if (edge.stimulus1 === start && !visited.has(edge.stimulus2)) {
+                    nextNode = edge.stimulus2;
+                    edgeToAdd = { ...edge, reversed: false };
+                } else if (edge.stimulus2 === start && !visited.has(edge.stimulus1)) {
+                    nextNode = edge.stimulus1;
+                    const reversedRelation = (edge.relation === 'CONTAINS') ? 'WITHIN' : 
+                                            (edge.relation === 'WITHIN') ? 'CONTAINS' : edge.relation;
+                    edgeToAdd = { ...edge, relation: reversedRelation, reversed: true };
+                }
+                if (nextNode) {
+                    currentPath.push(edgeToAdd);
+                    findAllPaths(graph, nextNode, end, currentPath, new Set(visited), allPaths);
+                    currentPath.pop();
+                }
+            }
+            return allPaths;
+        }
+
+        function deriveFromPath(path) {
+            if (!path || path.length === 0) return null;
+            let result = path[0].relation;
+            for (let i = 1; i < path.length; i++) {
+                result = deriveRelation(result, path[i].relation);
+                if (result === 'AMBIGUOUS') return 'AMBIGUOUS';
+            }
+            return result;
+        }
+
+        function deriveRelationFromGraph(graph, start, end) {
+            if (start === end) {
+                if (state.enabledRelationModes.equality) return 'SAME';
+                if (state.enabledRelationModes.temporal) return 'AT';
+                return null;
+            }
+            const allPaths = findAllPaths(graph, start, end);
+            if (allPaths.length === 0) return null;
+            
+            const derivedRelations = allPaths.map(path => deriveFromPath(path)).filter(r => r !== null);
+            if (derivedRelations.length === 0) return null;
+            
+            const nonAmbiguous = derivedRelations.filter(r => r !== 'AMBIGUOUS');
+            if (nonAmbiguous.length === 0) return 'AMBIGUOUS';
+            
+            const firstRel = nonAmbiguous[0];
+            const allAgree = nonAmbiguous.every(rel => rel === firstRel);
+            
+            return allAgree ? firstRel : 'AMBIGUOUS';
+        }
+
+        function generateStimulus() {
+            const availableTypes = [];
+            if (state.useLetters) availableTypes.push('letters');
+            if (state.useEmojis) availableTypes.push('emojis');
+            if (state.useVoronoi) availableTypes.push('voronoi');
+            if (state.useMandelbrot) availableTypes.push('mandelbrot');
+            
+            if (availableTypes.length === 0) availableTypes.push('letters');
+            
+            const selectedType = availableTypes[Math.floor(Math.random() * availableTypes.length)];
+            
+            if (selectedType === 'emojis') {
+                return emojiList[Math.floor(Math.random() * emojiList.length)];
+            } else if (selectedType === 'voronoi') {
+                return `voronoi_${Math.floor(Math.random() * 1000000)}`;
+            } else if (selectedType === 'mandelbrot') {
+                return `mandelbrot_${Math.floor(Math.random() * 1000000)}`;
+            } else {
+                const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+                let result = '';
+                for (let i = 0; i < state.letterLength; i++) {
+                    result += chars.charAt(Math.floor(Math.random() * chars.length));
+                }
+                return result;
+            }
+        }
+
+        function generateVoronoiSVG(seed) {
+            const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E2', '#F06292', '#AED581'];
+            const random = (s) => { const x = Math.sin(s++) * 10000; return x - Math.floor(x); };
+            
+            let svgContent = '<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" style="border-radius: 0.375rem;">';
+            const gridSize = 4;
+            const tileSize = 64 / gridSize;
+            
+            for (let row = 0; row < gridSize; row++) {
+                for (let col = 0; col < gridSize; col++) {
+                    const colorIndex = Math.floor(random(seed + row * gridSize + col) * colors.length);
+                    const color = colors[colorIndex];
+                    const x = col * tileSize;
+                    const y = row * tileSize;
+                    svgContent += `<rect x="${x}" y="${y}" width="${tileSize}" height="${tileSize}" fill="${color}" opacity="0.9"/>`;
+                }
+            }
+            svgContent += '</svg>';
+            return svgContent;
+        }
+
+        function generateMandelbrotSVG(seed) {
+            const random = (s) => { const x = Math.sin(s++) * 10000; return x - Math.floor(x); };
+            const centerX = -0.7 + (random(seed) - 0.5) * 0.5;
+            const centerY = 0 + (random(seed + 100) - 0.5) * 0.5;
+            const zoom = 0.3 + random(seed + 200) * 0.7;
+            
+            const width = 64, height = 64, maxIterations = 50;
+            let svgContent = '<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" style="border-radius: 0.375rem;">';
+            const colors = ['#000033', '#000055', '#0000AA', '#0000FF', '#0055FF', '#00AAFF', '#00FFFF', '#55FFAA', '#AAFF55', '#FFFF00', '#FFAA00', '#FF5500', '#FF0000', '#AA0000', '#550000', '#000000'];
+            
+            for (let py = 0; py < height; py++) {
+                for (let px = 0; px < width; px++) {
+                    const x0 = centerX + (px / width - 0.5) * zoom;
+                    const y0 = centerY + (py / height - 0.5) * zoom;
+                    let x = 0, y = 0, iteration = 0;
+                    
+                    while (x * x + y * y <= 4 && iteration < maxIterations) {
+                        const xtemp = x * x - y * y + x0;
+                        y = 2 * x * y + y0;
+                        x = xtemp;
+                        iteration++;
+                    }
+                    
+                    const color = iteration === maxIterations ? '#000000' : colors[Math.floor((iteration / maxIterations) * (colors.length - 1))];
+                    svgContent += `<rect x="${px}" y="${py}" width="1" height="1" fill="${color}"/>`;
+                }
+            }
+            svgContent += '</svg>';
+            return svgContent;
+        }
+
+        function generateTrial() {
+            const enabledModes = Object.keys(state.enabledRelationModes).filter(mode => state.enabledRelationModes[mode]);
+            const chosenMode = enabledModes.length > 0 ? enabledModes[Math.floor(Math.random() * enabledModes.length)] : 'equality';
+            const activeRelations = relationSets[chosenMode];
+            
+            // Use the premise count specific to this mode
+            const premiseCount = state.premiseCounts[chosenMode];
+            
+            const numStimuli = Math.max(3, premiseCount + 1);
+            const stimuli = [generateStimulus()];
+            const premises = [];
+            
+            for (let p = 0; p < premiseCount; p++) {
+                let chosenPair = null;
+                const ambiguousPairs = [];
+                
+                for (let i = 0; i < stimuli.length; i++) {
+                    for (let j = i + 1; j < stimuli.length; j++) {
+                        const s1 = stimuli[i], s2 = stimuli[j];
+                        const alreadyConnected = premises.some(pr => (pr.stimulus1 === s1 && pr.stimulus2 === s2) || (pr.stimulus1 === s2 && pr.stimulus2 === s1));
+                        if (!alreadyConnected) {
+                            const derived = deriveRelationFromGraph(premises, s1, s2);
+                            if (derived === 'AMBIGUOUS') ambiguousPairs.push({ s1, s2 });
+                        }
+                    }
+                }
+                
+                if (ambiguousPairs.length > 0 && Math.random() < state.networkComplexity) {
+                    chosenPair = ambiguousPairs[Math.floor(Math.random() * ambiguousPairs.length)];
+                } else if (stimuli.length < numStimuli) {
+                    const newStimulus = generateStimulus();
+                    stimuli.push(newStimulus);
+                    chosenPair = { s1: stimuli[Math.floor(Math.random() * (stimuli.length - 1))], s2: newStimulus };
+                } else {
+                    const availablePairs = [];
+                    for (let i = 0; i < stimuli.length; i++) {
+                        for (let j = i + 1; j < stimuli.length; j++) {
+                            const s1 = stimuli[i], s2 = stimuli[j];
+                            if (!premises.some(pr => (pr.stimulus1 === s1 && pr.stimulus2 === s2) || (pr.stimulus1 === s2 && pr.stimulus2 === s1))) {
+                                availablePairs.push({ s1, s2 });
+                            }
+                        }
+                    }
+                    chosenPair = availablePairs.length > 0 ? availablePairs[Math.floor(Math.random() * availablePairs.length)] : { s1: stimuli[0], s2: stimuli[1] };
+                }
+                
+                if (chosenPair) {
+                    premises.push({
+                        stimulus1: chosenPair.s1,
+                        relation: activeRelations[Math.floor(Math.random() * activeRelations.length)],
+                        stimulus2: chosenPair.s2
+                    });
+                }
+            }
+            
+            const startIdx = Math.floor(Math.random() * stimuli.length);
+            let endIdx = Math.floor(Math.random() * stimuli.length);
+            if (startIdx === endIdx) endIdx = (endIdx + 1) % stimuli.length;
+            
+            const derivedRelation = deriveRelationFromGraph(premises, stimuli[startIdx], stimuli[endIdx]);
+            let questionRelation, correctAnswer;
+            
+            if (derivedRelation === 'AMBIGUOUS' || derivedRelation === null) {
+                questionRelation = activeRelations[Math.floor(Math.random() * activeRelations.length)];
+                correctAnswer = 'ambiguous';
+            } else {
+                const askCompatible = Math.random() < 0.5;
+                if (askCompatible) {
+                    questionRelation = derivedRelation;
+                    correctAnswer = true;
+                } else {
+                    const incompatible = activeRelations.filter(r => r !== derivedRelation);
+                    if (incompatible.length > 0) {
+                        questionRelation = incompatible[Math.floor(Math.random() * incompatible.length)];
+                        correctAnswer = false;
+                    } else {
+                        questionRelation = derivedRelation;
+                        correctAnswer = true;
+                    }
+                }
+            }
+
+            return {
+                premises,
+                question: { stimulus1: stimuli[startIdx], relation: questionRelation, stimulus2: stimuli[endIdx] },
+                correctAnswer,
+                derivedRelation: derivedRelation || 'AMBIGUOUS',
+                allStimuli: stimuli,
+                mode: chosenMode  // Store which mode this trial belongs to
+            };
+        }
+
+        function startNewTrial() {
+            state.currentTrial = generateTrial();
+            // Use mode-specific time per question
+            const mode = state.currentTrial.mode;
+            state.timeLeft = state.modeProgress[mode].timePerQuestion;
+            state.feedback = null;
+            render();
+            startTimer();
+        }
+
+        function startTimer() {
+            if (timerId) clearInterval(timerId);
+            timerId = setInterval(() => {
+                if (!state.isPaused && !state.feedback && state.timeLeft > 0) {
+                    const hasMandelbrot = state.currentTrial?.premises.some(p => 
+                        p.stimulus1.startsWith('mandelbrot_') || p.stimulus2.startsWith('mandelbrot_')
+                    ) || false;
+                    const speedMultiplier = (state.useMandelbrot && hasMandelbrot) ? 5 : 1;
+                    state.timeLeft = Math.max(0, state.timeLeft - (0.1 * speedMultiplier));
+                    render();
+                    
+                    if (state.timeLeft <= 0) {
+                        handleTimeout();
+                    }
+                }
+            }, 100);
+        }
+
+        function handleTimeout() {
+            state.score.missed++;
+            state.feedback = 'missed';
+            const mode = state.currentTrial.mode;
+            const modeTime = state.modeProgress[mode].timePerQuestion;
+            const entry = {
+                trial: state.currentTrial,
+                userAnswer: null,
+                isCorrect: false,
+                timestamp: Date.now(),
+                timeUsed: modeTime,
+                premiseCount: state.currentTrial.premises.length
+            };
+            state.history.push(entry);
+            state.statsHistory.push({
+                timestamp: Date.now(),
+                timeUsed: modeTime,
+                premiseCount: state.currentTrial.premises.length,
+                isCorrect: false,
+                mode: mode
+            });
+            
+            // Track for auto-progress (both universal and mode-specific)
+            state.recentAnswers.push(false);
+            state.modeProgress[mode].recentAnswers.push(false);
+            checkAutoProgress(mode);
+            
+            render();
+            saveToStorage();
+            setTimeout(() => startNewTrial(), 1500);
+        }
+
+        function handleAnswer(userAnswer) {
+            if (state.isPaused || state.feedback) return;
+            
+            const isCorrect = userAnswer === state.currentTrial.correctAnswer;
+            const mode = state.currentTrial.mode;
+            const modeTime = state.modeProgress[mode].timePerQuestion;
+            const timeUsed = modeTime - state.timeLeft;
+            
+            if (isCorrect) {
+                state.score.correct++;
+            } else {
+                state.score.incorrect++;
+            }
+            
+            state.feedback = isCorrect ? 'correct' : 'incorrect';
+            
+            const entry = {
+                trial: state.currentTrial,
+                userAnswer,
+                isCorrect,
+                timestamp: Date.now(),
+                timeUsed,
+                premiseCount: state.currentTrial.premises.length
+            };
+            
+            state.history.push(entry);
+            state.statsHistory.push({
+                timestamp: Date.now(),
+                timeUsed,
+                premiseCount: state.currentTrial.premises.length,
+                isCorrect,
+                mode: mode
+            });
+            
+            // Track for auto-progress (both universal and mode-specific)
+            state.recentAnswers.push(isCorrect);
+            state.modeProgress[mode].recentAnswers.push(isCorrect);
+            checkAutoProgress(mode);
+            
+            render();
+            saveToStorage();
+            setTimeout(() => startNewTrial(), 1500);
+        }
+
+        function checkAutoProgress(mode) {
+            if (!state.autoProgressEnabled) return;
+            
+            if (state.universalAutoProgress) {
+                // Universal mode: all modes share the same progress
+                if (state.recentAnswers.length < state.targetPremiseCount) return;
+                
+                const recentWindow = state.recentAnswers.slice(-state.targetPremiseCount);
+                const accuracy = (recentWindow.filter(a => a).length / state.targetPremiseCount) * 100;
+                
+                if (accuracy >= state.targetAccuracy) {
+                    if (state.timePerQuestion > 10) {
+                        // Decrease time for all modes
+                        state.timePerQuestion = Math.max(10, state.timePerQuestion - 5);
+                        Object.keys(state.modeProgress).forEach(m => {
+                            state.modeProgress[m].timePerQuestion = state.timePerQuestion;
+                        });
+                        state.recentAnswers = [];
+                    } else {
+                        // Time is at minimum, increase premises for all modes
+                        Object.keys(state.premiseCounts).forEach(m => {
+                            state.premiseCounts[m] = Math.min(100, state.premiseCounts[m] + 1);
+                        });
+                        state.timePerQuestion = 30;
+                        Object.keys(state.modeProgress).forEach(m => {
+                            state.modeProgress[m].timePerQuestion = 30;
+                        });
+                        state.recentAnswers = [];
+                    }
+                }
+            } else {
+                // Mode-specific: each mode has independent progress
+                const modeData = state.modeProgress[mode];
+                if (modeData.recentAnswers.length < state.targetPremiseCount) return;
+                
+                const recentWindow = modeData.recentAnswers.slice(-state.targetPremiseCount);
+                const accuracy = (recentWindow.filter(a => a).length / state.targetPremiseCount) * 100;
+                
+                if (accuracy >= state.targetAccuracy) {
+                    if (modeData.timePerQuestion > 10) {
+                        // Decrease time for this mode
+                        modeData.timePerQuestion = Math.max(10, modeData.timePerQuestion - 5);
+                        modeData.recentAnswers = [];
+                    } else {
+                        // Time is at minimum, increase premises for this mode
+                        state.premiseCounts[mode] = Math.min(100, state.premiseCounts[mode] + 1);
+                        modeData.timePerQuestion = 30; // Reset time
+                        modeData.recentAnswers = [];
+                    }
+                }
+            }
+        }
+
+        function togglePause() {
+            state.isPaused = !state.isPaused;
+            if (!state.isPaused) {
+                state.currentTrial = generateTrial();
+                const mode = state.currentTrial.mode;
+                state.timeLeft = state.modeProgress[mode].timePerQuestion;
+                state.feedback = null;
+                startTimer();
+            } else {
+                if (state.currentTrial) {
+                    const mode = state.currentTrial.mode;
+                    state.timeLeft = state.modeProgress[mode].timePerQuestion;
+                }
+            }
+            render();
+        }
+
+        function resetGame() {
+            state.score = { correct: 0, incorrect: 0, missed: 0 };
+            state.history = [];
+            state.recentAnswers = [];
+            state.statsHistory = [];
+            // Reset mode-specific progress
+            state.modeProgress = {
+                equality: { recentAnswers: [], timePerQuestion: 30 },
+                temporal: { recentAnswers: [], timePerQuestion: 30 },
+                spatial: { recentAnsw
