@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Relational Frame Trainer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        * { box-sizing: border-box; }
+        body { margin: 0; font-family: system-ui, sans-serif; }
+        .emoji-stimulus { font-size: 2rem; }
+        button:active { transform: scale(0.95); }
+    </style>
+</head>
+<body>
+    <div id="app"></div>
+    <script>
+        const Game = {
+            state: {
+                darkMode: false,
+                score: { correct: 0, incorrect: 0, missed: 0 },
+                timeLeft: 30,
+                isPaused: false,
+                feedback: null,
+                currentTrial: null,
+                showSettings: false,
+                showTutorial: false
+            },
+            
+            relationSets: {
+                equality: ['SAME', 'OPPOSITE', 'DIFFERENT']
+            },
+            
+            timerId: null,
+
+            init() {
+                this.startNewTrial();
+                this.render();
+                this.attachKeyboard();
+            },
+
+            generateStimulus() {
+                let r = '';
+                for (let i = 0; i < 3; i++) {
+                    r += 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'[Math.floor(Math.random() * 26)];
+                }
+                return r;
+            },
+
+            deriveRelation(r1, r2) {
+                if (r1 === 'SAME') return r2;
+                if (r2 === 'SAME') return r1;
+                if (r1 === 'OPPOSITE' && r2 === 'OPPOSITE') return 'SAME';
+                return 'AMBIGUOUS';
+            },
+
+            findPaths(graph, start, end, path = [], visited = new Set(), all = []) {
+                if (start === end && path.length > 0) {
+                    all.push([...path]);
+                    return all;
+                }
+                visited.add(start);
+                for (const edge of graph) {
+                    let next = null, e = null;
+                    if (edge.stimulus1 === start && !visited.has(edge.stimulus2)) {
+                        next = edge.stimulus2;
+                        e = {...edge};
+                    } else if (edge.stimulus2 === start && !visited.has(edge.stimulus1)) {
+                        next = edge.stimulus1;
+                        e = {...edge};
+                    }
+                    if (next) {
+                        path.push(e);
+                        this.findPaths(graph, next, end, path, new Set(visited), all);
+                        path.pop();
+                    }
+                }
+                return all;
+            },
+
+            deriveFromGraph(graph, start, end) {
+                if (start === end) return 'SAME';
+                const paths = this.findPaths(graph, start, end);
+                if (paths.length === 0) return null;
+                
+                const rels = paths.map(p => {
+                    let r = p[0].relation;
+                    for (let i = 1; i < p.length; i++) {
+                        r = this.deriveRelation(r, p[i].relation);
+                        if (r === 'AMBIGUOUS') return 'AMBIGUOUS';
+                    }
+                    return r;
+                });
+                
+                const clean = rels.filter(r => r !== 'AMBIGUOUS');
+                if (clean.length === 0) return 'AMBIGUOUS';
+                return clean.every(r => r === clean[0]) ? clean[0] : 'AMBIGUOUS';
+            },
+
+            generateTrial() {
+                const rels = this.relationSets.equality;
+                const stimuli = [this.generateStimulus()];
+                const premises = [];
+                
+                for (let p = 0; p < 3; p++) {
+                    if (stimuli.length < 4) {
+                        const ns = this.generateStimulus();
+                        stimuli.push(ns);
+                        const prevIdx = Math.floor(Math.random() * (stimuli.length - 1));
+                        premises.push({
+                            stimulus1: stimuli[prevIdx],
+                            relation: rels[Math.floor(Math.random() * rels.length)],
+                            stimulus2: ns
+                        });
+                    }
+                }
+                
+                const si = Math.floor(Math.random() * stimuli.length);
+                let ei = Math.floor(Math.random() * stimuli.length);
+                if (si === ei) ei = (ei + 1) % stimuli.length;
+                
+                const derived = this.deriveFromGraph(premises, stimuli[si], stimuli[ei]);
+                let qrel, ans;
+                
+                if (derived === 'AMBIGUOUS' || !derived) {
+                    qrel = rels[Math.floor(Math.random() * rels.length)];
+                    ans = 'ambiguous';
+                } else {
+                    if (Math.random() < 0.5) {
+                        qrel = derived;
+                        ans = true;
+                    } else {
+                        const inc = rels.filter(r => r !== derived);
+                        qrel = inc.length ? inc[Math.floor(Math.random() * inc.length)] : derived;
+                        ans = qrel === derived;
+                    }
+                }
+                
+                return {
+                    premises,
+                    question: {stimulus1: stimuli[si], relation: qrel, stimulus2: stimuli[ei]},
+                    correctAnswer: ans
+                };
+            },
+
+            startNewTrial() {
+                this.state.currentTrial = this.generateTrial();
+                this.state.timeLeft = 30;
+                this.state.feedback = null;
+                this.render();
+                this.startTimer();
+            },
+
+            startTimer() {
+                clearInterval(this.timerId);
+                this.timerId = setInterval(() => {
+                    if (!this.state.isPaused && !this.state.feedback && this.state.timeLeft > 0) {
+                        this.state.timeLeft = Math.max(0, this.state.timeLeft - 0.1);
+                        this.render();
+                        if (this.state.timeLeft <= 0) this.handleTimeout();
+                    }
+                }, 100);
+            },
+
+            handleTimeout() {
+                this.state.score.missed++;
+                this.state.feedback = 'missed';
+                this.render();
+                setTimeout(() => this.startNewTrial(), 1500);
+            },
+
+            handleAnswer(ans) {
+                if (this.state.isPaused || this.state.feedback) return;
+                
+                const correct = ans === this.state.currentTrial.correctAnswer;
+                if (correct) this.state.score.correct++;
+                else this.state.score.incorrect++;
+                
+                this.state.feedback = correct ? 'correct' : 'incorrect';
+                this.render();
+                setTimeout(() => this.startNewTrial(), 1500);
+            },
+
+            togglePause() {
+                this.state.isPaused = !this.state.isPaused;
+                if (!this.state.isPaused) this.startTimer();
+                this.render();
+            },
+
+            attachKeyboard() {
+                document.addEventListener('keydown', e => {
+                    if (e.key === ' ') {
+                        e.preventDefault();
+                        this.togglePause();
+                    } else if (!this.state.isPaused && !this.state.feedback) {
+                        if (e.key === '1') this.handleAnswer(true);
+                        else if (e.key === '2') this.handleAnswer(false);
+                        else if (e.key === '3') this.handleAnswer('ambiguous');
+                    }
+                });
+            },
+
+            render() {
+                const s = this.state;
+                const dark = s.darkMode;
+                
+                let html = '<div class="min-h-screen flex flex-col ' + (dark ? 'bg-slate-900 text-white' : 'bg-slate-50 text-gray-900') + '">';
+                
+                // Header
+                html += '<div class="p-4 shadow-md ' + (dark ? 'bg-slate-800' : 'bg-white') + '">';
+                html += '<div class="flex justify-between items-center">';
+                html += '<button onclick="Game.state.showTutorial=true;Game.render()" class="px-4 py-2 rounded bg-blue-500 text-white">Help</button>';
+                html += '<div class="flex items-center gap-4">';
+                html += '<div class="text-2xl font-bold">' + s.timeLeft.toFixed(1) + 's</div>';
+                html += '<button onclick="Game.togglePause()" class="px-4 py-2 rounded text-white ' + (s.isPaused ? 'bg-green-500' : 'bg-yellow-500') + '">' + (s.isPaused ? '▶' : '⏸') + '</button>';
+                html += '<button onclick="Game.state.darkMode=!Game.state.darkMode;Game.render()" class="px-4 py-2 rounded bg-indigo-500 text-white">🌓</button>';
+                html += '</div></div>';
+                
+                // Score
+                html += '<div class="flex gap-6 mt-4">';
+                html += '<div><div class="text-2xl font-bold text-green-600">' + s.score.correct + '</div><div class="text-sm">Correct</div></div>';
+                html += '<div><div class="text-2xl font-bold text-red-600">' + s.score.incorrect + '</div><div class="text-sm">Incorrect</div></div>';
+                html += '<div><div class="text-2xl font-bold text-orange-600">' + s.score.missed + '</div><div class="text-sm">Missed</div></div>';
+                html += '</div></div>';
+                
+                // Main content
+                if (s.isPaused) {
+                    html += '<div class="flex-1 flex items-center justify-center">';
+                    html += '<div class="text-center"><div class="text-4xl mb-4">⏸</div><div class="text-2xl">Game Paused</div></div>';
+                    html += '</div>';
+                } else if (s.currentTrial) {
+                    html += '<div class="flex-1 p-6">';
+                    html += '<div class="max-w-4xl mx-auto">';
+                    html += '<div class="rounded-xl shadow-xl p-8 ' + (dark ? 'bg-slate-800' : 'bg-white') + '">';
+                    
+                    // Premises
+                    html += '<h3 class="text-sm font-semibold uppercase mb-4 text-gray-500">Given Premises:</h3>';
+                    html += '<div class="space-y-3 mb-8">';
+                    for (const p of s.currentTrial.premises) {
+                        html += '<div class="flex items-center justify-center text-xl p-4 rounded-lg ' + (dark ? 'bg-slate-700' : 'bg-gray-50') + '">';
+                        html += '<span class="font-bold text-indigo-600">' + p.stimulus1 + '</span>';
+                        html += '<span class="mx-3 text-gray-500">is</span>';
+                        html += '<span class="font-semibold px-3 py-1 rounded border border-indigo-600">' + p.relation + '</span>';
+                        html += '<span class="mx-3 text-gray-500">to</span>';
+                        html += '<span class="font-bold text-indigo-600">' + p.stimulus2 + '</span>';
+                        html += '</div>';
+                    }
+                    html += '</div>';
+                    
+                    // Question
+                    html += '<div class="border-t-4 border-indigo-500 pt-8">';
+                    html += '<h3 class="text-lg font-semibold mb-4 text-indigo-600">Question:</h3>';
+                    html += '<div class="flex flex-wrap items-center justify-center text-2xl p-6 rounded-xl mb-6 ' + (dark ? 'bg-indigo-900/30' : 'bg-indigo-50') + '">';
+                    html += '<span class="font-bold mx-2">Is</span>';
+                    html += '<span class="font-bold text-indigo-600">' + s.currentTrial.question.stimulus1 + '</span>';
+                    html += '<span class="mx-3 font-semibold px-4 py-2 rounded-lg border-2 border-indigo-600">' + s.currentTrial.question.relation + '</span>';
+                    html += '<span class="font-bold mx-2">to</span>';
+                    html += '<span class="font-bold text-indigo-600">' + s.currentTrial.question.stimulus2 + '</span>';
+                    html += '<span class="font-bold mx-2">?</span>';
+                    html += '</div>';
+                    
+                    // Feedback or buttons
+                    if (s.feedback) {
+                        const color = s.feedback === 'correct' ? 'green' : s.feedback === 'incorrect' ? 'red' : 'orange';
+                        const msg = s.feedback === 'correct' ? '✓ Correct!' : s.feedback === 'incorrect' ? '✗ Incorrect' : '⏱ Time\'s Up!';
+                        html += '<div class="text-center text-3xl font-bold text-' + color + '-600 mb-6">' + msg + '</div>';
+                    } else {
+                        html += '<div class="grid grid-cols-1 md:grid-cols-3 gap-4">';
+                        html += '<button onclick="Game.handleAnswer(true)" class="px-6 py-4 text-white text-xl font-bold rounded-xl bg-green-600 hover:bg-green-700">YES<div class="text-sm font-normal mt-1">Press 1</div></button>';
+                        html += '<button onclick="Game.handleAnswer(false)" class="px-6 py-4 text-white text-xl font-bold rounded-xl bg-red-600 hover:bg-red-700">NO<div class="text-sm font-normal mt-1">Press 2</div></button>';
+                        html += '<button onclick="Game.handleAnswer(\'ambiguous\')" class="px-6 py-4 text-white text-xl font-bold rounded-xl bg-slate-600 hover:bg-slate-700">CAN\'T TELL<div class="text-sm font-normal mt-1">Press 3</div></button>';
+                        html += '</div>';
+                    }
+                    
+                    html += '</div></div></div></div>';
+                }
+                
+                // Tutorial modal
+                if (s.showTutorial) {
+                    html += '<div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onclick="Game.state.showTutorial=false;Game.render()">';
+                    html += '<div class="bg-white rounded-xl p-6 max-w-2xl m-4 text-gray-900" onclick="event.stopPropagation()">';
+                    html += '<h2 class="text-2xl font-bold mb-4 text-indigo-600">How to Play</h2>';
+                    html += '<div class="space-y-4">';
+                    html += '<p><strong>Relational Frame Training</strong> helps you practice deriving logical relationships.</p>';
+                    html += '<div><h3 class="font-bold mb-2">Rules:</h3><ul class="list-disc pl-6 space-y-2">';
+                    html += '<li>You\'ll see premises that establish relationships</li>';
+                    html += '<li>Answer whether the question relationship is true</li>';
+                    html += '<li>YES if it follows from premises</li>';
+                    html += '<li>NO if it contradicts premises</li>';
+                    html += '<li>CAN\'T TELL if insufficient information</li>';
+                    html += '</ul></div>';
+                    html += '<div><h3 class="font-bold mb-2">Keyboard:</h3><ul class="list-disc pl-6">';
+                    html += '<li>1 - YES</li><li>2 - NO</li><li>3 - CAN\'T TELL</li><li>Space - Pause</li>';
+                    html += '</ul></div>';
+                    html += '<button onclick="Game.state.showTutorial=false;Game.render()" class="mt-4 px-6 py-2 bg-indigo-600 text-white rounded-lg">Got it!</button>';
+                    html += '</div></div></div>';
+                }
+                
+                html += '</div>';
+                
+                document.getElementById('app').innerHTML = html;
+            }
+        };
+
+        Game.init();
+    </script>
+</body>
+</html>
