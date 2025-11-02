@@ -1,0 +1,2030 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Relational Frame Trainer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * { box-sizing: border-box; }
+        body { margin: 0; font-family: system-ui, -apple-system, sans-serif; overflow: hidden; }
+        .emoji-stimulus { font-size: 2rem; line-height: 1; }
+        .transition-colors { transition: background-color 0.3s, color 0.3s, border-color 0.3s; }
+        input[type="range"] { -webkit-appearance: none; appearance: none; height: 8px; border-radius: 5px; background: #ddd; outline: none; }
+        input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 20px; height: 20px; border-radius: 50%; background: #6366f1; cursor: pointer; }
+        input[type="range"]::-moz-range-thumb { width: 20px; height: 20px; border-radius: 50%; background: #6366f1; cursor: pointer; border: none; }
+        .dark input[type="range"] { background: #475569; }
+        button { cursor: pointer; }
+        button:active { transform: scale(0.98); }
+        .premise-item:hover { transform: translateX(2px); }
+        .premise-item { transition: transform 0.2s; }
+        
+        /* Ensure proper scrolling on mobile */
+        .main-content-wrapper {
+            height: 100%;
+            overflow-y: auto;
+            overflow-x: hidden;
+            -webkit-overflow-scrolling: touch;
+        }
+        
+        /* Add padding at bottom for mobile to ensure last button is visible */
+        @media (max-width: 640px) {
+            .main-content-wrapper {
+                padding-bottom: env(safe-area-inset-bottom, 20px);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="app"></div>
+
+    <script>
+        // State management
+        const state = {
+            difficulty: 3,
+            timePerQuestion: 30,
+            networkComplexity: 0.5,
+            spoilerPremises: false,
+            darkMode: false,
+            useLetters: true,
+            useEmojis: false,
+            useVoronoi: false,
+            useMandelbrot: false,
+            letterLength: 3,
+            autoProgressEnabled: true,
+            universalAutoProgress: true,  // true = universal, false = mode-specific
+            targetPremiseCount: 40,
+            targetAccuracy: 95,
+            recentAnswers: [],
+            statsHistory: [],
+            showSettings: false,
+            showHistory: false,
+            showStats: false,
+            showTutorial: false,
+            showAuth: false,
+            authView: 'login', // 'login', 'register', 'verify'
+            isPaused: false,
+            currentTrial: null,
+            timeLeft: 30,
+            score: { correct: 0, incorrect: 0, missed: 0 },
+            feedback: null,
+            history: [],
+            hoveredPremise: null,
+            enabledRelationModes: {
+                equality: true,
+                temporal: false,
+                spatial: false,
+                containment: false
+            },
+            // Separate premise counts for each mode
+            premiseCounts: {
+                equality: 3,
+                temporal: 3,
+                spatial: 3,
+                containment: 3
+            },
+            // Separate auto-progress tracking for each mode
+            modeProgress: {
+                equality: { recentAnswers: [], timePerQuestion: 30 },
+                temporal: { recentAnswers: [], timePerQuestion: 30 },
+                spatial: { recentAnswers: [], timePerQuestion: 30 },
+                containment: { recentAnswers: [], timePerQuestion: 30 }
+            },
+            // Auth state
+            user: null,
+            authEmail: '',
+            authPassword: '',
+            authUsername: '',
+            authVerificationCode: '',
+            authError: null,
+            authLoading: false
+        };
+
+        const relationSets = {
+            equality: ['SAME', 'OPPOSITE', 'DIFFERENT'],
+            temporal: ['BEFORE', 'AFTER', 'AT'],
+            spatial: ['NORTH', 'SOUTH', 'EAST', 'WEST', 'NORTHEAST', 'NORTHWEST', 'SOUTHEAST', 'SOUTHWEST'],
+            containment: ['CONTAINS', 'WITHIN']
+        };
+
+        const emojiList = ['😀', '😃', '😄', '😁', '😆', '😅', '🤣', '😂', '🙂', '🙃', '😉', '😊', '😇', '🥰', '😍', '🤩', '😘', '😗', '😚', '😙', '🥲', '😋', '😛', '😜', '🤪', '😝', '🤑', '🤗', '🤭', '🤫', '🤔', '🤐', '🤨', '😐', '😑', '😶', '😏', '😒', '🙄', '😬', '🤥', '😌', '😔', '😪', '🤤', '😴', '😷', '🤒', '🤕', '🤢', '🤮', '🤧', '🥵', '🥶', '🥴', '😵', '🤯', '🤠', '🥳', '🥸', '😎', '🤓', '🧐'];
+
+        let timerId = null;
+
+        // Initialize Supabase client
+        const SUPABASE_URL = 'https://hpqfgumdvftrwjzuoggx.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhwcWZndW1kdmZ0cndqenVvZ2d4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIwNjE5OTQsImV4cCI6MjA3NzYzNzk5NH0.U8TLeF5D263-8rJ3dEgiukA84jWr8nwzznFKNLJB3zg';
+        const { createClient } = supabase;
+        const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // Supabase authentication backend
+        const authBackend = {
+            async sendVerificationCode(email) {
+                try {
+                    // Generate 6-digit code
+                    const code = Math.floor(100000 + Math.random() * 900000).toString();
+                    
+                    // Store verification code in database
+                    const { error } = await supabaseClient
+                        .from('verification_codes')
+                        .insert({
+                            email: email,
+                            code: code
+                        });
+                    
+                    if (error) throw error;
+                    
+                    // In production, send email via service
+                    // For now, show in alert
+                    console.log(`Verification code for ${email}: ${code}`);
+                    alert(`Verification code (in production this would be emailed): ${code}`);
+                    
+                    return { success: true };
+                } catch (error) {
+                    console.error('Send verification error:', error);
+                    return { success: false, error: error.message };
+                }
+            },
+            
+            async verifyCode(email, code) {
+                try {
+                    // Check if code exists and is not expired
+                    const { data, error } = await supabase
+                        .from('verification_codes')
+                        .select('*')
+                        .eq('email', email)
+                        .eq('code', code)
+                        .gt('expires_at', new Date().toISOString())
+                        .order('created_at', { ascending: false })
+                        .limit(1);
+                    
+                    if (error) throw error;
+                    
+                    if (!data || data.length === 0) {
+                        return { success: false, error: 'Invalid or expired verification code' };
+                    }
+                    
+                    // Delete used code
+                    await supabase
+                        .from('verification_codes')
+                        .delete()
+                        .eq('email', email);
+                    
+                    return { success: true };
+                } catch (error) {
+                    console.error('Verify code error:', error);
+                    return { success: false, error: error.message };
+                }
+            },
+            
+            async register(email, username, password) {
+                try {
+                    // Check if email already exists
+                    const { data: existingEmail } = await supabase
+                        .from('users')
+                        .select('id')
+                        .eq('email', email)
+                        .single();
+                    
+                    if (existingEmail) {
+                        return { success: false, error: 'Email already registered' };
+                    }
+                    
+                    // Check if username already exists
+                    const { data: existingUsername } = await supabase
+                        .from('users')
+                        .select('id')
+                        .eq('username', username)
+                        .single();
+                    
+                    if (existingUsername) {
+                        return { success: false, error: 'Username already taken' };
+                    }
+                    
+                    // Hash password (simple hash - in production use bcrypt)
+                    const passwordHash = btoa(password); // Base64 encoding (NOT secure for production!)
+                    
+                    // Create user
+                    const { data: newUser, error } = await supabase
+                        .from('users')
+                        .insert({
+                            email: email,
+                            username: username,
+                            password_hash: passwordHash
+                        })
+                        .select()
+                        .single();
+                    
+                    if (error) throw error;
+                    
+                    // Initialize user progress
+                    await supabase
+                        .from('user_progress')
+                        .insert({
+                            user_id: newUser.id,
+                            score: { correct: 0, incorrect: 0, missed: 0 },
+                            history: [],
+                            stats_history: [],
+                            settings: {},
+                            recent_answers: []
+                        });
+                    
+                    return { 
+                        success: true, 
+                        user: { 
+                            id: newUser.id,
+                            email: newUser.email, 
+                            username: newUser.username 
+                        } 
+                    };
+                } catch (error) {
+                    console.error('Register error:', error);
+                    return { success: false, error: error.message };
+                }
+            },
+            
+            async login(usernameOrEmail, password) {
+                try {
+                    // Hash password
+                    const passwordHash = btoa(password);
+                    
+                    // Try to find user by username or email
+                    const { data, error } = await supabase
+                        .from('users')
+                        .select('*')
+                        .or(`username.eq.${usernameOrEmail},email.eq.${usernameOrEmail}`)
+                        .eq('password_hash', passwordHash)
+                        .single();
+                    
+                    if (error || !data) {
+                        return { success: false, error: 'Invalid credentials' };
+                    }
+                    
+                    return { 
+                        success: true, 
+                        user: { 
+                            id: data.id,
+                            email: data.email, 
+                            username: data.username 
+                        } 
+                    };
+                } catch (error) {
+                    console.error('Login error:', error);
+                    return { success: false, error: 'Invalid credentials' };
+                }
+            },
+            
+            async saveProgress(userId, progressData) {
+                try {
+                    const { error } = await supabase
+                        .from('user_progress')
+                        .upsert({
+                            user_id: userId,
+                            score: progressData.score,
+                            history: progressData.history,
+                            stats_history: progressData.statsHistory,
+                            settings: progressData.settings,
+                            recent_answers: progressData.recentAnswers,
+                            last_sync: new Date().toISOString()
+                        }, {
+                            onConflict: 'user_id'
+                        });
+                    
+                    if (error) throw error;
+                    
+                    return { success: true };
+                } catch (error) {
+                    console.error('Save progress error:', error);
+                    return { success: false, error: error.message };
+                }
+            },
+            
+            async loadProgress(userId) {
+                try {
+                    const { data, error } = await supabase
+                        .from('user_progress')
+                        .select('*')
+                        .eq('user_id', userId)
+                        .single();
+                    
+                    if (error) {
+                        // If no progress found, return empty progress
+                        if (error.code === 'PGRST116') {
+                            return {
+                                success: true,
+                                data: {
+                                    score: { correct: 0, incorrect: 0, missed: 0 },
+                                    history: [],
+                                    statsHistory: [],
+                                    settings: {},
+                                    recentAnswers: []
+                                }
+                            };
+                        }
+                        throw error;
+                    }
+                    
+                    return { 
+                        success: true, 
+                        data: {
+                            score: data.score,
+                            history: data.history,
+                            statsHistory: data.stats_history,
+                            settings: data.settings,
+                            recentAnswers: data.recent_answers
+                        }
+                    };
+                } catch (error) {
+                    console.error('Load progress error:', error);
+                    return { success: false, error: error.message };
+                }
+            }
+        };
+
+        // Storage functions - using localStorage for PC compatibility
+        function saveToStorage() {
+            const progressData = {
+                score: state.score,
+                history: state.history,
+                statsHistory: state.statsHistory,
+                settings: {
+                    difficulty: state.difficulty,
+                    timePerQuestion: state.timePerQuestion,
+                    networkComplexity: state.networkComplexity,
+                    spoilerPremises: state.spoilerPremises,
+                    darkMode: state.darkMode,
+                    useLetters: state.useLetters,
+                    useEmojis: state.useEmojis,
+                    useVoronoi: state.useVoronoi,
+                    useMandelbrot: state.useMandelbrot,
+                    letterLength: state.letterLength,
+                    autoProgressEnabled: state.autoProgressEnabled,
+                    universalAutoProgress: state.universalAutoProgress,
+                    targetPremiseCount: state.targetPremiseCount,
+                    targetAccuracy: state.targetAccuracy,
+                    enabledRelationModes: state.enabledRelationModes,
+                    premiseCounts: state.premiseCounts,
+                    modeProgress: state.modeProgress
+                },
+                recentAnswers: state.recentAnswers
+            };
+            
+            try {
+                // Save locally
+                localStorage.setItem('rft-data', JSON.stringify(progressData));
+                
+                // If user is logged in, sync to their account (using user ID)
+                if (state.user && state.user.id) {
+                    authBackend.saveProgress(state.user.id, progressData);
+                }
+            } catch (error) {
+                console.error('Save failed:', error);
+            }
+        }
+
+        function loadFromStorage() {
+            try {
+                const data = localStorage.getItem('rft-data');
+                if (data) {
+                    const parsed = JSON.parse(data);
+                    if (parsed.score) state.score = parsed.score;
+                    if (parsed.history) state.history = parsed.history;
+                    if (parsed.statsHistory) state.statsHistory = parsed.statsHistory;
+                    if (parsed.recentAnswers) state.recentAnswers = parsed.recentAnswers;
+                    if (parsed.settings) {
+                        Object.keys(parsed.settings).forEach(key => {
+                            if (parsed.settings[key] !== undefined) {
+                                state[key] = parsed.settings[key];
+                            }
+                        });
+                    }
+                }
+            } catch (error) {
+                console.log('No saved data found');
+            }
+        }
+
+        async function loadUserProgress(userId) {
+            try {
+                const result = await authBackend.loadProgress(userId);
+                if (result.success && result.data) {
+                    const data = result.data;
+                    
+                    // Load score and history
+                    if (data.score) state.score = data.score;
+                    if (data.history) state.history = data.history;
+                    if (data.statsHistory) state.statsHistory = data.statsHistory;
+                    if (data.recentAnswers) state.recentAnswers = data.recentAnswers;
+                    
+                    // Load settings
+                    if (data.settings) {
+                        Object.keys(data.settings).forEach(key => {
+                            if (data.settings[key] !== undefined) {
+                                state[key] = data.settings[key];
+                            }
+                        });
+                    }
+                    
+                    // Save to local storage as well
+                    localStorage.setItem('rft-data', JSON.stringify(data));
+                    
+                    console.log('Progress loaded from cloud!');
+                }
+            } catch (error) {
+                console.error('Failed to load user progress:', error);
+            }
+        }
+
+        // Utility functions
+        function getRelationMode(relation) {
+            if (['SAME', 'OPPOSITE', 'DIFFERENT'].includes(relation)) return 'equality';
+            if (['BEFORE', 'AFTER', 'AT'].includes(relation)) return 'temporal';
+            if (['CONTAINS', 'WITHIN'].includes(relation)) return 'containment';
+            return 'spatial';
+        }
+
+        function deriveRelation(rel1, rel2) {
+            const mode1 = getRelationMode(rel1);
+            const mode2 = getRelationMode(rel2);
+            
+            if (mode1 !== mode2) return 'AMBIGUOUS';
+            
+            if (mode1 === 'equality') {
+                if (rel1 === 'SAME') return rel2;
+                if (rel2 === 'SAME') return rel1;
+                if (rel1 === 'OPPOSITE' && rel2 === 'OPPOSITE') return 'SAME';
+                // DIFFERENT combined with anything other than SAME is AMBIGUOUS
+                if (rel1 === 'DIFFERENT' || rel2 === 'DIFFERENT') return 'AMBIGUOUS';
+                return 'AMBIGUOUS';
+            } else if (mode1 === 'temporal') {
+                if (rel1 === 'AT') return rel2;
+                if (rel2 === 'AT') return rel1;
+                if (rel1 === 'BEFORE' && rel2 === 'BEFORE') return 'BEFORE';
+                if (rel1 === 'AFTER' && rel2 === 'AFTER') return 'AFTER';
+                return 'AMBIGUOUS';
+            } else if (mode1 === 'containment') {
+                if (rel1 === 'CONTAINS' && rel2 === 'CONTAINS') return 'CONTAINS';
+                if (rel1 === 'WITHIN' && rel2 === 'WITHIN') return 'WITHIN';
+                return 'AMBIGUOUS';
+            } else {
+                if (rel1 === rel2) return rel1;
+                return 'AMBIGUOUS';
+            }
+        }
+
+        function findAllPaths(graph, start, end, currentPath = [], visited = new Set(), allPaths = []) {
+            if (start === end && currentPath.length > 0) {
+                allPaths.push([...currentPath]);
+                return allPaths;
+            }
+            visited.add(start);
+            for (const edge of graph) {
+                let nextNode = null, edgeToAdd = null;
+                if (edge.stimulus1 === start && !visited.has(edge.stimulus2)) {
+                    nextNode = edge.stimulus2;
+                    edgeToAdd = { ...edge, reversed: false };
+                } else if (edge.stimulus2 === start && !visited.has(edge.stimulus1)) {
+                    nextNode = edge.stimulus1;
+                    const reversedRelation = (edge.relation === 'CONTAINS') ? 'WITHIN' : 
+                                            (edge.relation === 'WITHIN') ? 'CONTAINS' : edge.relation;
+                    edgeToAdd = { ...edge, relation: reversedRelation, reversed: true };
+                }
+                if (nextNode) {
+                    currentPath.push(edgeToAdd);
+                    findAllPaths(graph, nextNode, end, currentPath, new Set(visited), allPaths);
+                    currentPath.pop();
+                }
+            }
+            return allPaths;
+        }
+
+        function deriveFromPath(path) {
+            if (!path || path.length === 0) return null;
+            let result = path[0].relation;
+            for (let i = 1; i < path.length; i++) {
+                result = deriveRelation(result, path[i].relation);
+                if (result === 'AMBIGUOUS') return 'AMBIGUOUS';
+            }
+            return result;
+        }
+
+        function deriveRelationFromGraph(graph, start, end) {
+            if (start === end) {
+                if (state.enabledRelationModes.equality) return 'SAME';
+                if (state.enabledRelationModes.temporal) return 'AT';
+                return null;
+            }
+            const allPaths = findAllPaths(graph, start, end);
+            if (allPaths.length === 0) return null;
+            
+            const derivedRelations = allPaths.map(path => deriveFromPath(path)).filter(r => r !== null);
+            if (derivedRelations.length === 0) return null;
+            
+            const nonAmbiguous = derivedRelations.filter(r => r !== 'AMBIGUOUS');
+            if (nonAmbiguous.length === 0) return 'AMBIGUOUS';
+            
+            const firstRel = nonAmbiguous[0];
+            const allAgree = nonAmbiguous.every(rel => rel === firstRel);
+            
+            return allAgree ? firstRel : 'AMBIGUOUS';
+        }
+
+        function generateStimulus() {
+            const availableTypes = [];
+            if (state.useLetters) availableTypes.push('letters');
+            if (state.useEmojis) availableTypes.push('emojis');
+            if (state.useVoronoi) availableTypes.push('voronoi');
+            if (state.useMandelbrot) availableTypes.push('mandelbrot');
+            
+            if (availableTypes.length === 0) availableTypes.push('letters');
+            
+            const selectedType = availableTypes[Math.floor(Math.random() * availableTypes.length)];
+            
+            if (selectedType === 'emojis') {
+                return emojiList[Math.floor(Math.random() * emojiList.length)];
+            } else if (selectedType === 'voronoi') {
+                return `voronoi_${Math.floor(Math.random() * 1000000)}`;
+            } else if (selectedType === 'mandelbrot') {
+                return `mandelbrot_${Math.floor(Math.random() * 1000000)}`;
+            } else {
+                const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+                let result = '';
+                for (let i = 0; i < state.letterLength; i++) {
+                    result += chars.charAt(Math.floor(Math.random() * chars.length));
+                }
+                return result;
+            }
+        }
+
+        function generateVoronoiSVG(seed) {
+            const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E2', '#F06292', '#AED581'];
+            const random = (s) => { const x = Math.sin(s++) * 10000; return x - Math.floor(x); };
+            
+            let svgContent = '<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" style="border-radius: 0.375rem;">';
+            const gridSize = 4;
+            const tileSize = 64 / gridSize;
+            
+            for (let row = 0; row < gridSize; row++) {
+                for (let col = 0; col < gridSize; col++) {
+                    const colorIndex = Math.floor(random(seed + row * gridSize + col) * colors.length);
+                    const color = colors[colorIndex];
+                    const x = col * tileSize;
+                    const y = row * tileSize;
+                    svgContent += `<rect x="${x}" y="${y}" width="${tileSize}" height="${tileSize}" fill="${color}" opacity="0.9"/>`;
+                }
+            }
+            svgContent += '</svg>';
+            return svgContent;
+        }
+
+        function generateMandelbrotSVG(seed) {
+            const random = (s) => { const x = Math.sin(s++) * 10000; return x - Math.floor(x); };
+            const centerX = -0.7 + (random(seed) - 0.5) * 0.5;
+            const centerY = 0 + (random(seed + 100) - 0.5) * 0.5;
+            const zoom = 0.3 + random(seed + 200) * 0.7;
+            
+            const width = 64, height = 64, maxIterations = 50;
+            let svgContent = '<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" style="border-radius: 0.375rem;">';
+            const colors = ['#000033', '#000055', '#0000AA', '#0000FF', '#0055FF', '#00AAFF', '#00FFFF', '#55FFAA', '#AAFF55', '#FFFF00', '#FFAA00', '#FF5500', '#FF0000', '#AA0000', '#550000', '#000000'];
+            
+            for (let py = 0; py < height; py++) {
+                for (let px = 0; px < width; px++) {
+                    const x0 = centerX + (px / width - 0.5) * zoom;
+                    const y0 = centerY + (py / height - 0.5) * zoom;
+                    let x = 0, y = 0, iteration = 0;
+                    
+                    while (x * x + y * y <= 4 && iteration < maxIterations) {
+                        const xtemp = x * x - y * y + x0;
+                        y = 2 * x * y + y0;
+                        x = xtemp;
+                        iteration++;
+                    }
+                    
+                    const color = iteration === maxIterations ? '#000000' : colors[Math.floor((iteration / maxIterations) * (colors.length - 1))];
+                    svgContent += `<rect x="${px}" y="${py}" width="1" height="1" fill="${color}"/>`;
+                }
+            }
+            svgContent += '</svg>';
+            return svgContent;
+        }
+
+        function generateTrial() {
+            const enabledModes = Object.keys(state.enabledRelationModes).filter(mode => state.enabledRelationModes[mode]);
+            const chosenMode = enabledModes.length > 0 ? enabledModes[Math.floor(Math.random() * enabledModes.length)] : 'equality';
+            const activeRelations = relationSets[chosenMode];
+            
+            // Use the premise count specific to this mode
+            const premiseCount = state.premiseCounts[chosenMode];
+            
+            const numStimuli = Math.max(3, premiseCount + 1);
+            const stimuli = [generateStimulus()];
+            const premises = [];
+            
+            for (let p = 0; p < premiseCount; p++) {
+                let chosenPair = null;
+                const ambiguousPairs = [];
+                
+                for (let i = 0; i < stimuli.length; i++) {
+                    for (let j = i + 1; j < stimuli.length; j++) {
+                        const s1 = stimuli[i], s2 = stimuli[j];
+                        const alreadyConnected = premises.some(pr => (pr.stimulus1 === s1 && pr.stimulus2 === s2) || (pr.stimulus1 === s2 && pr.stimulus2 === s1));
+                        if (!alreadyConnected) {
+                            const derived = deriveRelationFromGraph(premises, s1, s2);
+                            if (derived === 'AMBIGUOUS') ambiguousPairs.push({ s1, s2 });
+                        }
+                    }
+                }
+                
+                if (ambiguousPairs.length > 0 && Math.random() < state.networkComplexity) {
+                    chosenPair = ambiguousPairs[Math.floor(Math.random() * ambiguousPairs.length)];
+                } else if (stimuli.length < numStimuli) {
+                    const newStimulus = generateStimulus();
+                    stimuli.push(newStimulus);
+                    chosenPair = { s1: stimuli[Math.floor(Math.random() * (stimuli.length - 1))], s2: newStimulus };
+                } else {
+                    const availablePairs = [];
+                    for (let i = 0; i < stimuli.length; i++) {
+                        for (let j = i + 1; j < stimuli.length; j++) {
+                            const s1 = stimuli[i], s2 = stimuli[j];
+                            if (!premises.some(pr => (pr.stimulus1 === s1 && pr.stimulus2 === s2) || (pr.stimulus1 === s2 && pr.stimulus2 === s1))) {
+                                availablePairs.push({ s1, s2 });
+                            }
+                        }
+                    }
+                    chosenPair = availablePairs.length > 0 ? availablePairs[Math.floor(Math.random() * availablePairs.length)] : { s1: stimuli[0], s2: stimuli[1] };
+                }
+                
+                if (chosenPair) {
+                    premises.push({
+                        stimulus1: chosenPair.s1,
+                        relation: activeRelations[Math.floor(Math.random() * activeRelations.length)],
+                        stimulus2: chosenPair.s2
+                    });
+                }
+            }
+            
+            const startIdx = Math.floor(Math.random() * stimuli.length);
+            let endIdx = Math.floor(Math.random() * stimuli.length);
+            if (startIdx === endIdx) endIdx = (endIdx + 1) % stimuli.length;
+            
+            const derivedRelation = deriveRelationFromGraph(premises, stimuli[startIdx], stimuli[endIdx]);
+            let questionRelation, correctAnswer;
+            
+            if (derivedRelation === 'AMBIGUOUS' || derivedRelation === null) {
+                questionRelation = activeRelations[Math.floor(Math.random() * activeRelations.length)];
+                correctAnswer = 'ambiguous';
+            } else {
+                const askCompatible = Math.random() < 0.5;
+                if (askCompatible) {
+                    questionRelation = derivedRelation;
+                    correctAnswer = true;
+                } else {
+                    const incompatible = activeRelations.filter(r => r !== derivedRelation);
+                    if (incompatible.length > 0) {
+                        questionRelation = incompatible[Math.floor(Math.random() * incompatible.length)];
+                        correctAnswer = false;
+                    } else {
+                        questionRelation = derivedRelation;
+                        correctAnswer = true;
+                    }
+                }
+            }
+
+            return {
+                premises,
+                question: { stimulus1: stimuli[startIdx], relation: questionRelation, stimulus2: stimuli[endIdx] },
+                correctAnswer,
+                derivedRelation: derivedRelation || 'AMBIGUOUS',
+                allStimuli: stimuli,
+                mode: chosenMode  // Store which mode this trial belongs to
+            };
+        }
+
+        function startNewTrial() {
+            state.currentTrial = generateTrial();
+            // Use mode-specific time per question
+            const mode = state.currentTrial.mode;
+            state.timeLeft = state.modeProgress[mode].timePerQuestion;
+            state.feedback = null;
+            render();
+            startTimer();
+        }
+
+        function startTimer() {
+            if (timerId) clearInterval(timerId);
+            timerId = setInterval(() => {
+                if (!state.isPaused && !state.feedback && state.timeLeft > 0) {
+                    const hasMandelbrot = state.currentTrial?.premises.some(p => 
+                        p.stimulus1.startsWith('mandelbrot_') || p.stimulus2.startsWith('mandelbrot_')
+                    ) || false;
+                    const speedMultiplier = (state.useMandelbrot && hasMandelbrot) ? 5 : 1;
+                    state.timeLeft = Math.max(0, state.timeLeft - (0.1 * speedMultiplier));
+                    render();
+                    
+                    if (state.timeLeft <= 0) {
+                        handleTimeout();
+                    }
+                }
+            }, 100);
+        }
+
+        function handleTimeout() {
+            state.score.missed++;
+            state.feedback = 'missed';
+            const mode = state.currentTrial.mode;
+            const modeTime = state.modeProgress[mode].timePerQuestion;
+            const entry = {
+                trial: state.currentTrial,
+                userAnswer: null,
+                isCorrect: false,
+                timestamp: Date.now(),
+                timeUsed: modeTime,
+                premiseCount: state.currentTrial.premises.length
+            };
+            state.history.push(entry);
+            state.statsHistory.push({
+                timestamp: Date.now(),
+                timeUsed: modeTime,
+                premiseCount: state.currentTrial.premises.length,
+                isCorrect: false,
+                mode: mode
+            });
+            
+            // Track for auto-progress (both universal and mode-specific)
+            state.recentAnswers.push(false);
+            state.modeProgress[mode].recentAnswers.push(false);
+            checkAutoProgress(mode);
+            
+            render();
+            saveToStorage();
+            setTimeout(() => startNewTrial(), 1500);
+        }
+
+        function handleAnswer(userAnswer) {
+            if (state.isPaused || state.feedback) return;
+            
+            const isCorrect = userAnswer === state.currentTrial.correctAnswer;
+            const mode = state.currentTrial.mode;
+            const modeTime = state.modeProgress[mode].timePerQuestion;
+            const timeUsed = modeTime - state.timeLeft;
+            
+            if (isCorrect) {
+                state.score.correct++;
+            } else {
+                state.score.incorrect++;
+            }
+            
+            state.feedback = isCorrect ? 'correct' : 'incorrect';
+            
+            const entry = {
+                trial: state.currentTrial,
+                userAnswer,
+                isCorrect,
+                timestamp: Date.now(),
+                timeUsed,
+                premiseCount: state.currentTrial.premises.length
+            };
+            
+            state.history.push(entry);
+            state.statsHistory.push({
+                timestamp: Date.now(),
+                timeUsed,
+                premiseCount: state.currentTrial.premises.length,
+                isCorrect,
+                mode: mode
+            });
+            
+            // Track for auto-progress (both universal and mode-specific)
+            state.recentAnswers.push(isCorrect);
+            state.modeProgress[mode].recentAnswers.push(isCorrect);
+            checkAutoProgress(mode);
+            
+            render();
+            saveToStorage();
+            setTimeout(() => startNewTrial(), 1500);
+        }
+
+        function checkAutoProgress(mode) {
+            if (!state.autoProgressEnabled) return;
+            
+            if (state.universalAutoProgress) {
+                // Universal mode: all modes share the same progress
+                if (state.recentAnswers.length < state.targetPremiseCount) return;
+                
+                const recentWindow = state.recentAnswers.slice(-state.targetPremiseCount);
+                const accuracy = (recentWindow.filter(a => a).length / state.targetPremiseCount) * 100;
+                
+                if (accuracy >= state.targetAccuracy) {
+                    if (state.timePerQuestion > 10) {
+                        // Decrease time for all modes
+                        state.timePerQuestion = Math.max(10, state.timePerQuestion - 5);
+                        Object.keys(state.modeProgress).forEach(m => {
+                            state.modeProgress[m].timePerQuestion = state.timePerQuestion;
+                        });
+                        state.recentAnswers = [];
+                    } else {
+                        // Time is at minimum, increase premises for all modes
+                        Object.keys(state.premiseCounts).forEach(m => {
+                            state.premiseCounts[m] = Math.min(100, state.premiseCounts[m] + 1);
+                        });
+                        state.timePerQuestion = 30;
+                        Object.keys(state.modeProgress).forEach(m => {
+                            state.modeProgress[m].timePerQuestion = 30;
+                        });
+                        state.recentAnswers = [];
+                    }
+                }
+            } else {
+                // Mode-specific: each mode has independent progress
+                const modeData = state.modeProgress[mode];
+                if (modeData.recentAnswers.length < state.targetPremiseCount) return;
+                
+                const recentWindow = modeData.recentAnswers.slice(-state.targetPremiseCount);
+                const accuracy = (recentWindow.filter(a => a).length / state.targetPremiseCount) * 100;
+                
+                if (accuracy >= state.targetAccuracy) {
+                    if (modeData.timePerQuestion > 10) {
+                        // Decrease time for this mode
+                        modeData.timePerQuestion = Math.max(10, modeData.timePerQuestion - 5);
+                        modeData.recentAnswers = [];
+                    } else {
+                        // Time is at minimum, increase premises for this mode
+                        state.premiseCounts[mode] = Math.min(100, state.premiseCounts[mode] + 1);
+                        modeData.timePerQuestion = 30; // Reset time
+                        modeData.recentAnswers = [];
+                    }
+                }
+            }
+        }
+
+        function togglePause() {
+            state.isPaused = !state.isPaused;
+            if (!state.isPaused) {
+                state.currentTrial = generateTrial();
+                const mode = state.currentTrial.mode;
+                state.timeLeft = state.modeProgress[mode].timePerQuestion;
+                state.feedback = null;
+                startTimer();
+            } else {
+                if (state.currentTrial) {
+                    const mode = state.currentTrial.mode;
+                    state.timeLeft = state.modeProgress[mode].timePerQuestion;
+                }
+            }
+            render();
+        }
+
+        function resetGame() {
+            state.score = { correct: 0, incorrect: 0, missed: 0 };
+            state.history = [];
+            state.recentAnswers = [];
+            state.statsHistory = [];
+            // Reset mode-specific progress
+            state.modeProgress = {
+                equality: { recentAnswers: [], timePerQuestion: 30 },
+                temporal: { recentAnswers: [], timePerQuestion: 30 },
+                spatial: { recentAnswers: [], timePerQuestion: 30 },
+                containment: { recentAnswers: [], timePerQuestion: 30 }
+            };
+            startNewTrial();
+            saveToStorage();
+        }
+
+        function getAnswerLabel(answer) {
+            if (answer === true) return 'YES';
+            if (answer === false) return 'NO';
+            if (answer === 'ambiguous') return "CAN'T TELL";
+            return 'NO ANSWER';
+        }
+
+        function getRelationColor(relation) {
+            const colors = {
+                dark: {
+                    'SAME': 'bg-green-900/40 text-green-300 border-green-500',
+                    'OPPOSITE': 'bg-red-900/40 text-red-300 border-red-500',
+                    'DIFFERENT': 'bg-blue-900/40 text-blue-300 border-blue-500',
+                    'BEFORE': 'bg-purple-900/40 text-purple-300 border-purple-500',
+                    'AFTER': 'bg-orange-900/40 text-orange-300 border-orange-500',
+                    'AT': 'bg-cyan-900/40 text-cyan-300 border-cyan-500',
+                    'CONTAINS': 'bg-blue-900/40 text-blue-300 border-blue-500',
+                    'WITHIN': 'bg-green-900/40 text-green-300 border-green-500',
+                    'spatial': 'bg-teal-900/40 text-teal-300 border-teal-500'
+                },
+                light: {
+                    'SAME': 'bg-green-100 text-green-700 border-green-300',
+                    'OPPOSITE': 'bg-red-100 text-red-700 border-red-300',
+                    'DIFFERENT': 'bg-blue-100 text-blue-700 border-blue-300',
+                    'BEFORE': 'bg-purple-100 text-purple-700 border-purple-300',
+                    'AFTER': 'bg-orange-100 text-orange-700 border-orange-300',
+                    'AT': 'bg-cyan-100 text-cyan-700 border-cyan-300',
+                    'CONTAINS': 'bg-blue-100 text-blue-700 border-blue-300',
+                    'WITHIN': 'bg-green-100 text-green-700 border-green-300',
+                    'spatial': 'bg-teal-100 text-teal-700 border-teal-300'
+                }
+            };
+            
+            const mode = state.darkMode ? 'dark' : 'light';
+            if (['NORTH', 'SOUTH', 'EAST', 'WEST', 'NORTHEAST', 'NORTHWEST', 'SOUTHEAST', 'SOUTHWEST'].includes(relation)) {
+                return colors[mode]['spatial'];
+            }
+            return colors[mode][relation] || colors[mode]['DIFFERENT'];
+        }
+
+        function renderStimulus(stimulus) {
+            if (stimulus.startsWith('voronoi_')) {
+                const svg = generateVoronoiSVG(parseInt(stimulus.split('_')[1]));
+                return `<div class="inline-block w-16 h-16 align-middle border-2 border-gray-300 rounded-md overflow-hidden">${svg}</div>`;
+            }
+            if (stimulus.startsWith('mandelbrot_')) {
+                const svg = generateMandelbrotSVG(parseInt(stimulus.split('_')[1]));
+                return `<div class="inline-block w-16 h-16 align-middle border-2 border-gray-300 rounded-md overflow-hidden">${svg}</div>`;
+            }
+            const isEmoji = emojiList.includes(stimulus);
+            const colorClass = state.darkMode ? 'text-indigo-400' : 'text-indigo-600';
+            return `<span class="font-bold ${isEmoji ? 'emoji-stimulus' : ''} ${colorClass}">${stimulus}</span>`;
+        }
+
+        // Render function
+        function render() {
+            const app = document.getElementById('app');
+            const darkClass = state.darkMode ? 'dark' : '';
+            
+            app.innerHTML = `
+                <div class="${darkClass} h-screen flex flex-col transition-colors duration-300 ${state.darkMode ? 'bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900' : 'bg-gradient-to-br from-slate-50 to-slate-100'}">
+                    ${renderTutorial()}
+                    ${renderAuth()}
+                    ${renderSidebar('history')}
+                    ${renderSidebar('stats')}
+                    
+                    <div class="flex-1 flex flex-col min-h-0">
+                        ${renderHeader()}
+                        ${renderProgressBar()}
+                        ${renderMainContent()}
+                    </div>
+                    
+                    ${renderSettings()}
+                </div>
+            `;
+            
+            attachEventListeners();
+        }
+
+        function renderTutorial() {
+            if (!state.showTutorial) return '';
+            return `
+                <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+                    <div class="max-w-2xl w-full rounded-2xl p-6 shadow-2xl max-h-[90vh] overflow-y-auto ${state.darkMode ? 'bg-slate-800' : 'bg-white'}">
+                        <div class="flex justify-between items-center mb-4">
+                            <h2 class="text-2xl font-bold ${state.darkMode ? 'text-indigo-400' : 'text-indigo-600'}">How to Play</h2>
+                            <button onclick="closeTutorial()" class="p-2 rounded-lg hover:bg-opacity-10 ${state.darkMode ? 'hover:bg-white' : 'hover:bg-black'}">
+                                <svg class="w-6 h-6 ${state.darkMode ? 'text-gray-300' : 'text-gray-700'}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                </svg>
+                            </button>
+                        </div>
+                        <div class="space-y-4 ${state.darkMode ? 'text-gray-300' : 'text-gray-700'}">
+                            <p><strong class="${state.darkMode ? 'text-indigo-400' : 'text-indigo-600'}">Relational Frame Training</strong> helps you practice deriving logical relationships between stimuli.</p>
+                            <div>
+                                <h3 class="font-bold mb-2 ${state.darkMode ? 'text-indigo-400' : 'text-indigo-600'}">Game Rules:</h3>
+                                <ul class="list-disc pl-6 space-y-2">
+                                    <li>You will be given several <strong>premises</strong> that establish relationships between stimuli</li>
+                                    <li>Based on these premises, you must answer whether a <strong>question relationship</strong> is true</li>
+                                    <li>Answer <strong>YES</strong> if the relationship follows from the premises</li>
+                                    <li>Answer <strong>NO</strong> if the relationship contradicts the premises</li>
+                                    <li>Answer <strong>CAN'T TELL</strong> if there is insufficient information or contradictions</li>
+                                </ul>
+                            </div>
+                            <div>
+                                <h3 class="font-bold mb-2 ${state.darkMode ? 'text-indigo-400' : 'text-indigo-600'}">Keyboard Shortcuts:</h3>
+                                <ul class="list-disc pl-6 space-y-2">
+                                    <li><kbd class="px-2 py-1 rounded ${state.darkMode ? 'bg-slate-700' : 'bg-gray-200'}">1</kbd> - Answer YES</li>
+                                    <li><kbd class="px-2 py-1 rounded ${state.darkMode ? 'bg-slate-700' : 'bg-gray-200'}">2</kbd> - Answer NO</li>
+                                    <li><kbd class="px-2 py-1 rounded ${state.darkMode ? 'bg-slate-700' : 'bg-gray-200'}">3</kbd> - Answer CAN'T TELL</li>
+                                    <li><kbd class="px-2 py-1 rounded ${state.darkMode ? 'bg-slate-700' : 'bg-gray-200'}">Space</kbd> - Pause/Resume</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderAuth() {
+            if (!state.showAuth) return '';
+            
+            return `
+                <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+                    <div class="max-w-md w-full rounded-2xl p-6 shadow-2xl ${state.darkMode ? 'bg-slate-800' : 'bg-white'}">
+                        <div class="flex justify-between items-center mb-6">
+                            <h2 class="text-2xl font-bold ${state.darkMode ? 'text-indigo-400' : 'text-indigo-600'}">
+                                ${state.authView === 'login' ? 'Login' : state.authView === 'register' ? 'Register' : 'Verify Email'}
+                            </h2>
+                            <button onclick="toggleAuth()" class="p-2 rounded-lg hover:bg-opacity-10 ${state.darkMode ? 'hover:bg-white' : 'hover:bg-black'}">
+                                <svg class="w-6 h-6 ${state.darkMode ? 'text-gray-300' : 'text-gray-700'}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                </svg>
+                            </button>
+                        </div>
+                        
+                        ${state.authError ? `
+                            <div class="mb-4 p-3 rounded-lg ${state.darkMode ? 'bg-red-900/30 text-red-300 border border-red-500' : 'bg-red-100 text-red-700 border border-red-300'}">
+                                ${state.authError}
+                            </div>
+                        ` : ''}
+                        
+                        ${state.authView === 'login' ? renderLoginForm() : state.authView === 'register' ? renderRegisterForm() : renderVerifyForm()}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderLoginForm() {
+            return `
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-semibold mb-2 ${state.darkMode ? 'text-gray-300' : 'text-gray-700'}">Email or Username</label>
+                        <input 
+                            type="text" 
+                            id="loginIdentifier"
+                            value="${state.authEmail}"
+                            onchange="state.authEmail = this.value"
+                            class="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors ${state.darkMode ? 'bg-slate-700 border-slate-600 text-gray-100' : 'bg-white border-gray-300 text-gray-900'}"
+                            placeholder="Enter email or username"
+                        />
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-semibold mb-2 ${state.darkMode ? 'text-gray-300' : 'text-gray-700'}">Password</label>
+                        <input 
+                            type="password" 
+                            id="loginPassword"
+                            value="${state.authPassword}"
+                            onchange="state.authPassword = this.value"
+                            class="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors ${state.darkMode ? 'bg-slate-700 border-slate-600 text-gray-100' : 'bg-white border-gray-300 text-gray-900'}"
+                            placeholder="Enter password"
+                        />
+                    </div>
+                    
+                    <button 
+                        onclick="handleLogin()"
+                        ${state.authLoading ? 'disabled' : ''}
+                        class="w-full px-6 py-3 text-white font-bold rounded-lg transition-all ${state.authLoading ? 'opacity-50 cursor-not-allowed' : ''} ${state.darkMode ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-indigo-500 hover:bg-indigo-600'}">
+                        ${state.authLoading ? 'Logging in...' : 'Login'}
+                    </button>
+                    
+                    <div class="text-center">
+                        <button onclick="switchAuthView('register')" class="text-sm ${state.darkMode ? 'text-indigo-400 hover:text-indigo-300' : 'text-indigo-600 hover:text-indigo-700'}">
+                            Don't have an account? <strong>Register</strong>
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderRegisterForm() {
+            return `
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-semibold mb-2 ${state.darkMode ? 'text-gray-300' : 'text-gray-700'}">Email</label>
+                        <input 
+                            type="email" 
+                            id="registerEmail"
+                            value="${state.authEmail}"
+                            onchange="state.authEmail = this.value"
+                            class="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors ${state.darkMode ? 'bg-slate-700 border-slate-600 text-gray-100' : 'bg-white border-gray-300 text-gray-900'}"
+                            placeholder="Enter your email"
+                        />
+                    </div>
+                    
+                    <button 
+                        onclick="handleSendVerification()"
+                        ${state.authLoading ? 'disabled' : ''}
+                        class="w-full px-6 py-3 text-white font-bold rounded-lg transition-all ${state.authLoading ? 'opacity-50 cursor-not-allowed' : ''} ${state.darkMode ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-indigo-500 hover:bg-indigo-600'}">
+                        ${state.authLoading ? 'Sending...' : 'Send Verification Code'}
+                    </button>
+                    
+                    <div class="text-center">
+                        <button onclick="switchAuthView('login')" class="text-sm ${state.darkMode ? 'text-indigo-400 hover:text-indigo-300' : 'text-indigo-600 hover:text-indigo-700'}">
+                            Already have an account? <strong>Login</strong>
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderVerifyForm() {
+            return `
+                <div class="space-y-4">
+                    <p class="text-sm ${state.darkMode ? 'text-gray-400' : 'text-gray-600'}">
+                        We've sent a 6-digit verification code to <strong>${state.authEmail}</strong>
+                    </p>
+                    
+                    <div>
+                        <label class="block text-sm font-semibold mb-2 ${state.darkMode ? 'text-gray-300' : 'text-gray-700'}">Verification Code</label>
+                        <input 
+                            type="text" 
+                            id="verificationCode"
+                            value="${state.authVerificationCode}"
+                            onchange="state.authVerificationCode = this.value"
+                            maxlength="6"
+                            class="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors text-center text-2xl tracking-widest ${state.darkMode ? 'bg-slate-700 border-slate-600 text-gray-100' : 'bg-white border-gray-300 text-gray-900'}"
+                            placeholder="000000"
+                        />
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-semibold mb-2 ${state.darkMode ? 'text-gray-300' : 'text-gray-700'}">Password</label>
+                        <input 
+                            type="password" 
+                            id="registerPassword"
+                            value="${state.authPassword}"
+                            onchange="state.authPassword = this.value"
+                            class="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors ${state.darkMode ? 'bg-slate-700 border-slate-600 text-gray-100' : 'bg-white border-gray-300 text-gray-900'}"
+                            placeholder="Create a password"
+                        />
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-semibold mb-2 ${state.darkMode ? 'text-gray-300' : 'text-gray-700'}">Username</label>
+                        <input 
+                            type="text" 
+                            id="registerUsername"
+                            value="${state.authUsername}"
+                            onchange="state.authUsername = this.value"
+                            class="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors ${state.darkMode ? 'bg-slate-700 border-slate-600 text-gray-100' : 'bg-white border-gray-300 text-gray-900'}"
+                            placeholder="Choose a username"
+                        />
+                    </div>
+                    
+                    <button 
+                        onclick="handleRegister()"
+                        ${state.authLoading ? 'disabled' : ''}
+                        class="w-full px-6 py-3 text-white font-bold rounded-lg transition-all ${state.authLoading ? 'opacity-50 cursor-not-allowed' : ''} ${state.darkMode ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-indigo-500 hover:bg-indigo-600'}">
+                        ${state.authLoading ? 'Creating Account...' : 'Create Account'}
+                    </button>
+                    
+                    <div class="text-center">
+                        <button onclick="switchAuthView('register')" class="text-sm ${state.darkMode ? 'text-indigo-400 hover:text-indigo-300' : 'text-indigo-600 hover:text-indigo-700'}">
+                            <strong>← Back</strong>
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderSidebar(type) {
+            const isVisible = type === 'history' ? state.showHistory : state.showStats;
+            if (!isVisible) return '';
+            
+            return `
+                <div class="${state.darkMode ? 'bg-slate-800' : 'bg-white'} shadow-xl transition-all duration-300 overflow-hidden fixed inset-y-0 left-0 w-96 z-40">
+                    <div class="h-full flex flex-col p-4">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center">
+                                <svg class="w-5 h-5 mr-2 ${state.darkMode ? (type === 'history' ? 'text-indigo-400' : 'text-purple-400') : (type === 'history' ? 'text-indigo-600' : 'text-purple-600')}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    ${type === 'history' ? '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>' : '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>'}
+                                </svg>
+                                <h2 class="text-lg font-bold ${state.darkMode ? 'text-gray-100' : 'text-gray-800'}">${type === 'history' ? 'History' : 'Statistics'}</h2>
+                            </div>
+                            <button onclick="toggleSidebar('${type}')" class="p-1 rounded hover:bg-opacity-10 ${state.darkMode ? 'hover:bg-white' : 'hover:bg-black'}">
+                                <svg class="w-4 h-4 ${state.darkMode ? 'text-gray-300' : 'text-gray-700'}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                </svg>
+                            </button>
+                        </div>
+                        <div class="flex-1 overflow-y-auto">
+                            ${type === 'history' ? renderHistoryContent() : renderStatsContent()}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderHistoryContent() {
+            if (state.history.length === 0) {
+                return `<p class="text-sm ${state.darkMode ? 'text-gray-400' : 'text-gray-500'}">No questions answered yet</p>`;
+            }
+            
+            return state.history.slice().reverse().map((item, idx) => `
+                <div class="premise-item p-3 rounded-lg border-2 mb-2 ${state.darkMode ? (item.isCorrect ? 'border-green-500/50 bg-green-900/20' : 'border-red-500/50 bg-red-900/20') : (item.isCorrect ? 'border-green-300 bg-green-50' : 'border-red-300 bg-red-50')}">
+                    <div class="text-xs font-semibold mb-2 ${state.darkMode ? 'text-gray-400' : 'text-gray-500'}">
+                        Question #${state.history.length - idx} • ${item.timeUsed.toFixed(1)}s
+                    </div>
+                    <div class="mb-2 text-xs space-y-1">
+                        ${item.trial.premises.map(premise => `
+                            <div class="flex items-center gap-1 flex-wrap ${state.darkMode ? 'text-gray-300' : 'text-gray-700'}">
+                                ${renderStimulus(premise.stimulus1)} is <span class="px-1 rounded text-xs ${getRelationColor(premise.relation)}">${premise.relation}</span> to ${renderStimulus(premise.stimulus2)}
+                            </div>
+                        `).join('')}
+                    </div>
+                    <div class="text-xs space-y-1">
+                        <div class="${state.darkMode ? 'text-gray-300' : 'text-gray-700'}">
+                            <span class="font-semibold">Your answer:</span> <span class="${item.isCorrect ? (state.darkMode ? 'text-green-400' : 'text-green-700') : (state.darkMode ? 'text-red-400' : 'text-red-700')}">${getAnswerLabel(item.userAnswer)}</span>
+                        </div>
+                        <div class="${state.darkMode ? 'text-gray-300' : 'text-gray-700'}">
+                            <span class="font-semibold">Correct:</span> <span class="${state.darkMode ? 'text-green-400' : 'text-green-700'}">${getAnswerLabel(item.trial.correctAnswer)}</span>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderStatsContent() {
+            if (state.statsHistory.length === 0) {
+                return `<p class="text-sm ${state.darkMode ? 'text-gray-400' : 'text-gray-500'}">No statistics yet</p>`;
+            }
+            
+            const accuracy = ((state.statsHistory.filter(s => s.isCorrect).length / state.statsHistory.length) * 100).toFixed(1);
+            const avgTime = (state.statsHistory.reduce((sum, s) => sum + s.timeUsed, 0) / state.statsHistory.length).toFixed(1);
+            const avgPremises = (state.statsHistory.reduce((sum, s) => sum + s.premiseCount, 0) / state.statsHistory.length).toFixed(1);
+            
+            return `
+                <div class="space-y-6">
+                    <div class="p-4 rounded-lg ${state.darkMode ? 'bg-slate-700' : 'bg-gray-50'}">
+                        <h3 class="text-sm font-semibold mb-3 ${state.darkMode ? 'text-gray-300' : 'text-gray-700'}">Overall</h3>
+                        <div class="space-y-2">
+                            <div class="flex justify-between">
+                                <span class="text-sm ${state.darkMode ? 'text-gray-400' : 'text-gray-600'}">Total Questions:</span>
+                                <span class="text-sm font-bold ${state.darkMode ? 'text-gray-200' : 'text-gray-800'}">${state.statsHistory.length}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-sm ${state.darkMode ? 'text-gray-400' : 'text-gray-600'}">Accuracy:</span>
+                                <span class="text-sm font-bold ${state.darkMode ? 'text-green-400' : 'text-green-600'}">${accuracy}%</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-sm ${state.darkMode ? 'text-gray-400' : 'text-gray-600'}">Avg Time:</span>
+                                <span class="text-sm font-bold ${state.darkMode ? 'text-indigo-400' : 'text-indigo-600'}">${avgTime}s</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-sm ${state.darkMode ? 'text-gray-400' : 'text-gray-600'}">Avg Premises:</span>
+                                <span class="text-sm font-bold ${state.darkMode ? 'text-purple-400' : 'text-purple-600'}">${avgPremises}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderHeader() {
+            const currentMode = state.currentTrial ? state.currentTrial.mode : 'equality';
+            const currentModeTime = state.modeProgress[currentMode].timePerQuestion;
+            
+            return `
+                <div class="shadow-md p-3 flex justify-between items-center transition-colors duration-300 ${state.darkMode ? 'bg-slate-800/90 backdrop-blur' : 'bg-white'}">
+                    <div class="flex gap-2">
+                        <button onclick="toggleSidebar('history')" class="flex items-center gap-1 px-3 py-2 rounded-lg transition-colors ${state.darkMode ? 'bg-indigo-900/50 hover:bg-indigo-900/70 text-indigo-200' : 'bg-indigo-100 hover:bg-indigo-200 text-indigo-900'}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            History
+                        </button>
+                        <button onclick="toggleSidebar('stats')" class="flex items-center gap-1 px-3 py-2 rounded-lg transition-colors ${state.darkMode ? 'bg-purple-900/50 hover:bg-purple-900/70 text-purple-200' : 'bg-purple-100 hover:bg-purple-200 text-purple-900'}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
+                            Stats
+                        </button>
+                        <button onclick="openTutorial()" class="flex items-center gap-1 px-3 py-2 rounded-lg transition-colors ${state.darkMode ? 'bg-cyan-900/50 hover:bg-cyan-900/70 text-cyan-200' : 'bg-cyan-100 hover:bg-cyan-200 text-cyan-900'}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            Help
+                        </button>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        ${state.user ? `
+                            <div class="flex items-center gap-2">
+                                <div class="text-right">
+                                    <div class="text-sm font-semibold ${state.darkMode ? 'text-gray-200' : 'text-gray-800'}">${state.user.username}</div>
+                                    <div class="text-xs ${state.darkMode ? 'text-gray-400' : 'text-gray-600'}">${state.user.email}</div>
+                                </div>
+                                <button onclick="handleLogout()" class="px-3 py-2 rounded-lg transition-colors text-sm ${state.darkMode ? 'bg-red-900/50 hover:bg-red-900/70 text-red-200' : 'bg-red-100 hover:bg-red-200 text-red-700'}">
+                                    Logout
+                                </button>
+                            </div>
+                        ` : `
+                            <button onclick="toggleAuth()" class="flex items-center gap-1 px-3 py-2 rounded-lg transition-colors ${state.darkMode ? 'bg-green-900/50 hover:bg-green-900/70 text-green-200' : 'bg-green-100 hover:bg-green-200 text-green-900'}">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path></svg>
+                                Login
+                            </button>
+                        `}
+                        <div class="text-center">
+                            <div class="text-xl font-bold tabular-nums ${state.darkMode ? 'text-indigo-400' : 'text-indigo-600'}">${state.timeLeft.toFixed(1)}s</div>
+                            <div class="text-xs ${state.darkMode ? 'text-gray-400' : 'text-gray-600'}">Time</div>
+                        </div>
+                        <div class="flex flex-col gap-1">
+                            <button onclick="togglePause()" class="text-white p-2 rounded-lg transition-colors ${state.isPaused ? 'bg-green-500 hover:bg-green-600' : (state.darkMode ? 'bg-yellow-600 hover:bg-yellow-700' : 'bg-yellow-500 hover:bg-yellow-600')}">
+                                ${state.isPaused ? '<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>' : '<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/></svg>'}
+                            </button>
+                            <button onclick="toggleSettings()" class="text-white p-2 rounded-lg transition-colors ${state.darkMode ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-indigo-500 hover:bg-indigo-600'}">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="shadow-sm px-3 py-2 flex gap-4 ${state.darkMode ? 'bg-slate-800/50' : 'bg-white'}">
+                    <div class="text-center">
+                        <div class="text-xl font-bold ${state.darkMode ? 'text-green-400' : 'text-green-600'}">${state.score.correct}</div>
+                        <div class="text-xs ${state.darkMode ? 'text-gray-400' : 'text-gray-600'}">Correct</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-xl font-bold ${state.darkMode ? 'text-red-400' : 'text-red-600'}">${state.score.incorrect}</div>
+                        <div class="text-xs ${state.darkMode ? 'text-gray-400' : 'text-gray-600'}">Incorrect</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-xl font-bold ${state.darkMode ? 'text-orange-400' : 'text-orange-600'}">${state.score.missed}</div>
+                        <div class="text-xs ${state.darkMode ? 'text-gray-400' : 'text-gray-600'}">Missed</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderProgressBar() {
+            const currentMode = state.currentTrial ? state.currentTrial.mode : 'equality';
+            const currentModeTime = state.modeProgress[currentMode].timePerQuestion;
+            const progress = (state.timeLeft / currentModeTime) * 100;
+            return `
+                <div class="shadow-sm p-2 transition-colors duration-300 ${state.darkMode ? 'bg-slate-800/50' : 'bg-white'}">
+                    <div class="h-3 rounded-full overflow-hidden ${state.darkMode ? 'bg-slate-700' : 'bg-gray-200'}">
+                        <div class="h-full transition-all duration-100 ${state.isPaused ? (state.darkMode ? 'bg-yellow-600' : 'bg-yellow-500') : (state.darkMode ? 'bg-indigo-500' : 'bg-indigo-600')}" style="width: ${progress}%"></div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderMainContent() {
+            if (state.isPaused) {
+                return `
+                    <div class="flex-1 main-content-wrapper">
+                        <div class="min-h-full flex items-center justify-center p-3 sm:p-6">
+                            <div class="max-w-xl w-full">
+                                <div class="border-2 rounded-xl p-4 sm:p-6 text-center transition-colors duration-300 ${state.darkMode ? 'bg-yellow-900/20 border-yellow-500/50 backdrop-blur' : 'bg-yellow-50 border-yellow-300'}">
+                                    <svg class="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-2 ${state.darkMode ? 'text-yellow-400' : 'text-yellow-600'}" fill="currentColor" viewBox="0 0 24 24"><path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/></svg>
+                                    <h2 class="text-xl sm:text-2xl font-bold mb-2 ${state.darkMode ? 'text-yellow-300' : 'text-yellow-800'}">Paused</h2>
+                                    <p class="text-sm sm:text-base ${state.darkMode ? 'text-yellow-200' : 'text-yellow-700'}">
+                                        Press <kbd class="px-2 sm:px-3 py-1 rounded font-mono text-xs sm:text-sm ${state.darkMode ? 'bg-slate-700 text-yellow-300' : 'bg-white'}">Space</kbd> or the play button to resume
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            if (!state.currentTrial) return '';
+            
+            const modeName = state.currentTrial.mode.charAt(0).toUpperCase() + state.currentTrial.mode.slice(1);
+            const modeColors = {
+                equality: state.darkMode ? 'bg-green-900/30 text-green-300 border-green-500' : 'bg-green-100 text-green-700 border-green-300',
+                temporal: state.darkMode ? 'bg-purple-900/30 text-purple-300 border-purple-500' : 'bg-purple-100 text-purple-700 border-purple-300',
+                spatial: state.darkMode ? 'bg-teal-900/30 text-teal-300 border-teal-500' : 'bg-teal-100 text-teal-700 border-teal-300',
+                containment: state.darkMode ? 'bg-blue-900/30 text-blue-300 border-blue-500' : 'bg-blue-100 text-blue-700 border-blue-300'
+            };
+            
+            return `
+                <div class="flex-1 main-content-wrapper">
+                    <div class="p-3 sm:p-6">
+                        <div class="max-w-4xl mx-auto">
+                            <!-- Mode Badge -->
+                            <div class="flex justify-center mb-3 sm:mb-4">
+                                <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full border-2 font-bold text-sm sm:text-base ${modeColors[state.currentTrial.mode]}">
+                                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clip-rule="evenodd"/>
+                                    </svg>
+                                    ${modeName} Mode
+                                </div>
+                            </div>
+                            
+                            <div class="rounded-xl sm:rounded-2xl shadow-xl p-4 sm:p-8 transition-colors duration-300 ${state.darkMode ? 'bg-slate-800/90 backdrop-blur' : 'bg-white'}">
+                                <h3 class="text-xs sm:text-sm font-semibold uppercase tracking-wide mb-3 sm:mb-4 ${state.darkMode ? 'text-gray-400' : 'text-gray-500'}">Given:</h3>
+                                <div class="space-y-2 sm:space-y-3 mb-4 sm:mb-8">
+                                    ${state.currentTrial.premises.map((premise, idx) => {
+                                        const mode = getRelationMode(premise.relation);
+                                        const preposition = mode === 'equality' ? 'to' : mode === 'containment' ? '' : mode === 'temporal' ? '' : 'of';
+                                        return `
+                                            <div class="premise-item relative flex items-center justify-center text-base sm:text-xl p-3 sm:p-4 rounded-lg overflow-hidden transition-colors duration-300 ${state.darkMode ? 'bg-slate-700/50' : 'bg-gray-50'}" 
+                                                 onmouseenter="hoverPremise(${idx})" 
+                                                 onmouseleave="unhoverPremise()">
+                                                <div class="relative z-0 flex items-center gap-1.5 sm:gap-2 flex-wrap justify-center">
+                                                    ${renderStimulus(premise.stimulus1)}
+                                                    ${premise.relation === 'CONTAINS' ? `
+                                                        <span class="font-semibold px-2 sm:px-3 py-0.5 sm:py-1 rounded border text-sm sm:text-base ${getRelationColor(premise.relation)}">CONTAINS</span>
+                                                        ${renderStimulus(premise.stimulus2)}
+                                                    ` : premise.relation === 'WITHIN' ? `
+                                                        <span class="mx-1 text-sm sm:text-base ${state.darkMode ? 'text-gray-500' : 'text-gray-400'}">is</span>
+                                                        <span class="font-semibold px-2 sm:px-3 py-0.5 sm:py-1 rounded border text-sm sm:text-base ${getRelationColor(premise.relation)}">WITHIN</span>
+                                                        ${renderStimulus(premise.stimulus2)}
+                                                    ` : `
+                                                        <span class="mx-1 text-sm sm:text-base ${state.darkMode ? 'text-gray-500' : 'text-gray-400'}">is</span>
+                                                        <span class="font-semibold px-2 sm:px-3 py-0.5 sm:py-1 rounded border text-sm sm:text-base ${getRelationColor(premise.relation)}">${premise.relation}</span>
+                                                        ${preposition ? `<span class="mx-1 text-sm sm:text-base ${state.darkMode ? 'text-gray-500' : 'text-gray-400'}">${preposition}</span>` : ''}
+                                                        ${renderStimulus(premise.stimulus2)}
+                                                    `}
+                                                </div>
+                                                ${state.spoilerPremises && state.hoveredPremise !== idx ? `
+                                                    <div class="absolute inset-0 rounded-lg z-10 ${state.darkMode ? 'bg-gradient-to-r from-purple-600 via-pink-600 to-indigo-600' : 'bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400'}"></div>
+                                                ` : ''}
+                                            </div>
+                                        `;
+                                    }).join('')}
+                                </div>
+                                
+                                <div class="border-t-4 pt-4 sm:pt-8 ${state.feedback === 'correct' ? (state.darkMode ? 'border-green-500' : 'border-green-500') : state.feedback === 'incorrect' ? (state.darkMode ? 'border-red-500' : 'border-red-500') : state.feedback === 'missed' ? (state.darkMode ? 'border-orange-500' : 'border-orange-500') : (state.darkMode ? 'border-indigo-500' : 'border-indigo-500')}">
+                                    <h3 class="text-base sm:text-lg font-semibold mb-3 sm:mb-4 ${state.darkMode ? 'text-indigo-400' : 'text-indigo-600'}">Question:</h3>
+                                    <div class="flex items-center justify-center text-lg sm:text-2xl p-4 sm:p-6 rounded-xl mb-4 sm:mb-6 transition-colors duration-300 gap-1.5 sm:gap-2 flex-wrap ${state.darkMode ? 'bg-indigo-900/30' : 'bg-indigo-50'}">
+                                        ${renderQuestion()}
+                                    </div>
+                                    
+                                    ${state.feedback ? `
+                                        <div class="text-center text-xl sm:text-2xl font-bold mb-4 sm:mb-6 ${state.feedback === 'correct' ? (state.darkMode ? 'text-green-400' : 'text-green-600') : state.feedback === 'incorrect' ? (state.darkMode ? 'text-red-400' : 'text-red-600') : (state.darkMode ? 'text-orange-400' : 'text-orange-600')}">
+                                            ${state.feedback === 'correct' ? '✓ Correct!' : state.feedback === 'incorrect' ? '✗ Incorrect' : '⏱ Time\'s Up!'}
+                                        </div>
+                                    ` : `
+                                        <div class="flex flex-col sm:flex-row gap-2 sm:gap-4">
+                                            <button onclick="handleAnswerClick(true)" class="flex-1 px-4 sm:px-6 py-3 sm:py-4 text-white text-lg sm:text-xl font-bold rounded-xl transition-all ${state.darkMode ? 'bg-green-600 hover:bg-green-700 shadow-lg shadow-green-900/50' : 'bg-green-500 hover:bg-green-600'}">
+                                                YES <span class="text-sm">(1)</span>
+                                            </button>
+                                            <button onclick="handleAnswerClick(false)" class="flex-1 px-4 sm:px-6 py-3 sm:py-4 text-white text-lg sm:text-xl font-bold rounded-xl transition-all ${state.darkMode ? 'bg-red-600 hover:bg-red-700 shadow-lg shadow-red-900/50' : 'bg-red-500 hover:bg-red-600'}">
+                                                NO <span class="text-sm">(2)</span>
+                                            </button>
+                                            <button onclick="handleAnswerClick('ambiguous')" class="flex-1 px-4 sm:px-6 py-3 sm:py-4 text-white text-lg sm:text-xl font-bold rounded-xl transition-all ${state.darkMode ? 'bg-slate-600 hover:bg-slate-700 shadow-lg shadow-slate-900/50' : 'bg-gray-500 hover:bg-gray-600'}">
+                                                CAN'T TELL <span class="text-sm">(3)</span>
+                                            </button>
+                                        </div>
+                                    `}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderQuestion() {
+            const rel = state.currentTrial.question.relation;
+            const mode = getRelationMode(rel);
+            
+            if (rel === 'CONTAINS') {
+                return `
+                    <span class="font-bold ${state.darkMode ? 'text-indigo-300' : 'text-indigo-700'}">Does</span>
+                    ${renderStimulus(state.currentTrial.question.stimulus1)}
+                    <span class="mx-2 font-semibold px-4 py-2 rounded-lg border-2 ${getRelationColor(rel)}">CONTAIN</span>
+                    ${renderStimulus(state.currentTrial.question.stimulus2)}
+                    <span class="font-bold ${state.darkMode ? 'text-indigo-300' : 'text-indigo-700'}">?</span>
+                `;
+            } else if (rel === 'WITHIN') {
+                return `
+                    <span class="font-bold ${state.darkMode ? 'text-indigo-300' : 'text-indigo-700'}">Is</span>
+                    ${renderStimulus(state.currentTrial.question.stimulus1)}
+                    <span class="mx-2 font-semibold px-4 py-2 rounded-lg border-2 ${getRelationColor(rel)}">WITHIN</span>
+                    ${renderStimulus(state.currentTrial.question.stimulus2)}
+                    <span class="font-bold ${state.darkMode ? 'text-indigo-300' : 'text-indigo-700'}">?</span>
+                `;
+            } else {
+                const preposition = mode === 'equality' ? 'to' : mode === 'temporal' ? '' : 'of';
+                return `
+                    <span class="font-bold ${state.darkMode ? 'text-indigo-300' : 'text-indigo-700'}">Is</span>
+                    ${renderStimulus(state.currentTrial.question.stimulus1)}
+                    <span class="mx-2 font-semibold px-4 py-2 rounded-lg border-2 ${getRelationColor(rel)}">${rel}</span>
+                    ${preposition ? `<span class="font-bold ${state.darkMode ? 'text-indigo-300' : 'text-indigo-700'}">${preposition}</span>` : ''}
+                    ${renderStimulus(state.currentTrial.question.stimulus2)}
+                    <span class="font-bold ${state.darkMode ? 'text-indigo-300' : 'text-indigo-700'}">?</span>
+                `;
+            }
+        }
+
+        function renderSettings() {
+            if (!state.showSettings) return '';
+            
+            return `
+                <div class="${state.darkMode ? 'bg-slate-800' : 'bg-white'} shadow-xl transition-all duration-300 overflow-hidden fixed inset-y-0 right-0 w-96 z-40">
+                    <div class="h-full flex flex-col p-4">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center">
+                                <svg class="w-5 h-5 mr-2 ${state.darkMode ? 'text-indigo-400' : 'text-indigo-600'}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                </svg>
+                                <h2 class="text-lg font-bold ${state.darkMode ? 'text-gray-100' : 'text-gray-800'}">Settings</h2>
+                            </div>
+                            <button onclick="toggleSettings()" class="p-1 rounded hover:bg-opacity-10 ${state.darkMode ? 'hover:bg-white' : 'hover:bg-black'}">
+                                <svg class="w-4 h-4 ${state.darkMode ? 'text-gray-300' : 'text-gray-700'}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                </svg>
+                            </button>
+                        </div>
+                        
+                        <div class="flex-1 overflow-y-auto space-y-6">
+                            <div>
+                                <label class="block text-sm font-semibold mb-2 ${state.darkMode ? 'text-gray-300' : 'text-gray-700'}">Dark Mode</label>
+                                <button onclick="toggleDarkMode()" class="w-full flex items-center justify-between">
+                                    <div class="relative w-14 h-7 rounded-full transition-colors ${state.darkMode ? 'bg-indigo-600' : 'bg-gray-300'}">
+                                        <div class="absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full transition-transform shadow-md ${state.darkMode ? 'transform translate-x-7' : ''}"></div>
+                                    </div>
+                                    <span class="text-sm font-medium ${state.darkMode ? 'text-gray-300' : 'text-gray-700'}">${state.darkMode ? 'Enabled' : 'Disabled'}</span>
+                                </button>
+                            </div>
+
+                            <div class="border-t pt-4 ${state.darkMode ? 'border-slate-700' : 'border-gray-200'}">
+                                <h3 class="text-sm font-bold mb-3 ${state.darkMode ? 'text-indigo-400' : 'text-indigo-600'}">Auto-Progression</h3>
+                                <label class="flex items-center space-x-2 cursor-pointer mb-3">
+                                    <input type="checkbox" ${state.autoProgressEnabled ? 'checked' : ''} onchange="toggleAutoProgress()" class="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+                                    <span class="text-sm font-semibold ${state.darkMode ? 'text-gray-300' : 'text-gray-700'}">Enable Auto-Progression</span>
+                                </label>
+                                
+                                ${state.autoProgressEnabled ? `
+                                    <div class="ml-6 space-y-3 p-3 rounded-lg ${state.darkMode ? 'bg-slate-700/50' : 'bg-gray-50'}">
+                                        <label class="flex items-center space-x-2 cursor-pointer">
+                                            <input type="radio" name="autoProgressType" ${state.universalAutoProgress ? 'checked' : ''} onchange="setAutoProgressType(true)" class="w-4 h-4 text-indigo-600 border-gray-300 focus:ring-indigo-500">
+                                            <div>
+                                                <div class="text-sm font-semibold ${state.darkMode ? 'text-gray-300' : 'text-gray-700'}">Universal Auto-Progression</div>
+                                                <div class="text-xs ${state.darkMode ? 'text-gray-400' : 'text-gray-600'}">All modes share same progress and timing</div>
+                                            </div>
+                                        </label>
+                                        <label class="flex items-center space-x-2 cursor-pointer">
+                                            <input type="radio" name="autoProgressType" ${!state.universalAutoProgress ? 'checked' : ''} onchange="setAutoProgressType(false)" class="w-4 h-4 text-indigo-600 border-gray-300 focus:ring-indigo-500">
+                                            <div>
+                                                <div class="text-sm font-semibold ${state.darkMode ? 'text-gray-300' : 'text-gray-700'}">Mode-Specific Auto-Progression</div>
+                                                <div class="text-xs ${state.darkMode ? 'text-gray-400' : 'text-gray-600'}">Each mode has independent progress</div>
+                                            </div>
+                                        </label>
+                                    </div>
+                                ` : ''}
+                            </div>
+
+                            ${state.universalAutoProgress ? `
+                                <div class="border-t pt-4 ${state.darkMode ? 'border-slate-700' : 'border-gray-200'}">
+                                    <h3 class="text-sm font-bold mb-3 ${state.darkMode ? 'text-indigo-400' : 'text-indigo-600'}">Universal Timer</h3>
+                                    <label class="block text-sm font-semibold mb-2 ${state.darkMode ? 'text-gray-300' : 'text-gray-700'}">Time Per Question: ${state.timePerQuestion.toFixed(1)}s</label>
+                                    <input type="range" min="5" max="120" step="0.5" value="${state.timePerQuestion}" oninput="updateUniversalTime(this.value)" class="w-full accent-indigo-600">
+                                </div>
+                            ` : ''}
+
+                            <div class="border-t pt-4 ${state.darkMode ? 'border-slate-700' : 'border-gray-200'}">
+                                <button onclick="resetGame()" class="w-full px-4 py-3 rounded-lg transition-colors flex items-center justify-center gap-2 ${state.darkMode ? 'bg-red-900/50 hover:bg-red-900/70 text-red-200' : 'bg-red-100 hover:bg-red-200 text-red-700'}">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                                    </svg>
+                                    <span class="font-semibold">Reset Game</span>
+                                </button>
+                            </div>
+
+                            <div class="border-t pt-4 ${state.darkMode ? 'border-slate-700' : 'border-gray-200'}">
+                                <h3 class="text-sm font-bold mb-3 ${state.darkMode ? 'text-indigo-400' : 'text-indigo-600'}">Relation Modes</h3>
+                                <div class="space-y-3">
+                                    <label class="flex items-center space-x-2 cursor-pointer">
+                                        <input type="checkbox" ${state.enabledRelationModes.equality ? 'checked' : ''} onchange="toggleRelationMode('equality')" class="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+                                        <span class="text-sm font-semibold ${state.darkMode ? 'text-gray-300' : 'text-gray-700'}">Equality (SAME, OPPOSITE, DIFFERENT)</span>
+                                    </label>
+                                    ${state.enabledRelationModes.equality ? `
+                                        <div class="ml-6 mt-2 space-y-2">
+                                            <div>
+                                                <label class="block text-xs font-semibold mb-1 ${state.darkMode ? 'text-gray-400' : 'text-gray-600'}">Premises: ${state.premiseCounts.equality}</label>
+                                                <input type="range" min="1" max="100" value="${state.premiseCounts.equality}" oninput="updatePremiseCount('equality', this.value)" class="w-full accent-indigo-600">
+                                            </div>
+                                            ${!state.universalAutoProgress ? `
+                                                <div>
+                                                    <label class="block text-xs font-semibold mb-1 ${state.darkMode ? 'text-gray-400' : 'text-gray-600'}">Time: ${state.modeProgress.equality.timePerQuestion.toFixed(1)}s</label>
+                                                    <input type="range" min="5" max="120" step="0.5" value="${state.modeProgress.equality.timePerQuestion}" oninput="updateModeTime('equality', this.value)" class="w-full accent-indigo-600">
+                                                </div>
+                                            ` : ''}
+                                        </div>
+                                    ` : ''}
+                                    <label class="flex items-center space-x-2 cursor-pointer">
+                                        <input type="checkbox" ${state.enabledRelationModes.temporal ? 'checked' : ''} onchange="toggleRelationMode('temporal')" class="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+                                        <span class="text-sm font-semibold ${state.darkMode ? 'text-gray-300' : 'text-gray-700'}">Temporal (BEFORE, AFTER, AT)</span>
+                                    </label>
+                                    ${state.enabledRelationModes.temporal ? `
+                                        <div class="ml-6 mt-2 space-y-2">
+                                            <div>
+                                                <label class="block text-xs font-semibold mb-1 ${state.darkMode ? 'text-gray-400' : 'text-gray-600'}">Premises: ${state.premiseCounts.temporal}</label>
+                                                <input type="range" min="1" max="100" value="${state.premiseCounts.temporal}" oninput="updatePremiseCount('temporal', this.value)" class="w-full accent-indigo-600">
+                                            </div>
+                                            ${!state.universalAutoProgress ? `
+                                                <div>
+                                                    <label class="block text-xs font-semibold mb-1 ${state.darkMode ? 'text-gray-400' : 'text-gray-600'}">Time: ${state.modeProgress.temporal.timePerQuestion.toFixed(1)}s</label>
+                                                    <input type="range" min="5" max="120" step="0.5" value="${state.modeProgress.temporal.timePerQuestion}" oninput="updateModeTime('temporal', this.value)" class="w-full accent-indigo-600">
+                                                </div>
+                                            ` : ''}
+                                        </div>
+                                    ` : ''}
+                                    <label class="flex items-center space-x-2 cursor-pointer">
+                                        <input type="checkbox" ${state.enabledRelationModes.spatial ? 'checked' : ''} onchange="toggleRelationMode('spatial')" class="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+                                        <span class="text-sm font-semibold ${state.darkMode ? 'text-gray-300' : 'text-gray-700'}">Space 2D (NORTH, SOUTH, EAST, WEST, etc.)</span>
+                                    </label>
+                                    ${state.enabledRelationModes.spatial ? `
+                                        <div class="ml-6 mt-2 space-y-2">
+                                            <div>
+                                                <label class="block text-xs font-semibold mb-1 ${state.darkMode ? 'text-gray-400' : 'text-gray-600'}">Premises: ${state.premiseCounts.spatial}</label>
+                                                <input type="range" min="1" max="100" value="${state.premiseCounts.spatial}" oninput="updatePremiseCount('spatial', this.value)" class="w-full accent-indigo-600">
+                                            </div>
+                                            ${!state.universalAutoProgress ? `
+                                                <div>
+                                                    <label class="block text-xs font-semibold mb-1 ${state.darkMode ? 'text-gray-400' : 'text-gray-600'}">Time: ${state.modeProgress.spatial.timePerQuestion.toFixed(1)}s</label>
+                                                    <input type="range" min="5" max="120" step="0.5" value="${state.modeProgress.spatial.timePerQuestion}" oninput="updateModeTime('spatial', this.value)" class="w-full accent-indigo-600">
+                                                </div>
+                                            ` : ''}
+                                        </div>
+                                    ` : ''}
+                                    <label class="flex items-center space-x-2 cursor-pointer">
+                                        <input type="checkbox" ${state.enabledRelationModes.containment ? 'checked' : ''} onchange="toggleRelationMode('containment')" class="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+                                        <span class="text-sm font-semibold ${state.darkMode ? 'text-gray-300' : 'text-gray-700'}">Containment (CONTAINS, WITHIN)</span>
+                                    </label>
+                                    ${state.enabledRelationModes.containment ? `
+                                        <div class="ml-6 mt-2 space-y-2">
+                                            <div>
+                                                <label class="block text-xs font-semibold mb-1 ${state.darkMode ? 'text-gray-400' : 'text-gray-600'}">Premises: ${state.premiseCounts.containment}</label>
+                                                <input type="range" min="1" max="100" value="${state.premiseCounts.containment}" oninput="updatePremiseCount('containment', this.value)" class="w-full accent-indigo-600">
+                                            </div>
+                                            ${!state.universalAutoProgress ? `
+                                                <div>
+                                                    <label class="block text-xs font-semibold mb-1 ${state.darkMode ? 'text-gray-400' : 'text-gray-600'}">Time: ${state.modeProgress.containment.timePerQuestion.toFixed(1)}s</label>
+                                                    <input type="range" min="5" max="120" step="0.5" value="${state.modeProgress.containment.timePerQuestion}" oninput="updateModeTime('containment', this.value)" class="w-full accent-indigo-600">
+                                                </div>
+                                            ` : ''}
+                                        </div>
+                                    ` : ''}
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-semibold mb-2 ${state.darkMode ? 'text-gray-300' : 'text-gray-700'}">Premise Count (Legacy - use per-mode sliders above)</label>
+                                <input type="number" min="2" max="20" value="${state.difficulty}" onchange="updateDifficulty(this.value)" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors ${state.darkMode ? 'bg-slate-700 border-slate-600 text-gray-100' : 'bg-white border-gray-300 text-gray-900'}">
+                            </div>
+
+                            <div class="border-t pt-4 ${state.darkMode ? 'border-slate-700' : 'border-gray-200'}">
+                                <h3 class="text-sm font-bold mb-3 ${state.darkMode ? 'text-indigo-400' : 'text-indigo-600'}">Stimulus Display</h3>
+                                <div class="space-y-3">
+                                    <label class="flex items-center space-x-2 cursor-pointer">
+                                        <input type="checkbox" ${state.useLetters ? 'checked' : ''} onchange="toggleStimulusType('useLetters')" class="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+                                        <span class="text-sm font-semibold ${state.darkMode ? 'text-gray-300' : 'text-gray-700'}">Use Letters (ABC)</span>
+                                    </label>
+                                    <label class="flex items-center space-x-2 cursor-pointer">
+                                        <input type="checkbox" ${state.useEmojis ? 'checked' : ''} onchange="toggleStimulusType('useEmojis')" class="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+                                        <span class="text-sm font-semibold ${state.darkMode ? 'text-gray-300' : 'text-gray-700'}">Use Emojis 🎨</span>
+                                    </label>
+                                    <label class="flex items-center space-x-2 cursor-pointer">
+                                        <input type="checkbox" ${state.useVoronoi ? 'checked' : ''} onchange="toggleStimulusType('useVoronoi')" class="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+                                        <span class="text-sm font-semibold ${state.darkMode ? 'text-gray-300' : 'text-gray-700'}">Use Voronoi Patterns</span>
+                                    </label>
+                                    <label class="flex items-center space-x-2 cursor-pointer">
+                                        <input type="checkbox" ${state.useMandelbrot ? 'checked' : ''} onchange="toggleStimulusType('useMandelbrot')" class="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+                                        <span class="text-sm font-semibold ${state.darkMode ? 'text-gray-300' : 'text-gray-700'}">Use Mandelbrot Fractals</span>
+                                    </label>
+                                    ${state.useLetters ? `
+                                        <div class="mt-4 pt-4 border-t ${state.darkMode ? 'border-slate-600' : 'border-gray-200'}">
+                                            <label class="block text-sm font-semibold mb-2 ${state.darkMode ? 'text-gray-300' : 'text-gray-700'}">Letter Length: ${state.letterLength}</label>
+                                            <input type="range" min="1" max="20" value="${state.letterLength}" oninput="updateLetterLength(this.value)" class="w-full accent-indigo-600">
+                                        </div>
+                                    ` : ''}
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-semibold mb-2 ${state.darkMode ? 'text-gray-300' : 'text-gray-700'}">Time Per Question: ${state.timePerQuestion.toFixed(1)}s</label>
+                                <input type="range" min="5" max="120" step="0.5" value="${state.timePerQuestion}" oninput="updateTimePerQuestion(this.value)" class="w-full accent-indigo-600">
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-semibold mb-2 ${state.darkMode ? 'text-gray-300' : 'text-gray-700'}">Network Complexity: ${state.networkComplexity.toFixed(2)}</label>
+                                <input type="range" min="0" max="1" step="0.01" value="${state.networkComplexity}" oninput="updateNetworkComplexity(this.value)" class="w-full accent-indigo-600">
+                                <p class="text-xs mt-1 ${state.darkMode ? 'text-gray-400' : 'text-gray-500'}">Probability of resolving ambiguous relationships</p>
+                            </div>
+
+                            <div>
+                                <label class="flex items-center space-x-2 cursor-pointer">
+                                    <input type="checkbox" ${state.spoilerPremises ? 'checked' : ''} onchange="toggleSpoilerPremises()" class="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+                                    <span class="text-sm font-semibold ${state.darkMode ? 'text-gray-300' : 'text-gray-700'}">Spoiler Premises</span>
+                                </label>
+                                <p class="text-xs mt-1 ml-6 ${state.darkMode ? 'text-gray-400' : 'text-gray-500'}">Hover to reveal premises</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function attachEventListeners() {
+            // Remove any existing listener first
+            document.removeEventListener('keydown', handleKeyPress);
+            // Add new listener
+            document.addEventListener('keydown', handleKeyPress);
+        }
+
+        function handleKeyPress(e) {
+            if (e.key === ' ') {
+                e.preventDefault();
+                togglePause();
+            } else if (!state.isPaused && !state.feedback) {
+                if (e.key === '1') handleAnswer(true);
+                else if (e.key === '2') handleAnswer(false);
+                else if (e.key === '3') handleAnswer('ambiguous');
+            }
+        }
+
+        // Global functions for onclick handlers
+        window.closeTutorial = () => {
+            state.showTutorial = false;
+            render();
+        };
+
+        window.openTutorial = () => {
+            state.showTutorial = true;
+            render();
+        };
+
+        window.toggleSidebar = (type) => {
+            if (type === 'history') {
+                state.showHistory = !state.showHistory;
+                if (state.showHistory) state.showStats = false;
+            } else {
+                state.showStats = !state.showStats;
+                if (state.showStats) state.showHistory = false;
+            }
+            render();
+        };
+
+        window.toggleSettings = () => {
+            state.showSettings = !state.showSettings;
+            render();
+        };
+
+        window.togglePause = togglePause;
+
+        window.handleAnswerClick = (answer) => {
+            handleAnswer(answer);
+        };
+
+        window.hoverPremise = (idx) => {
+            if (state.spoilerPremises) {
+                state.hoveredPremise = idx;
+                render();
+            }
+        };
+
+        window.unhoverPremise = () => {
+            if (state.spoilerPremises) {
+                state.hoveredPremise = null;
+                render();
+            }
+        };
+
+        window.toggleDarkMode = () => {
+            state.darkMode = !state.darkMode;
+            render();
+            saveToStorage();
+        };
+
+        window.resetGame = resetGame;
+
+        window.toggleRelationMode = (mode) => {
+            state.enabledRelationModes[mode] = !state.enabledRelationModes[mode];
+            render();
+            saveToStorage();
+        };
+
+        window.updateDifficulty = (value) => {
+            state.difficulty = Math.max(2, parseInt(value) || 2);
+            render();
+            saveToStorage();
+        };
+
+        window.toggleStimulusType = (type) => {
+            state[type] = !state[type];
+            render();
+            saveToStorage();
+        };
+
+        window.updateLetterLength = (value) => {
+            state.letterLength = parseInt(value);
+            render();
+            saveToStorage();
+        };
+
+        window.updateTimePerQuestion = (value) => {
+            state.timePerQuestion = parseFloat(value);
+            render();
+            saveToStorage();
+        };
+
+        window.updateNetworkComplexity = (value) => {
+            state.networkComplexity = parseFloat(value);
+            render();
+            saveToStorage();
+        };
+
+        window.toggleSpoilerPremises = () => {
+            state.spoilerPremises = !state.spoilerPremises;
+            render();
+            saveToStorage();
+        };
+
+        window.updatePremiseCount = (mode, value) => {
+            state.premiseCounts[mode] = parseInt(value);
+            render();
+            saveToStorage();
+        };
+
+        window.toggleAutoProgress = () => {
+            state.autoProgressEnabled = !state.autoProgressEnabled;
+            render();
+            saveToStorage();
+        };
+
+        window.setAutoProgressType = (isUniversal) => {
+            state.universalAutoProgress = isUniversal;
+            render();
+            saveToStorage();
+        };
+
+        window.updateUniversalTime = (value) => {
+            state.timePerQuestion = parseFloat(value);
+            // Update all mode times to match
+            Object.keys(state.modeProgress).forEach(mode => {
+                state.modeProgress[mode].timePerQuestion = state.timePerQuestion;
+            });
+            render();
+            saveToStorage();
+        };
+
+        window.updateModeTime = (mode, value) => {
+            state.modeProgress[mode].timePerQuestion = parseFloat(value);
+            render();
+            saveToStorage();
+        };
+
+        // Authentication functions
+        window.toggleAuth = () => {
+            state.showAuth = !state.showAuth;
+            state.authError = null;
+            state.authEmail = '';
+            state.authPassword = '';
+            state.authUsername = '';
+            state.authVerificationCode = '';
+            state.authView = 'login';
+            render();
+        };
+
+        window.switchAuthView = (view) => {
+            state.authView = view;
+            state.authError = null;
+            render();
+        };
+
+        window.handleLogin = async () => {
+            state.authLoading = true;
+            state.authError = null;
+            render();
+
+            const identifier = document.getElementById('loginIdentifier').value.trim();
+            const password = document.getElementById('loginPassword').value;
+
+            if (!identifier || !password) {
+                state.authError = 'Please fill in all fields';
+                state.authLoading = false;
+                render();
+                return;
+            }
+
+            const result = await authBackend.login(identifier, password);
+            
+            if (result.success) {
+                state.user = result.user;
+                state.showAuth = false;
+                state.authEmail = '';
+                state.authPassword = '';
+                
+                // Save user session
+                localStorage.setItem('rft-current-user', JSON.stringify(result.user));
+                
+                // Load user's saved progress from their account
+                await loadUserProgress(result.user.id);
+                
+                // Restart the game with loaded data
+                if (state.currentTrial) {
+                    startNewTrial();
+                }
+            } else {
+                state.authError = result.error;
+            }
+
+            state.authLoading = false;
+            render();
+        };
+
+        window.handleSendVerification = async () => {
+            state.authLoading = true;
+            state.authError = null;
+            render();
+
+            const email = document.getElementById('registerEmail').value.trim();
+
+            if (!email || !email.includes('@')) {
+                state.authError = 'Please enter a valid email';
+                state.authLoading = false;
+                render();
+                return;
+            }
+
+            const result = await authBackend.sendVerificationCode(email);
+            
+            if (result.success) {
+                state.authView = 'verify';
+                state.authEmail = email;
+            } else {
+                state.authError = result.error;
+            }
+
+            state.authLoading = false;
+            render();
+        };
+
+        window.handleRegister = async () => {
+            state.authLoading = true;
+            state.authError = null;
+            render();
+
+            const code = document.getElementById('verificationCode').value.trim();
+            const password = document.getElementById('registerPassword').value;
+            const username = document.getElementById('registerUsername').value.trim();
+
+            if (!code || !password || !username) {
+                state.authError = 'Please fill in all fields';
+                state.authLoading = false;
+                render();
+                return;
+            }
+
+            if (code.length !== 6) {
+                state.authError = 'Verification code must be 6 digits';
+                state.authLoading = false;
+                render();
+                return;
+            }
+
+            // Verify the code first
+            const verifyResult = await authBackend.verifyCode(state.authEmail, code);
+            if (!verifyResult.success) {
+                state.authError = verifyResult.error;
+                state.authLoading = false;
+                render();
+                return;
+            }
+
+            // Create the account
+            const result = await authBackend.register(state.authEmail, username, password);
+            
+            if (result.success) {
+                state.user = result.user;
+                state.showAuth = false;
+                state.authEmail = '';
+                state.authPassword = '';
+                state.authUsername = '';
+                state.authVerificationCode = '';
+                
+                // Save user session
+                localStorage.setItem('rft-current-user', JSON.stringify(result.user));
+                
+                // Save current progress to the new account
+                saveToStorage();
+            } else {
+                state.authError = result.error;
+            }
+
+            state.authLoading = false;
+            render();
+        };
+
+        window.handleLogout = () => {
+            // Save current progress before logging out
+            if (state.user) {
+                saveToStorage();
+            }
+            
+            // Clear user session
+            state.user = null;
+            localStorage.removeItem('rft-current-user');
+            render();
+        };
+
+        // Initialize the app
+        async function init() {
+            // Check for saved user session
+            const savedUser = localStorage.getItem('rft-current-user');
+            if (savedUser) {
+                try {
+                    state.user = JSON.parse(savedUser);
+                    // Load their progress from account (using user ID)
+                    await loadUserProgress(state.user.id);
+                } catch (error) {
+                    console.error('Failed to restore session:', error);
+                    localStorage.removeItem('rft-current-user');
+                }
+            } else {
+                // Load local progress if not logged in
+                loadFromStorage();
+            }
+            
+            startNewTrial();
+            render();
+        }
+
+        init();
+    </script>
+</body>
+  </html>
