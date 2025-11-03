@@ -432,9 +432,15 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
   }, [difficulty, networkComplexity, useLetters, useEmojis, useVoronoi, letterLength, enabledRelationModes]);
 
   const startNewTrial = useCallback(() => {
-    setCurrentTrial(generateTrial());
-    setTimeLeft(timePerQuestion);
-    setFeedback(null);
+    try {
+      const trial = generateTrial();
+      console.log('Generated new trial:', trial ? 'success' : 'null');
+      setCurrentTrial(trial);
+      setTimeLeft(timePerQuestion);
+      setFeedback(null);
+    } catch (error) {
+      console.error('Error generating trial:', error);
+    }
   }, [generateTrial, timePerQuestion]);
 
   const saveToStorage = useCallback(async () => {
@@ -480,6 +486,7 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
 
   const loadFromStorage = useCallback(async () => {
     try {
+      console.log('loadFromStorage called, user:', user ? user.id : 'null');
       if (user) {
         // Load from Supabase if logged in
         const { data, error } = await supabase
@@ -489,11 +496,12 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
           .single();
 
         if (error) {
-          console.log('No saved data found');
+          console.log('No saved data found in Supabase');
           return;
         }
 
         if (data) {
+          console.log('Loading data from Supabase');
           if (data.score) setScore(data.score);
           if (data.history) setHistory(data.history);
           if (data.stats_history) setStatsHistory(data.stats_history);
@@ -516,8 +524,10 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
         }
       } else {
         // Load from localStorage if not logged in
+        console.log('Loading from localStorage');
         const saved = localStorage.getItem('rft_local_progress');
         if (saved) {
+          console.log('Found localStorage data');
           const data = JSON.parse(saved);
           if (data.score) setScore(data.score);
           if (data.history) setHistory(data.history);
@@ -538,12 +548,16 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
             if (data.settings.modeSpecificProgress !== undefined) setModeSpecificProgress(data.settings.modeSpecificProgress);
             if (data.settings.enabledRelationModes !== undefined) setEnabledRelationModes(data.settings.enabledRelationModes);
           }
+        } else {
+          console.log('No localStorage data found');
         }
       }
     } catch (error) {
-      console.log('Error loading data:', error);
+      console.error('Error loading data:', error);
     }
-  }, [user, setScore, setHistory, setStatsHistory, setDifficulty, setTimePerQuestion, setNetworkComplexity, setSpoilerPremises, setDarkMode, setUseLetters, setUseEmojis, setUseVoronoi, setUseMandelbrot, setLetterLength, setAutoProgressMode, setUniversalProgress, setModeSpecificProgress, setEnabledRelationModes]);
+    // Intentionally empty dependencies - setState functions are stable
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
 
   const resetGame = () => {
     setShowResetConfirmation(false);
@@ -707,16 +721,32 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
     return () => window.removeEventListener('keydown', handleKeyPress);
   }, [isPaused, feedback, handleAnswer, togglePause]);
 
+  // Initial load on mount - only runs once
   useEffect(() => {
-    if (!currentTrial) { loadFromStorage(); startNewTrial(); }
+    const initializeGame = async () => {
+      try {
+        console.log('Initializing game...');
+        await loadFromStorage();
+        console.log('Storage loaded, starting trial...');
+        startNewTrial();
+        console.log('Game initialized successfully');
+      } catch (error) {
+        console.error('Error initializing game:', error);
+        // Still start a trial even if loading fails
+        startNewTrial();
+      }
+    };
+    initializeGame();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentTrial]);
+  }, []);
 
   // Reload data when user logs in or out
   useEffect(() => {
-    loadFromStorage();
+    if (user) {
+      loadFromStorage();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]);
+  }, [user?.id]);
   
   const renderStimulus = (stimulus) => {
     if (stimulus.startsWith('voronoi_')) {
@@ -1060,7 +1090,13 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
               <button onClick={togglePause} className={`text-white p-1.5 sm:p-2 rounded-lg transition-colors ${isPaused ? 'bg-green-500 hover:bg-green-600' : (darkMode ? 'bg-yellow-600 hover:bg-yellow-700' : 'bg-yellow-500 hover:bg-yellow-600')}`} title="Pause/Resume">
                 {isPaused ? <Play className="w-4 h-4 sm:w-5 sm:h-5" /> : <Pause className="w-4 h-4 sm:w-5 sm:h-5" />}
               </button>
-              <button onClick={() => setShowSettings(!showSettings)} className={`flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-colors text-xs sm:text-sm ${darkMode ? 'bg-indigo-900/50 hover:bg-indigo-900/70 text-indigo-200' : 'bg-indigo-100 hover:bg-indigo-200 text-gray-900'}`}>
+              <button
+                onClick={() => {
+                  console.log('Settings button clicked, current state:', showSettings);
+                  setShowSettings(!showSettings);
+                }}
+                className={`flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-colors text-xs sm:text-sm ${darkMode ? 'bg-indigo-900/50 hover:bg-indigo-900/70 text-indigo-200' : 'bg-indigo-100 hover:bg-indigo-200 text-gray-900'}`}
+              >
                 <Settings className="w-4 h-4" />
                 <span className="hidden sm:inline">Settings</span>
               </button>
