@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Settings, History, Play, Pause, RotateCcw, X, Check, Clock, TrendingUp, Info } from 'lucide-react';
+import { Settings, History, Play, Pause, RotateCcw, X, Check, Clock, TrendingUp, Info, LogIn, LogOut, User } from 'lucide-react';
 import { supabase } from './supabaseClient';
 
 interface RelationalFrameTrainerProps {
-  userId: string;
-  username: string;
+  user: { id: string; username: string } | null;
+  onShowLogin: () => void;
+  onLogout: () => void;
 }
 
-export default function RelationalFrameTrainer({ userId, username }: RelationalFrameTrainerProps) {
+export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: RelationalFrameTrainerProps) {
   const [difficulty, setDifficulty] = useState(3);
   const [timePerQuestion, setTimePerQuestion] = useState(30);
   const [networkComplexity, setNetworkComplexity] = useState(0.5);
@@ -425,34 +426,39 @@ export default function RelationalFrameTrainer({ userId, username }: RelationalF
 
   const saveToStorage = async () => {
     try {
-      const progressData = {
-        user_id: userId,
-        score: score,
-        history: history,
-        stats_history: statsHistory,
-        settings: {
-          difficulty, timePerQuestion, networkComplexity, spoilerPremises, darkMode,
-          useLetters, useEmojis, useVoronoi, useMandelbrot, letterLength, autoProgressMode,
-          universalProgress, modeSpecificProgress, enabledRelationModes
-        },
-        updated_at: new Date().toISOString()
+      const saveData = {
+        score, history, statsHistory,
+        settings: { difficulty, timePerQuestion, networkComplexity, spoilerPremises, darkMode, useLetters, useEmojis, useVoronoi, useMandelbrot, letterLength, autoProgressMode, universalProgress, modeSpecificProgress, enabledRelationModes },
       };
 
-      // Try to update first, if it fails, insert
-      const { error: updateError } = await supabase
-        .from('user_progress')
-        .update(progressData)
-        .eq('user_id', userId);
+      if (user) {
+        // Save to Supabase if logged in
+        const progressData = {
+          user_id: user.id,
+          score: score,
+          history: history,
+          stats_history: statsHistory,
+          settings: saveData.settings,
+          updated_at: new Date().toISOString()
+        };
 
-      if (updateError) {
-        // If update fails (no row exists), insert a new one
-        const { error: insertError } = await supabase
+        const { error: updateError } = await supabase
           .from('user_progress')
-          .insert([progressData]);
+          .update(progressData)
+          .eq('user_id', user.id);
 
-        if (insertError) {
-          console.error('Save failed:', insertError);
+        if (updateError) {
+          const { error: insertError } = await supabase
+            .from('user_progress')
+            .insert([progressData]);
+
+          if (insertError) {
+            console.error('Save failed:', insertError);
+          }
         }
+      } else {
+        // Save to localStorage if not logged in
+        localStorage.setItem('rft_local_progress', JSON.stringify(saveData));
       }
     } catch (error) {
       console.error('Save failed:', error);
@@ -461,36 +467,64 @@ export default function RelationalFrameTrainer({ userId, username }: RelationalF
 
   const loadFromStorage = async () => {
     try {
-      const { data, error } = await supabase
-        .from('user_progress')
-        .select('*')
-        .eq('user_id', userId)
-        .single();
+      if (user) {
+        // Load from Supabase if logged in
+        const { data, error } = await supabase
+          .from('user_progress')
+          .select('*')
+          .eq('user_id', user.id)
+          .single();
 
-      if (error) {
-        console.log('No saved data found');
-        return;
-      }
+        if (error) {
+          console.log('No saved data found');
+          return;
+        }
 
-      if (data) {
-        if (data.score) setScore(data.score);
-        if (data.history) setHistory(data.history);
-        if (data.stats_history) setStatsHistory(data.stats_history);
-        if (data.settings) {
-          if (data.settings.difficulty !== undefined) setDifficulty(data.settings.difficulty);
-          if (data.settings.timePerQuestion !== undefined) setTimePerQuestion(data.settings.timePerQuestion);
-          if (data.settings.networkComplexity !== undefined) setNetworkComplexity(data.settings.networkComplexity);
-          if (data.settings.spoilerPremises !== undefined) setSpoilerPremises(data.settings.spoilerPremises);
-          if (data.settings.darkMode !== undefined) setDarkMode(data.settings.darkMode);
-          if (data.settings.useLetters !== undefined) setUseLetters(data.settings.useLetters);
-          if (data.settings.useEmojis !== undefined) setUseEmojis(data.settings.useEmojis);
-          if (data.settings.useVoronoi !== undefined) setUseVoronoi(data.settings.useVoronoi);
-          if (data.settings.useMandelbrot !== undefined) setUseMandelbrot(data.settings.useMandelbrot);
-          if (data.settings.letterLength !== undefined) setLetterLength(data.settings.letterLength);
-          if (data.settings.autoProgressMode !== undefined) setAutoProgressMode(data.settings.autoProgressMode);
-          if (data.settings.universalProgress !== undefined) setUniversalProgress(data.settings.universalProgress);
-          if (data.settings.modeSpecificProgress !== undefined) setModeSpecificProgress(data.settings.modeSpecificProgress);
-          if (data.settings.enabledRelationModes !== undefined) setEnabledRelationModes(data.settings.enabledRelationModes);
+        if (data) {
+          if (data.score) setScore(data.score);
+          if (data.history) setHistory(data.history);
+          if (data.stats_history) setStatsHistory(data.stats_history);
+          if (data.settings) {
+            if (data.settings.difficulty !== undefined) setDifficulty(data.settings.difficulty);
+            if (data.settings.timePerQuestion !== undefined) setTimePerQuestion(data.settings.timePerQuestion);
+            if (data.settings.networkComplexity !== undefined) setNetworkComplexity(data.settings.networkComplexity);
+            if (data.settings.spoilerPremises !== undefined) setSpoilerPremises(data.settings.spoilerPremises);
+            if (data.settings.darkMode !== undefined) setDarkMode(data.settings.darkMode);
+            if (data.settings.useLetters !== undefined) setUseLetters(data.settings.useLetters);
+            if (data.settings.useEmojis !== undefined) setUseEmojis(data.settings.useEmojis);
+            if (data.settings.useVoronoi !== undefined) setUseVoronoi(data.settings.useVoronoi);
+            if (data.settings.useMandelbrot !== undefined) setUseMandelbrot(data.settings.useMandelbrot);
+            if (data.settings.letterLength !== undefined) setLetterLength(data.settings.letterLength);
+            if (data.settings.autoProgressMode !== undefined) setAutoProgressMode(data.settings.autoProgressMode);
+            if (data.settings.universalProgress !== undefined) setUniversalProgress(data.settings.universalProgress);
+            if (data.settings.modeSpecificProgress !== undefined) setModeSpecificProgress(data.settings.modeSpecificProgress);
+            if (data.settings.enabledRelationModes !== undefined) setEnabledRelationModes(data.settings.enabledRelationModes);
+          }
+        }
+      } else {
+        // Load from localStorage if not logged in
+        const saved = localStorage.getItem('rft_local_progress');
+        if (saved) {
+          const data = JSON.parse(saved);
+          if (data.score) setScore(data.score);
+          if (data.history) setHistory(data.history);
+          if (data.statsHistory) setStatsHistory(data.statsHistory);
+          if (data.settings) {
+            if (data.settings.difficulty !== undefined) setDifficulty(data.settings.difficulty);
+            if (data.settings.timePerQuestion !== undefined) setTimePerQuestion(data.settings.timePerQuestion);
+            if (data.settings.networkComplexity !== undefined) setNetworkComplexity(data.settings.networkComplexity);
+            if (data.settings.spoilerPremises !== undefined) setSpoilerPremises(data.settings.spoilerPremises);
+            if (data.settings.darkMode !== undefined) setDarkMode(data.settings.darkMode);
+            if (data.settings.useLetters !== undefined) setUseLetters(data.settings.useLetters);
+            if (data.settings.useEmojis !== undefined) setUseEmojis(data.settings.useEmojis);
+            if (data.settings.useVoronoi !== undefined) setUseVoronoi(data.settings.useVoronoi);
+            if (data.settings.useMandelbrot !== undefined) setUseMandelbrot(data.settings.useMandelbrot);
+            if (data.settings.letterLength !== undefined) setLetterLength(data.settings.letterLength);
+            if (data.settings.autoProgressMode !== undefined) setAutoProgressMode(data.settings.autoProgressMode);
+            if (data.settings.universalProgress !== undefined) setUniversalProgress(data.settings.universalProgress);
+            if (data.settings.modeSpecificProgress !== undefined) setModeSpecificProgress(data.settings.modeSpecificProgress);
+            if (data.settings.enabledRelationModes !== undefined) setEnabledRelationModes(data.settings.enabledRelationModes);
+          }
         }
       }
     } catch (error) {
@@ -663,7 +697,12 @@ export default function RelationalFrameTrainer({ userId, username }: RelationalF
   useEffect(() => {
     if (!currentTrial) { loadFromStorage(); startNewTrial(); }
   }, []);
-  
+
+  // Reload data when user logs in or out
+  useEffect(() => {
+    loadFromStorage();
+  }, [user]);
+
   useEffect(() => {
     if (currentTrial) saveToStorage();
   }, [difficulty, timePerQuestion, networkComplexity, spoilerPremises, darkMode, useLetters, useEmojis, useVoronoi, useMandelbrot, letterLength, autoProgressMode, universalProgress, modeSpecificProgress, enabledRelationModes]);
@@ -938,6 +977,19 @@ export default function RelationalFrameTrainer({ userId, username }: RelationalF
                 <Info className="w-4 h-4" />
                 <span className="hidden sm:inline">Help</span>
               </button>
+
+              {user ? (
+                <button onClick={onLogout} className={`flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-colors text-xs sm:text-sm ${darkMode ? 'bg-red-900/50 hover:bg-red-900/70 text-red-200' : 'bg-red-100 hover:bg-red-200 text-gray-900'}`} title={`Logged in as ${user.username}`}>
+                  <User className="w-4 h-4" />
+                  <span className="hidden sm:inline">{user.username}</span>
+                  <LogOut className="w-3 h-3 ml-0.5" />
+                </button>
+              ) : (
+                <button onClick={onShowLogin} className={`flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-colors text-xs sm:text-sm ${darkMode ? 'bg-green-900/50 hover:bg-green-900/70 text-green-200' : 'bg-green-100 hover:bg-green-200 text-gray-900'}`}>
+                  <LogIn className="w-4 h-4" />
+                  <span className="hidden sm:inline">Login</span>
+                </button>
+              )}
             </div>
             
             <div className="flex items-center gap-2 sm:gap-3">
