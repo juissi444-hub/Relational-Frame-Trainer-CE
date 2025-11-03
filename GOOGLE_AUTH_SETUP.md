@@ -2,6 +2,8 @@
 
 This guide explains how to configure Google Sign-In for both local development and production environments.
 
+**Note:** Discord Sign-In is also available. See [DISCORD_AUTH_SETUP.md](./DISCORD_AUTH_SETUP.md) for Discord configuration.
+
 ## Quick Fix Summary
 
 The issue where Google login tries to connect to `localhost:3000` has been fixed by:
