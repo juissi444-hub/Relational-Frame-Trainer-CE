@@ -19,10 +19,13 @@ export default function AuthModal({ onClose, onAuthSuccess }: AuthModalProps) {
     setLoading(true);
 
     try {
+      // Use environment variable for redirect URL, fallback to current origin
+      const redirectUrl = import.meta.env.VITE_REDIRECT_URL || window.location.origin;
+
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: window.location.origin,
+          redirectTo: redirectUrl,
         }
       });
 
