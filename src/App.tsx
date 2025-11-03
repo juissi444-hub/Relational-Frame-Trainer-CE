@@ -10,16 +10,36 @@ function App() {
 
   // Check for existing session on mount and listen to auth changes
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        const username = session.user.user_metadata?.username ||
-                        session.user.email?.split('@')[0] ||
-                        'User';
-        setUser({ id: session.user.id, username });
-      }
+    // Set a timeout to prevent infinite loading
+    const timeout = setTimeout(() => {
+      console.error('Session loading timeout - forcing app to load');
       setLoading(false);
-    });
+    }, 5000);
+
+    // Get initial session
+    supabase.auth.getSession()
+      .then(({ data: { session }, error }) => {
+        clearTimeout(timeout);
+
+        if (error) {
+          console.error('Error getting session:', error);
+          setLoading(false);
+          return;
+        }
+
+        if (session?.user) {
+          const username = session.user.user_metadata?.username ||
+                          session.user.email?.split('@')[0] ||
+                          'User';
+          setUser({ id: session.user.id, username });
+        }
+        setLoading(false);
+      })
+      .catch((err) => {
+        clearTimeout(timeout);
+        console.error('Exception getting session:', err);
+        setLoading(false);
+      });
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -28,12 +48,16 @@ function App() {
                         session.user.email?.split('@')[0] ||
                         'User';
         setUser({ id: session.user.id, username });
+        setLoading(false);
       } else {
         setUser(null);
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      clearTimeout(timeout);
+      subscription.unsubscribe();
+    };
   }, []);
 
   const handleAuthSuccess = (userId: string, username: string) => {
