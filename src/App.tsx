@@ -30,8 +30,9 @@ function App() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       console.log('Auth state changed:', event, session?.user?.email);
 
-      if (event === 'SIGNED_IN' && session?.user) {
-        console.log('User signed in successfully!');
+      // Handle any event that results in a valid session
+      if (session?.user) {
+        console.log('User session detected, event:', event);
         clearTimeout(timeout);
         const username = session.user.user_metadata?.username ||
                         session.user.user_metadata?.full_name ||
@@ -50,15 +51,6 @@ function App() {
       } else if (event === 'SIGNED_OUT') {
         console.log('User signed out');
         setUser(null);
-      } else if (event === 'TOKEN_REFRESHED') {
-        console.log('Token refreshed');
-        if (session?.user) {
-          const username = session.user.user_metadata?.username ||
-                          session.user.user_metadata?.full_name ||
-                          session.user.email?.split('@')[0] ||
-                          'User';
-          setUser({ id: session.user.id, username });
-        }
       }
     });
 
