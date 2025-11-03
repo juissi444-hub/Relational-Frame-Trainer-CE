@@ -2,6 +2,11 @@
   command = "npm run build"
   publish = "dist"
 
+# Environment variables for production
+# IMPORTANT: Set VITE_REDIRECT_URL in Netlify Dashboard
+# to your production URL (e.g., https://your-app.netlify.app)
+# Go to: Site settings > Environment variables
+
 [[redirects]]
   from = "/*"
   to = "/index.html"
