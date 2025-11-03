@@ -10,15 +10,50 @@ function App() {
 
   // Check for existing session on mount and listen to auth changes
   useEffect(() => {
-    // Set a timeout to prevent infinite loading
+    console.log('App mounting, checking auth...');
+
+    // Check if we're returning from OAuth (has hash in URL)
+    const hasOAuthHash = window.location.hash.includes('access_token');
+    if (hasOAuthHash) {
+      console.log('OAuth callback detected in URL');
+    }
+
+    // Set a shorter timeout to prevent infinite loading (2 seconds)
     const timeout = setTimeout(() => {
-      console.error('Session loading timeout - forcing app to load');
+      console.warn('Session loading timeout - forcing app to load');
+      // Clean up URL hash if present
+      if (window.location.hash) {
+        console.log('Cleaning up URL hash');
+        window.history.replaceState(null, '', window.location.pathname);
+      }
       setLoading(false);
-    }, 5000);
+    }, 2000);
+
+    // Listen for auth changes FIRST (before getSession)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('Auth state changed:', event, session?.user?.email);
+
+      if (session?.user) {
+        clearTimeout(timeout);
+        const username = session.user.user_metadata?.username ||
+                        session.user.email?.split('@')[0] ||
+                        'User';
+        setUser({ id: session.user.id, username });
+        setLoading(false);
+
+        // Clean up URL hash after successful auth
+        if (window.location.hash) {
+          window.history.replaceState(null, '', window.location.pathname);
+        }
+      } else if (event === 'SIGNED_OUT') {
+        setUser(null);
+      }
+    });
 
     // Get initial session
     supabase.auth.getSession()
       .then(({ data: { session }, error }) => {
+        console.log('getSession result:', { hasSession: !!session, error });
         clearTimeout(timeout);
 
         if (error) {
@@ -32,6 +67,11 @@ function App() {
                           session.user.email?.split('@')[0] ||
                           'User';
           setUser({ id: session.user.id, username });
+
+          // Clean up URL hash after successful session retrieval
+          if (window.location.hash) {
+            window.history.replaceState(null, '', window.location.pathname);
+          }
         }
         setLoading(false);
       })
@@ -40,19 +80,6 @@ function App() {
         console.error('Exception getting session:', err);
         setLoading(false);
       });
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) {
-        const username = session.user.user_metadata?.username ||
-                        session.user.email?.split('@')[0] ||
-                        'User';
-        setUser({ id: session.user.id, username });
-        setLoading(false);
-      } else {
-        setUser(null);
-      }
-    });
 
     return () => {
       clearTimeout(timeout);
