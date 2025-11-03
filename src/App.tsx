@@ -2,34 +2,59 @@ import React, { useState, useEffect } from 'react';
 import RelationalFrameTrainer from './RelationalFrameTrainer';
 import AuthModal from './AuthModal';
 import { LogIn, LogOut, User } from 'lucide-react';
+import { supabase } from './supabaseClient';
 
 function App() {
   const [user, setUser] = useState<{ id: string; username: string } | null>(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  // Load user from localStorage on mount
+  // Check for existing session on mount and listen to auth changes
   useEffect(() => {
-    const savedUser = localStorage.getItem('rft_user');
-    if (savedUser) {
-      try {
-        setUser(JSON.parse(savedUser));
-      } catch (e) {
-        localStorage.removeItem('rft_user');
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        const username = session.user.user_metadata?.username ||
+                        session.user.email?.split('@')[0] ||
+                        'User';
+        setUser({ id: session.user.id, username });
       }
-    }
+      setLoading(false);
+    });
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        const username = session.user.user_metadata?.username ||
+                        session.user.email?.split('@')[0] ||
+                        'User';
+        setUser({ id: session.user.id, username });
+      } else {
+        setUser(null);
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   const handleAuthSuccess = (userId: string, username: string) => {
     const userData = { id: userId, username };
     setUser(userData);
-    localStorage.setItem('rft_user', JSON.stringify(userData));
     setShowAuthModal(false);
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
     setUser(null);
-    localStorage.removeItem('rft_user');
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-gray-600">Loading...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">

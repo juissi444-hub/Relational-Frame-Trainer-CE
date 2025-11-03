@@ -20,56 +20,51 @@ export default function AuthModal({ onClose, onAuthSuccess }: AuthModalProps) {
     setLoading(true);
 
     try {
+      // Convert username to email format for Supabase Auth
+      const email = `${username.toLowerCase()}@rft.local`;
+
       if (isLogin) {
-        // Login
-        const { data, error } = await supabase
-          .from('users')
-          .select('id, username, password')
-          .eq('username', username)
-          .single();
-
-        if (error || !data) {
-          setError('Invalid username or password');
-          setLoading(false);
-          return;
-        }
-
-        if (data.password !== password) {
-          setError('Invalid username or password');
-          setLoading(false);
-          return;
-        }
-
-        onAuthSuccess(data.id, data.username);
-      } else {
-        // Register
-        // Check if username already exists
-        const { data: existingUser } = await supabase
-          .from('users')
-          .select('id')
-          .eq('username', username)
-          .single();
-
-        if (existingUser) {
-          setError('Username already exists');
-          setLoading(false);
-          return;
-        }
-
-        // Create new user
-        const { data, error } = await supabase
-          .from('users')
-          .insert([{ username, password }])
-          .select()
-          .single();
+        // Login with Supabase Auth
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: email,
+          password: password,
+        });
 
         if (error) {
-          setError('Failed to create account: ' + error.message);
+          setError('Invalid username or password');
           setLoading(false);
           return;
         }
 
-        onAuthSuccess(data.id, data.username);
+        if (data.user) {
+          onAuthSuccess(data.user.id, username);
+        }
+      } else {
+        // Register with Supabase Auth
+        const { data, error } = await supabase.auth.signUp({
+          email: email,
+          password: password,
+          options: {
+            data: {
+              username: username,
+            },
+            emailRedirectTo: undefined, // Disable email confirmation
+          }
+        });
+
+        if (error) {
+          if (error.message.includes('already registered')) {
+            setError('Username already exists');
+          } else {
+            setError('Failed to create account: ' + error.message);
+          }
+          setLoading(false);
+          return;
+        }
+
+        if (data.user) {
+          onAuthSuccess(data.user.id, username);
+        }
       }
     } catch (err: any) {
       setError('An error occurred: ' + err.message);
