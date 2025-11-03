@@ -1,7 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Settings, History, Play, Pause, RotateCcw, X, Check, Clock, TrendingUp, Info } from 'lucide-react';
+import { supabase } from './supabaseClient';
 
-export default function RelationalFrameTrainer() {
+interface RelationalFrameTrainerProps {
+  userId: string;
+  username: string;
+}
+
+export default function RelationalFrameTrainer({ userId, username }: RelationalFrameTrainerProps) {
   const [difficulty, setDifficulty] = useState(3);
   const [timePerQuestion, setTimePerQuestion] = useState(30);
   const [networkComplexity, setNetworkComplexity] = useState(0.5);
@@ -419,23 +425,57 @@ export default function RelationalFrameTrainer() {
 
   const saveToStorage = async () => {
     try {
-      await window.storage.set('rft-data', JSON.stringify({ 
-        score, history, statsHistory, 
-        settings: { difficulty, timePerQuestion, networkComplexity, spoilerPremises, darkMode, useLetters, useEmojis, useVoronoi, useMandelbrot, letterLength, autoProgressMode, universalProgress, modeSpecificProgress, enabledRelationModes }, 
-      }));
+      const progressData = {
+        user_id: userId,
+        score: score,
+        history: history,
+        stats_history: statsHistory,
+        settings: {
+          difficulty, timePerQuestion, networkComplexity, spoilerPremises, darkMode,
+          useLetters, useEmojis, useVoronoi, useMandelbrot, letterLength, autoProgressMode,
+          universalProgress, modeSpecificProgress, enabledRelationModes
+        },
+        updated_at: new Date().toISOString()
+      };
+
+      // Try to update first, if it fails, insert
+      const { error: updateError } = await supabase
+        .from('user_progress')
+        .update(progressData)
+        .eq('user_id', userId);
+
+      if (updateError) {
+        // If update fails (no row exists), insert a new one
+        const { error: insertError } = await supabase
+          .from('user_progress')
+          .insert([progressData]);
+
+        if (insertError) {
+          console.error('Save failed:', insertError);
+        }
+      }
     } catch (error) {
       console.error('Save failed:', error);
     }
   };
-  
+
   const loadFromStorage = async () => {
     try {
-      const result = await window.storage.get('rft-data');
-      if (result?.value) {
-        const data = JSON.parse(result.value);
+      const { data, error } = await supabase
+        .from('user_progress')
+        .select('*')
+        .eq('user_id', userId)
+        .single();
+
+      if (error) {
+        console.log('No saved data found');
+        return;
+      }
+
+      if (data) {
         if (data.score) setScore(data.score);
         if (data.history) setHistory(data.history);
-        if (data.statsHistory) setStatsHistory(data.statsHistory);
+        if (data.stats_history) setStatsHistory(data.stats_history);
         if (data.settings) {
           if (data.settings.difficulty !== undefined) setDifficulty(data.settings.difficulty);
           if (data.settings.timePerQuestion !== undefined) setTimePerQuestion(data.settings.timePerQuestion);
@@ -454,7 +494,7 @@ export default function RelationalFrameTrainer() {
         }
       }
     } catch (error) {
-      console.log('No saved data found');
+      console.log('Error loading data:', error);
     }
   };
 
