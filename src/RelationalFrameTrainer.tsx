@@ -668,8 +668,8 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
         p.stimulus1.startsWith('mandelbrot_') || p.stimulus2.startsWith('mandelbrot_')
       ) || false;
       
-      // Timer goes 10x faster if Mandelbrot is present and activated
-      const speedMultiplier = (useMandelbrot && hasMandelbrot) ? 10 : 1;
+      // Timer goes 3x faster if Mandelbrot is present and activated
+      const speedMultiplier = (useMandelbrot && hasMandelbrot) ? 3 : 1;
       const timer = setInterval(() => setTimeLeft(prev => Math.max(0, prev - (0.1 * speedMultiplier))), 100);
       return () => clearInterval(timer);
     } else if (!isPaused && !feedback && timeLeft <= 0) {
