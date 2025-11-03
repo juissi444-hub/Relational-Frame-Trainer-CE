@@ -707,16 +707,23 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
     return () => window.removeEventListener('keydown', handleKeyPress);
   }, [isPaused, feedback, handleAnswer, togglePause]);
 
+  // Initial load on mount - only runs once
   useEffect(() => {
-    if (!currentTrial) { loadFromStorage(); startNewTrial(); }
+    const initializeGame = async () => {
+      await loadFromStorage();
+      startNewTrial();
+    };
+    initializeGame();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentTrial]);
+  }, []);
 
   // Reload data when user logs in or out
   useEffect(() => {
-    loadFromStorage();
+    if (user) {
+      loadFromStorage();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]);
+  }, [user?.id]);
   
   const renderStimulus = (stimulus) => {
     if (stimulus.startsWith('voronoi_')) {
