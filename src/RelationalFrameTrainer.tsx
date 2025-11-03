@@ -709,16 +709,14 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
 
   useEffect(() => {
     if (!currentTrial) { loadFromStorage(); startNewTrial(); }
-  }, [loadFromStorage, startNewTrial, currentTrial]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentTrial]);
 
   // Reload data when user logs in or out
   useEffect(() => {
     loadFromStorage();
-  }, [user, loadFromStorage]);
-
-  useEffect(() => {
-    if (currentTrial) saveToStorage();
-  }, [currentTrial, saveToStorage]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
   
   const renderStimulus = (stimulus) => {
     if (stimulus.startsWith('voronoi_')) {
