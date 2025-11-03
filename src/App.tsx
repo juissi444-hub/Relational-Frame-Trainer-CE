@@ -30,6 +30,13 @@ function App() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       console.log('Auth state changed:', event, session?.user?.email);
 
+      // Handle SIGNED_OUT first (before checking session)
+      if (event === 'SIGNED_OUT') {
+        console.log('User signed out');
+        setUser(null);
+        return;
+      }
+
       // Handle any event that results in a valid session
       if (session?.user) {
         console.log('User session detected, event:', event);
@@ -48,9 +55,6 @@ function App() {
             window.history.replaceState(null, '', window.location.pathname);
           }
         }, 100);
-      } else if (event === 'SIGNED_OUT') {
-        console.log('User signed out');
-        setUser(null);
       }
     });
 
