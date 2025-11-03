@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Settings, History, Play, Pause, RotateCcw, X, Check, Clock, TrendingUp, Info, LogIn, LogOut, User } from 'lucide-react';
+import { Settings, History, Play, Pause, RotateCcw, X, Check, Clock, TrendingUp, Info, LogIn, LogOut, User, Heart } from 'lucide-react';
 import { supabase } from './supabaseClient';
 
 interface RelationalFrameTrainerProps {
@@ -38,6 +38,7 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
   const [showHistory, setShowHistory] = useState(false);
   const [showStats, setShowStats] = useState(false);
   const [showTutorial, setShowTutorial] = useState(false);
+  const [showSupportModal, setShowSupportModal] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [currentTrial, setCurrentTrial] = useState(null);
   const [timeLeft, setTimeLeft] = useState(timePerQuestion);
@@ -394,6 +395,8 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
               correctAnswer = true; // OPPOSITE implies DIFFERENT
             } else if (derivedRelation === 'DIFFERENT' && (questionRelation === 'OPPOSITE' || questionRelation === 'SAME')) {
               correctAnswer = 'ambiguous'; // DIFFERENT doesn't tell us if it's SAME or OPPOSITE
+            } else if (derivedRelation === 'DIFFERENT' && questionRelation === 'DIFFERENT') {
+              correctAnswer = 'ambiguous'; // DIFFERENT is non-transitive: can't determine if things different from the same thing are different from each other
             } else {
               correctAnswer = false;
             }
@@ -821,6 +824,55 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
         </div>
       )}
 
+      {showSupportModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-2 sm:p-4">
+          <div className={`max-w-2xl w-full rounded-2xl p-6 sm:p-8 shadow-2xl ${darkMode ? 'bg-slate-800' : 'bg-white'}`}>
+            <div className="flex justify-between items-center mb-6">
+              <h2 className={`text-2xl sm:text-3xl font-bold flex items-center gap-2 ${darkMode ? 'text-pink-400' : 'text-pink-600'}`}>
+                <Heart className="w-6 h-6 sm:w-8 sm:h-8 fill-current" />
+                Support Us!
+              </h2>
+              <button onClick={() => setShowSupportModal(false)} className={`p-2 rounded-lg ${darkMode ? 'hover:bg-slate-700' : 'hover:bg-gray-100'}`}>
+                <X className={`w-5 h-5 sm:w-6 sm:h-6 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`} />
+              </button>
+            </div>
+            <div className={`space-y-6 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+              <div className="text-center">
+                <p className={`text-xl sm:text-2xl font-semibold mb-4 ${darkMode ? 'text-pink-300' : 'text-pink-700'}`}>
+                  Thank you so much for supporting us!
+                </p>
+                <p className={`text-sm sm:text-base ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                  Your support helps us keep this training tool free and continuously improve it for everyone.
+                </p>
+              </div>
+
+              {/* Placeholder for Google AdSense */}
+              <div className={`border-2 border-dashed rounded-lg p-8 text-center ${darkMode ? 'border-slate-600 bg-slate-700/50' : 'border-gray-300 bg-gray-50'}`}>
+                <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                  Advertisement space
+                </p>
+                <p className={`text-xs mt-2 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                  (Google AdSense will be displayed here)
+                </p>
+              </div>
+
+              <div className={`p-4 rounded-lg ${darkMode ? 'bg-slate-700' : 'bg-pink-50'}`}>
+                <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                  💡 <strong>Did you know?</strong> This training tool helps improve cognitive flexibility and relational reasoning skills, which are valuable for learning, problem-solving, and academic success.
+                </p>
+              </div>
+
+              <button
+                onClick={() => setShowSupportModal(false)}
+                className={`w-full py-3 rounded-lg font-semibold transition-colors ${darkMode ? 'bg-pink-600 hover:bg-pink-700 text-white' : 'bg-pink-500 hover:bg-pink-600 text-white'}`}
+              >
+                Continue Training
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {(showHistory || showStats) && (
         <div className="sm:hidden fixed inset-0 z-40 bg-black/50 backdrop-blur-sm" onClick={() => { setShowHistory(false); setShowStats(false); }} />
       )}
@@ -1003,6 +1055,10 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
               <button onClick={() => setShowSettings(!showSettings)} className={`flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-colors text-xs sm:text-sm ${darkMode ? 'bg-indigo-900/50 hover:bg-indigo-900/70 text-indigo-200' : 'bg-indigo-100 hover:bg-indigo-200 text-gray-900'}`}>
                 <Settings className="w-4 h-4" />
                 <span className="hidden sm:inline">Settings</span>
+              </button>
+              <button onClick={() => setShowSupportModal(true)} className={`flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-colors text-xs sm:text-sm ${darkMode ? 'bg-pink-900/50 hover:bg-pink-900/70 text-pink-200' : 'bg-pink-100 hover:bg-pink-200 text-gray-900'}`}>
+                <Heart className="w-4 h-4" />
+                <span className="hidden sm:inline">Support Us</span>
               </button>
             </div>
           </div>
