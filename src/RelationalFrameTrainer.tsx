@@ -847,11 +847,11 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
               </div>
 
               {/* Placeholder for Google AdSense */}
-              <div className={`border-2 border-dashed rounded-lg p-8 text-center ${darkMode ? 'border-slate-600 bg-slate-700/50' : 'border-gray-300 bg-gray-50'}`}>
-                <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+              <div className={`border-2 border-dashed rounded-lg p-12 min-h-[280px] flex flex-col items-center justify-center text-center ${darkMode ? 'border-slate-600 bg-slate-700/50' : 'border-gray-300 bg-gray-50'}`}>
+                <p className={`text-base ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                   Advertisement space
                 </p>
-                <p className={`text-xs mt-2 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                <p className={`text-sm mt-3 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
                   (Google AdSense will be displayed here)
                 </p>
               </div>
