@@ -391,14 +391,24 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
           if (incompatible.length > 0) {
             questionRelation = incompatible[Math.floor(Math.random() * incompatible.length)];
             // Determine correct answer based on derivedRelation and questionRelation
+            // Key logical rules for equality relations:
+            // 1. OPPOSITE implies DIFFERENT (opposites are different)
+            // 2. DIFFERENT and SAME are mutually exclusive
+            // 3. DIFFERENT doesn't tell us if something is OPPOSITE
+            // 4. DIFFERENT is non-transitive
+
             if (derivedRelation === 'OPPOSITE' && questionRelation === 'DIFFERENT') {
               correctAnswer = true; // OPPOSITE implies DIFFERENT
-            } else if (derivedRelation === 'DIFFERENT' && (questionRelation === 'OPPOSITE' || questionRelation === 'SAME')) {
-              correctAnswer = 'ambiguous'; // DIFFERENT doesn't tell us if it's SAME or OPPOSITE
+            } else if (derivedRelation === 'DIFFERENT' && questionRelation === 'SAME') {
+              correctAnswer = false; // DIFFERENT means NOT SAME (mutually exclusive)
+            } else if (derivedRelation === 'SAME' && questionRelation === 'DIFFERENT') {
+              correctAnswer = false; // SAME means NOT DIFFERENT (mutually exclusive)
+            } else if (derivedRelation === 'DIFFERENT' && questionRelation === 'OPPOSITE') {
+              correctAnswer = 'ambiguous'; // DIFFERENT doesn't tell us if it's OPPOSITE or just different
             } else if (derivedRelation === 'DIFFERENT' && questionRelation === 'DIFFERENT') {
-              correctAnswer = 'ambiguous'; // DIFFERENT is non-transitive: can't determine if things different from the same thing are different from each other
+              correctAnswer = 'ambiguous'; // DIFFERENT is non-transitive: X≠Y, Y≠Z doesn't tell us about X and Z
             } else {
-              correctAnswer = false;
+              correctAnswer = false; // All other cases (e.g., SAME vs OPPOSITE, OPPOSITE vs SAME)
             }
           } else {
             questionRelation = derivedRelation;
