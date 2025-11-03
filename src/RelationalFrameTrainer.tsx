@@ -437,7 +437,7 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
     setFeedback(null);
   }, [generateTrial, timePerQuestion]);
 
-  const saveToStorage = async () => {
+  const saveToStorage = useCallback(async () => {
     try {
       const saveData = {
         score, history, statsHistory,
@@ -476,9 +476,9 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
     } catch (error) {
       console.error('Save failed:', error);
     }
-  };
+  }, [user, score, history, statsHistory, difficulty, timePerQuestion, networkComplexity, spoilerPremises, darkMode, useLetters, useEmojis, useVoronoi, useMandelbrot, letterLength, autoProgressMode, universalProgress, modeSpecificProgress, enabledRelationModes]);
 
-  const loadFromStorage = async () => {
+  const loadFromStorage = useCallback(async () => {
     try {
       if (user) {
         // Load from Supabase if logged in
@@ -543,7 +543,7 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
     } catch (error) {
       console.log('Error loading data:', error);
     }
-  };
+  }, [user, setScore, setHistory, setStatsHistory, setDifficulty, setTimePerQuestion, setNetworkComplexity, setSpoilerPremises, setDarkMode, setUseLetters, setUseEmojis, setUseVoronoi, setUseMandelbrot, setLetterLength, setAutoProgressMode, setUniversalProgress, setModeSpecificProgress, setEnabledRelationModes]);
 
   const resetGame = () => {
     setShowResetConfirmation(false);
@@ -709,16 +709,16 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
 
   useEffect(() => {
     if (!currentTrial) { loadFromStorage(); startNewTrial(); }
-  }, []);
+  }, [loadFromStorage, startNewTrial, currentTrial]);
 
   // Reload data when user logs in or out
   useEffect(() => {
     loadFromStorage();
-  }, [user]);
+  }, [user, loadFromStorage]);
 
   useEffect(() => {
     if (currentTrial) saveToStorage();
-  }, [difficulty, timePerQuestion, networkComplexity, spoilerPremises, darkMode, useLetters, useEmojis, useVoronoi, useMandelbrot, letterLength, autoProgressMode, universalProgress, modeSpecificProgress, enabledRelationModes]);
+  }, [currentTrial, saveToStorage]);
   
   const renderStimulus = (stimulus) => {
     if (stimulus.startsWith('voronoi_')) {
