@@ -15,38 +15,50 @@ function App() {
     // Check if we're returning from OAuth (has hash in URL)
     const hasOAuthHash = window.location.hash.includes('access_token');
     if (hasOAuthHash) {
-      console.log('OAuth callback detected in URL');
+      console.log('OAuth callback detected in URL - giving Supabase time to process');
     }
 
-    // Set a shorter timeout to prevent infinite loading (2 seconds)
+    // Set timeout based on whether we're processing OAuth
+    // OAuth needs more time (10s), normal page load is quick (2s)
+    const timeoutDuration = hasOAuthHash ? 10000 : 2000;
     const timeout = setTimeout(() => {
       console.warn('Session loading timeout - forcing app to load');
-      // Clean up URL hash if present
-      if (window.location.hash) {
-        console.log('Cleaning up URL hash');
-        window.history.replaceState(null, '', window.location.pathname);
-      }
       setLoading(false);
-    }, 2000);
+    }, timeoutDuration);
 
     // Listen for auth changes FIRST (before getSession)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       console.log('Auth state changed:', event, session?.user?.email);
 
-      if (session?.user) {
+      if (event === 'SIGNED_IN' && session?.user) {
+        console.log('User signed in successfully!');
         clearTimeout(timeout);
         const username = session.user.user_metadata?.username ||
+                        session.user.user_metadata?.full_name ||
                         session.user.email?.split('@')[0] ||
                         'User';
         setUser({ id: session.user.id, username });
         setLoading(false);
 
         // Clean up URL hash after successful auth
-        if (window.location.hash) {
-          window.history.replaceState(null, '', window.location.pathname);
-        }
+        setTimeout(() => {
+          if (window.location.hash) {
+            console.log('Cleaning up OAuth hash from URL');
+            window.history.replaceState(null, '', window.location.pathname);
+          }
+        }, 100);
       } else if (event === 'SIGNED_OUT') {
+        console.log('User signed out');
         setUser(null);
+      } else if (event === 'TOKEN_REFRESHED') {
+        console.log('Token refreshed');
+        if (session?.user) {
+          const username = session.user.user_metadata?.username ||
+                          session.user.user_metadata?.full_name ||
+                          session.user.email?.split('@')[0] ||
+                          'User';
+          setUser({ id: session.user.id, username });
+        }
       }
     });
 
@@ -64,14 +76,13 @@ function App() {
 
         if (session?.user) {
           const username = session.user.user_metadata?.username ||
+                          session.user.user_metadata?.full_name ||
                           session.user.email?.split('@')[0] ||
                           'User';
           setUser({ id: session.user.id, username });
-
-          // Clean up URL hash after successful session retrieval
-          if (window.location.hash) {
-            window.history.replaceState(null, '', window.location.pathname);
-          }
+          console.log('Session loaded, user:', username);
+        } else {
+          console.log('No existing session found');
         }
         setLoading(false);
       })
