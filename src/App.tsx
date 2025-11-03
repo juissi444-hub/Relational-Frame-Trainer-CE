@@ -101,8 +101,18 @@ function App() {
   };
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
+    try {
+      console.log('Logging out...');
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error('Logout error:', error);
+      } else {
+        console.log('Logout successful');
+      }
+      // Don't set user here - let onAuthStateChange handle it
+    } catch (err) {
+      console.error('Logout exception:', err);
+    }
   };
 
   if (loading) {
