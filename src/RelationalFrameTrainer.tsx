@@ -264,7 +264,7 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
 
       return 'AMBIGUOUS';
     } else if (mode1 === 'space3d') {
-      // 3D Space relations
+      // Space 3D relations
       // AT is identity
       if (rel1 === 'AT') return rel2;
       if (rel2 === 'AT') return rel1;
@@ -291,15 +291,17 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
       const p2 = parse3D(rel2);
 
       // Compose vertical components
+      // In Space 3D, opposite vertical directions cancel out to AT
       let vResult;
       if (p1.v === 'AT') vResult = p2.v;
       else if (p2.v === 'AT') vResult = p1.v;
       else if (p1.v === p2.v) vResult = p1.v; // ABOVE + ABOVE = ABOVE
-      else if (p1.v === 'ABOVE' && p2.v === 'BELOW') vResult = 'AMBIGUOUS';
-      else if (p1.v === 'BELOW' && p2.v === 'ABOVE') vResult = 'AMBIGUOUS';
-      else vResult = 'AMBIGUOUS';
+      else if (p1.v === 'ABOVE' && p2.v === 'BELOW') vResult = 'AT'; // Opposite directions cancel
+      else if (p1.v === 'BELOW' && p2.v === 'ABOVE') vResult = 'AT'; // Opposite directions cancel
+      else vResult = 'AT';
 
-      // Compose horizontal components (same logic as spatial)
+      // Compose horizontal components
+      // In Space 3D, opposite horizontal directions cancel out to AT
       const opposites = {
         'NORTH': 'SOUTH', 'SOUTH': 'NORTH',
         'EAST': 'WEST', 'WEST': 'EAST',
@@ -310,12 +312,9 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
       let hResult;
       if (p1.h === 'AT') hResult = p2.h;
       else if (p2.h === 'AT') hResult = p1.h;
-      else if (p1.h === p2.h) hResult = p1.h;
-      else if (opposites[p1.h] === p2.h) hResult = 'AMBIGUOUS';
-      else hResult = 'AMBIGUOUS';
-
-      // If either component is ambiguous, the whole relation is ambiguous
-      if (vResult === 'AMBIGUOUS' || hResult === 'AMBIGUOUS') return 'AMBIGUOUS';
+      else if (p1.h === p2.h) hResult = p1.h; // Same direction compounds
+      else if (opposites[p1.h] === p2.h) hResult = 'AT'; // Opposite directions cancel
+      else hResult = p2.h; // Different non-opposite directions: use second relation
 
       return compose3D(vResult, hResult);
     } else {
@@ -353,7 +352,7 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
     if (relation === 'CONTAINS') return 'WITHIN';
     if (relation === 'WITHIN') return 'CONTAINS';
 
-    // 3D Space relations - reverse both vertical and horizontal
+    // Space 3D relations - reverse both vertical and horizontal
     if (relation === 'ABOVE' || relation === 'BELOW' || relation.startsWith('ABOVE_') || relation.startsWith('BELOW_')) {
       const horizontalOpposites = {
         'NORTH': 'SOUTH', 'SOUTH': 'NORTH',
@@ -1157,12 +1156,19 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
       }
 
       // Find min/max to determine grid bounds
-      const rows = Object.values(positions).filter(p => p.vLevel === vLevelNum).map(p => p.row);
-      const cols = Object.values(positions).filter(p => p.vLevel === vLevelNum).map(p => p.col);
-      const minRow = Math.min(...rows, 0);
-      const maxRow = Math.max(...rows, 2);
-      const minCol = Math.min(...cols, 0);
-      const maxCol = Math.max(...cols, 2);
+      const objectsAtLevel = Object.values(positions).filter(p => p.vLevel === vLevelNum);
+      const rows = objectsAtLevel.map(p => p.row);
+      const cols = objectsAtLevel.map(p => p.col);
+
+      // Default to centered 3x3 grid if no objects at this level
+      const minRow = rows.length > 0 ? Math.min(...rows) : 0;
+      const maxRow = rows.length > 0 ? Math.max(...rows) : 2;
+      const minCol = cols.length > 0 ? Math.min(...cols) : 0;
+      const maxCol = cols.length > 0 ? Math.max(...cols) : 2;
+
+      // Ensure we always show at least a 3x3 grid
+      const gridRows = [minRow, minRow + 1, minRow + 2];
+      const gridCols = [minCol, minCol + 1, minCol + 2];
 
       return (
         <div className="flex flex-col gap-0.5">
@@ -1170,8 +1176,8 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
             {verticalLevel}
           </div>}
           <div className="grid grid-cols-3 gap-0.5">
-            {[minRow, minRow+1, minRow+2].map(row =>
-              [minCol, minCol+1, minCol+2].map(col => {
+            {gridRows.map(row =>
+              gridCols.map(col => {
                 const key = `${row},${col}`;
                 const objectsInCell = objectsHere[key] || [];
 
@@ -1183,8 +1189,8 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
                       (darkMode ? 'bg-slate-700 border-slate-600' : 'bg-gray-100 border-gray-300')
                     }`}
                   >
-                    {objectsInCell.map((s, i) => (
-                      <span key={i}>{renderStimulus(s)}</span>
+                    {objectsInCell.map((stimulus, i) => (
+                      <span key={i} className="text-[10px]">{renderStimulus(stimulus)}</span>
                     ))}
                   </div>
                 );
@@ -1243,7 +1249,7 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
                   <li><strong>Temporal:</strong> BEFORE, AFTER, AT (time relationships)</li>
                   <li><strong>Spatial:</strong> NORTH, SOUTH, EAST, WEST, etc. (directional)</li>
                   <li><strong>Containment:</strong> CONTAINS, WITHIN (hierarchical relationships)</li>
-                  <li><strong>3D Space:</strong> ABOVE, BELOW, ABOVE_NORTH, BELOW_SOUTH, etc. (3D positioning)</li>
+                  <li><strong>Space 3D:</strong> ABOVE, BELOW, ABOVE_NORTH, BELOW_SOUTH, etc. (3D positioning)</li>
                 </ul>
               </div>
               <div className="hidden sm:block">
@@ -1901,7 +1907,7 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
                       onChange={(e) => setEnabledRelationModes(prev => ({ ...prev, space3d: e.target.checked }))}
                       className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
                     />
-                    <span className={`text-sm font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>3D Space (ABOVE, BELOW, ABOVE_NORTH, etc.)</span>
+                    <span className={`text-sm font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Space 3D (ABOVE, BELOW, ABOVE_NORTH, etc.)</span>
                   </label>
 
                 </div>
