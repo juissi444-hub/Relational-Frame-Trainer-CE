@@ -29,7 +29,8 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
     equality: { targetPremiseCount: 40, targetAccuracy: 95, recentAnswers: [], currentDifficulty: 3, currentTime: 30 },
     temporal: { targetPremiseCount: 40, targetAccuracy: 95, recentAnswers: [], currentDifficulty: 3, currentTime: 30 },
     spatial: { targetPremiseCount: 40, targetAccuracy: 95, recentAnswers: [], currentDifficulty: 3, currentTime: 30 },
-    containment: { targetPremiseCount: 40, targetAccuracy: 95, recentAnswers: [], currentDifficulty: 3, currentTime: 30 }
+    containment: { targetPremiseCount: 40, targetAccuracy: 95, recentAnswers: [], currentDifficulty: 3, currentTime: 30 },
+    vibration: { targetPremiseCount: 40, targetAccuracy: 95, recentAnswers: [], currentDifficulty: 3, currentTime: 30 }
   });
   const [showResetConfirmation, setShowResetConfirmation] = useState(false);
   const [showResetComplete, setShowResetComplete] = useState(false);
@@ -52,14 +53,24 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
     equality: true,
     temporal: false,
     spatial: false,
-    containment: false
+    containment: false,
+    vibration: false
   });
 
   const relationSets = {
     equality: ['SAME', 'OPPOSITE', 'DIFFERENT'],
     temporal: ['BEFORE', 'AFTER', 'AT'],
     spatial: ['NORTH', 'SOUTH', 'EAST', 'WEST', 'NORTHEAST', 'NORTHWEST', 'SOUTHEAST', 'SOUTHWEST'],
-    containment: ['CONTAINS', 'WITHIN']
+    containment: ['CONTAINS', 'WITHIN'],
+    vibration: ['BUZZ', 'TAP', 'PULSE', 'WAVE']
+  };
+
+  // Vibration patterns in milliseconds [vibrate, pause, vibrate, ...]
+  const vibrationPatterns = {
+    'BUZZ': [500],                    // Long single buzz
+    'TAP': [100],                     // Short tap
+    'PULSE': [100, 100, 100, 100, 100], // Quick double pulse
+    'WAVE': [200, 100, 200]           // Wave pattern
   };
 
   const oppositeRelations = {
@@ -179,6 +190,7 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
     if (['SAME', 'OPPOSITE', 'DIFFERENT'].includes(relation)) return 'equality';
     if (['BEFORE', 'AFTER', 'AT'].includes(relation)) return 'temporal';
     if (['CONTAINS', 'WITHIN'].includes(relation)) return 'containment';
+    if (['BUZZ', 'TAP', 'PULSE', 'WAVE'].includes(relation)) return 'vibration';
     return 'spatial';
   };
 
@@ -232,7 +244,13 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
       // This doesn't tell us the relationship between A and C
       if (rel1 === 'CONTAINS' && rel2 === 'WITHIN') return 'AMBIGUOUS';
       if (rel1 === 'WITHIN' && rel2 === 'CONTAINS') return 'AMBIGUOUS';
-      
+
+      return 'AMBIGUOUS';
+    } else if (mode1 === 'vibration') {
+      // Vibration patterns - same patterns are transitive
+      if (rel1 === rel2) return rel1;
+
+      // Different patterns cannot be composed meaningfully
       return 'AMBIGUOUS';
     } else {
       // Spatial relations
@@ -268,6 +286,9 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
     // Containment relations - reverse the hierarchy
     if (relation === 'CONTAINS') return 'WITHIN';
     if (relation === 'WITHIN') return 'CONTAINS';
+
+    // Vibration relations - symmetric (same in both directions)
+    if (['BUZZ', 'TAP', 'PULSE', 'WAVE'].includes(relation)) return relation;
 
     // Spatial relations - reverse the direction
     const spatialOpposites = {
@@ -613,13 +634,15 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
       equality: { targetPremiseCount: 40, targetAccuracy: 95, recentAnswers: [], currentDifficulty: 3, currentTime: 30 },
       temporal: { targetPremiseCount: 40, targetAccuracy: 95, recentAnswers: [], currentDifficulty: 3, currentTime: 30 },
       spatial: { targetPremiseCount: 40, targetAccuracy: 95, recentAnswers: [], currentDifficulty: 3, currentTime: 30 },
-      containment: { targetPremiseCount: 40, targetAccuracy: 95, recentAnswers: [], currentDifficulty: 3, currentTime: 30 }
+      containment: { targetPremiseCount: 40, targetAccuracy: 95, recentAnswers: [], currentDifficulty: 3, currentTime: 30 },
+      vibration: { targetPremiseCount: 40, targetAccuracy: 95, recentAnswers: [], currentDifficulty: 3, currentTime: 30 }
     });
     setEnabledRelationModes({
       equality: true,
       temporal: false,
       spatial: false,
-      containment: false
+      containment: false,
+      vibration: false
     });
     startNewTrial();
     saveToStorage();
@@ -788,6 +811,13 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
     return <span className={`font-bold ${isEmoji ? 'text-3xl' : ''} ${darkMode ? 'text-indigo-400' : 'text-indigo-600'}`}>{stimulus}</span>;
   };
 
+  const triggerVibration = (relation) => {
+    // Check if vibration API is available (mainly mobile browsers)
+    if ('vibrate' in navigator && vibrationPatterns[relation]) {
+      navigator.vibrate(vibrationPatterns[relation]);
+    }
+  };
+
   const getRelationColor = (relation) => {
     if (darkMode) {
       if (relation === 'SAME') return 'bg-green-900/40 text-green-300 border-green-500';
@@ -801,9 +831,12 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
       if (['NORTH', 'SOUTH', 'EAST', 'WEST', 'NORTHEAST', 'NORTHWEST', 'SOUTHEAST', 'SOUTHWEST'].includes(relation)) {
         return 'bg-teal-900/40 text-teal-300 border-teal-500';
       }
+      if (['BUZZ', 'TAP', 'PULSE', 'WAVE'].includes(relation)) {
+        return 'bg-pink-900/40 text-pink-300 border-pink-500';
+      }
       return 'bg-blue-900/40 text-blue-300 border-blue-500';
     }
-    
+
     if (relation === 'SAME') return 'bg-green-100 text-green-700 border-green-300';
     if (relation === 'OPPOSITE') return 'bg-red-100 text-red-700 border-red-300';
     if (relation === 'DIFFERENT') return 'bg-blue-100 text-blue-700 border-blue-300';
@@ -814,6 +847,9 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
     if (relation === 'WITHIN') return 'bg-green-100 text-green-700 border-green-300';
     if (['NORTH', 'SOUTH', 'EAST', 'WEST', 'NORTHEAST', 'NORTHWEST', 'SOUTHEAST', 'SOUTHWEST'].includes(relation)) {
       return 'bg-teal-100 text-teal-700 border-teal-300';
+    }
+    if (['BUZZ', 'TAP', 'PULSE', 'WAVE'].includes(relation)) {
+      return 'bg-pink-100 text-pink-700 border-pink-300';
     }
     return 'bg-blue-100 text-blue-700 border-blue-300';
   };
@@ -1296,6 +1332,18 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
                               <span className={`font-semibold px-2 sm:px-3 py-0.5 sm:py-1 rounded border text-sm sm:text-base ${getRelationColor(premise.relation)}`}>WITHIN</span>
                               {renderStimulus(premise.stimulus2)}
                             </>
+                          ) : mode === 'vibration' ? (
+                            <>
+                              <span className={`mx-1 text-sm sm:text-base ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>is</span>
+                              <button
+                                onClick={() => triggerVibration(premise.relation)}
+                                className={`font-semibold px-2 sm:px-3 py-0.5 sm:py-1 rounded border text-sm sm:text-base ${getRelationColor(premise.relation)} cursor-pointer hover:opacity-80 transition-opacity`}
+                              >
+                                📳 {premise.relation}
+                              </button>
+                              <span className={`mx-1 text-sm sm:text-base ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>to</span>
+                              {renderStimulus(premise.stimulus2)}
+                            </>
                           ) : (
                             <>
                               <span className={`mx-1 text-sm sm:text-base ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>is</span>
@@ -1336,6 +1384,22 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
                             <span className={`font-bold text-base sm:text-2xl ${darkMode ? 'text-indigo-300' : 'text-indigo-700'}`}>Is</span>
                             {renderStimulus(currentTrial.question.stimulus1)}
                             <span className={`mx-1 sm:mx-2 font-semibold px-3 sm:px-4 py-1 sm:py-2 rounded-lg border-2 text-sm sm:text-base ${getRelationColor(rel)}`}>WITHIN</span>
+                            {renderStimulus(currentTrial.question.stimulus2)}
+                            <span className={`font-bold text-base sm:text-2xl ${darkMode ? 'text-indigo-300' : 'text-indigo-700'}`}>?</span>
+                          </>
+                        );
+                      } else if (mode === 'vibration') {
+                        return (
+                          <>
+                            <span className={`font-bold text-base sm:text-2xl ${darkMode ? 'text-indigo-300' : 'text-indigo-700'}`}>Is</span>
+                            {renderStimulus(currentTrial.question.stimulus1)}
+                            <button
+                              onClick={() => triggerVibration(rel)}
+                              className={`mx-1 sm:mx-2 font-semibold px-3 sm:px-4 py-1 sm:py-2 rounded-lg border-2 text-sm sm:text-base ${getRelationColor(rel)} cursor-pointer hover:opacity-80 transition-opacity`}
+                            >
+                              📳 {rel}
+                            </button>
+                            <span className={`font-bold text-base sm:text-2xl ${darkMode ? 'text-indigo-300' : 'text-indigo-700'}`}>to</span>
                             {renderStimulus(currentTrial.question.stimulus2)}
                             <span className={`font-bold text-base sm:text-2xl ${darkMode ? 'text-indigo-300' : 'text-indigo-700'}`}>?</span>
                           </>
@@ -1484,13 +1548,23 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
                   </label>
 
                   <label className="flex items-center space-x-2 cursor-pointer">
-                    <input 
-                      type="checkbox" 
-                      checked={enabledRelationModes.containment} 
-                      onChange={(e) => setEnabledRelationModes(prev => ({ ...prev, containment: e.target.checked }))} 
-                      className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500" 
+                    <input
+                      type="checkbox"
+                      checked={enabledRelationModes.containment}
+                      onChange={(e) => setEnabledRelationModes(prev => ({ ...prev, containment: e.target.checked }))}
+                      className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
                     />
                     <span className={`text-sm font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Containment (CONTAINS, WITHIN)</span>
+                  </label>
+
+                  <label className="flex items-center space-x-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={enabledRelationModes.vibration}
+                      onChange={(e) => setEnabledRelationModes(prev => ({ ...prev, vibration: e.target.checked }))}
+                      className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                    />
+                    <span className={`text-sm font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Vibration — Mobile only (BUZZ, TAP, PULSE, WAVE)</span>
                   </label>
                 </div>
               </div>
