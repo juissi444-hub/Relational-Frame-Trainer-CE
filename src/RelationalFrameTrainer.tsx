@@ -1034,6 +1034,33 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
     return relation;
   };
 
+  // Render relation with separate styling for vertical and horizontal components
+  const renderRelationStyled = (relation, size = 'sm') => {
+    const sizeClasses = size === 'lg' ? 'px-3 sm:px-4 py-1 sm:py-2 text-sm sm:text-base' : 'px-2 py-1 text-xs';
+
+    if (relation.startsWith('ABOVE_')) {
+      const horizontal = relation.substring(6);
+      return (
+        <>
+          <span className={`font-bold rounded border ${darkMode ? 'bg-indigo-900/40 text-indigo-300 border-indigo-500' : 'bg-indigo-100 text-indigo-700 border-indigo-300'} ${sizeClasses}`}>ABOVE</span>
+          <span className={`mx-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>and</span>
+          <span className={`font-bold rounded border ${darkMode ? 'bg-teal-900/40 text-teal-300 border-teal-500' : 'bg-teal-100 text-teal-700 border-teal-300'} ${sizeClasses}`}>{horizontal}</span>
+        </>
+      );
+    }
+    if (relation.startsWith('BELOW_')) {
+      const horizontal = relation.substring(6);
+      return (
+        <>
+          <span className={`font-bold rounded border ${darkMode ? 'bg-indigo-900/40 text-indigo-300 border-indigo-500' : 'bg-indigo-100 text-indigo-700 border-indigo-300'} ${sizeClasses}`}>BELOW</span>
+          <span className={`mx-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>and</span>
+          <span className={`font-bold rounded border ${darkMode ? 'bg-teal-900/40 text-teal-300 border-teal-500' : 'bg-teal-100 text-teal-700 border-teal-300'} ${sizeClasses}`}>{horizontal}</span>
+        </>
+      );
+    }
+    return <span className={`font-bold rounded border ${getRelationColor(relation)} ${sizeClasses}`}>{relation}</span>;
+  };
+
   // Render 3D grid visualization for spatial relations
   const renderSpatialGrid = (trial) => {
     if (!trial || !trial.premises) return null;
@@ -1044,8 +1071,9 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
     // Calculate positions for all objects based on all premises
     const positions = {}; // stimulus -> { v: vertical, h: horizontal, row: number, col: number }
 
-    // Start with the first premise's first stimulus at center
-    const firstStimulus = trial.premises[0].stimulus1;
+    // Start with the first premise's SECOND stimulus (reference point) at center
+    // "X is ABOVE Y" means Y is the reference, X is positioned relative to Y
+    const firstStimulus = trial.premises[0].stimulus2;
     positions[firstStimulus] = { v: 'CENTER', h: 'CENTER', row: 1, col: 1, vLevel: 0 };
 
     // Helper to get row/col offset from direction
@@ -1077,30 +1105,33 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
     };
 
     // Process all premises to calculate positions
+    // "X is DIRECTION of Y" means X is at position (Y + direction_offset)
     for (const premise of trial.premises) {
       const { v, h } = parse3D(premise.relation);
       const [rowOffset, colOffset] = getOffset(h);
       const vLevel = getVerticalLevel(v);
 
-      if (positions[premise.stimulus1]) {
-        // Calculate stimulus2 position relative to stimulus1
-        const pos1 = positions[premise.stimulus1];
-        positions[premise.stimulus2] = {
-          v: v,
-          h: h,
-          row: pos1.row + rowOffset,
-          col: pos1.col + colOffset,
-          vLevel: pos1.vLevel + vLevel
-        };
-      } else if (positions[premise.stimulus2]) {
-        // Calculate stimulus1 position relative to stimulus2 (reverse)
+      if (positions[premise.stimulus2]) {
+        // We know stimulus2 (reference point), calculate stimulus1 (the positioned object)
+        // "X is ABOVE_WEST of Y" means X = Y + (ABOVE_WEST offset)
         const pos2 = positions[premise.stimulus2];
         positions[premise.stimulus1] = {
+          v: v,
+          h: h,
+          row: pos2.row + rowOffset,
+          col: pos2.col + colOffset,
+          vLevel: pos2.vLevel + vLevel
+        };
+      } else if (positions[premise.stimulus1]) {
+        // We know stimulus1, calculate stimulus2 (reverse the relation)
+        // If "X is ABOVE_WEST of Y" and we know X, then Y = X - (ABOVE_WEST offset)
+        const pos1 = positions[premise.stimulus1];
+        positions[premise.stimulus2] = {
           v: v === 'ABOVE' ? 'BELOW' : v === 'BELOW' ? 'ABOVE' : 'CENTER',
           h: h,
-          row: pos2.row - rowOffset,
-          col: pos2.col - colOffset,
-          vLevel: pos2.vLevel - vLevel
+          row: pos1.row - rowOffset,
+          col: pos1.col - colOffset,
+          vLevel: pos1.vLevel - vLevel
         };
       }
     }
@@ -1422,7 +1453,7 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
                     <div className="mb-1.5 sm:mb-2 text-xs space-y-0.5 sm:space-y-1">
                       {item.trial.premises.map((premise, pidx) => (
                         <div key={pidx} className={`flex items-center gap-1 flex-wrap ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                          {renderStimulus(premise.stimulus1)} is <span className={`px-1 rounded text-xs ${getRelationColor(premise.relation)}`}>{formatRelation(premise.relation)}</span> to {renderStimulus(premise.stimulus2)}
+                          {renderStimulus(premise.stimulus1)} is {renderRelationStyled(premise.relation, 'sm')} to {renderStimulus(premise.stimulus2)}
                         </div>
                       ))}
                     </div>
@@ -1432,7 +1463,7 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
                       </div>
                     )}
                     <div className={`text-xs sm:text-sm mb-1.5 sm:mb-2 font-semibold flex items-center gap-1 flex-wrap ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>
-                      Is {renderStimulus(item.trial.question.stimulus1)} {formatRelation(item.trial.question.relation)} to {renderStimulus(item.trial.question.stimulus2)}?
+                      Is {renderStimulus(item.trial.question.stimulus1)} {renderRelationStyled(item.trial.question.relation, 'sm')} to {renderStimulus(item.trial.question.stimulus2)}?
                     </div>
                     <div className="text-xs space-y-0.5 sm:space-y-1">
                       <div className={darkMode ? 'text-gray-300' : 'text-gray-700'}>
@@ -1667,7 +1698,7 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
                           ) : (
                             <>
                               <span className={`mx-1 text-sm sm:text-base ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>is</span>
-                              <span className={`font-semibold px-2 sm:px-3 py-0.5 sm:py-1 rounded border text-sm sm:text-base ${getRelationColor(premise.relation)}`}>{formatRelation(premise.relation)}</span>
+                              {renderRelationStyled(premise.relation, 'lg')}
                               {preposition && <span className={`mx-1 text-sm sm:text-base ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>{preposition}</span>}
                               {renderStimulus(premise.stimulus2)}
                             </>
@@ -1714,7 +1745,7 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
                           <>
                             <span className={`font-bold text-base sm:text-2xl ${darkMode ? 'text-indigo-300' : 'text-indigo-700'}`}>Is</span>
                             {renderStimulus(currentTrial.question.stimulus1)}
-                            <span className={`mx-1 sm:mx-2 font-semibold px-3 sm:px-4 py-1 sm:py-2 rounded-lg border-2 text-sm sm:text-base ${getRelationColor(rel)}`}>{formatRelation(rel)}</span>
+                            <span className="mx-1 sm:mx-2">{renderRelationStyled(rel, 'lg')}</span>
                             {preposition && <span className={`font-bold text-base sm:text-2xl ${darkMode ? 'text-indigo-300' : 'text-indigo-700'}`}>{preposition}</span>}
                             {renderStimulus(currentTrial.question.stimulus2)}
                             <span className={`font-bold text-base sm:text-2xl ${darkMode ? 'text-indigo-300' : 'text-indigo-700'}`}>?</span>
