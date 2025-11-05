@@ -18,6 +18,7 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
   const [useEmojis, setUseEmojis] = useState(false);
   const [useVoronoi, setUseVoronoi] = useState(false);
   const [useMandelbrot, setUseMandelbrot] = useState(false);
+  const [useVibration, setUseVibration] = useState(false);
   const [letterLength, setLetterLength] = useState(3);
   const [autoProgressMode, setAutoProgressMode] = useState('universal'); // 'universal', 'mode-specific', or 'off'
   const [universalProgress, setUniversalProgress] = useState({
@@ -29,8 +30,7 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
     equality: { targetPremiseCount: 40, targetAccuracy: 95, recentAnswers: [], currentDifficulty: 3, currentTime: 30 },
     temporal: { targetPremiseCount: 40, targetAccuracy: 95, recentAnswers: [], currentDifficulty: 3, currentTime: 30 },
     spatial: { targetPremiseCount: 40, targetAccuracy: 95, recentAnswers: [], currentDifficulty: 3, currentTime: 30 },
-    containment: { targetPremiseCount: 40, targetAccuracy: 95, recentAnswers: [], currentDifficulty: 3, currentTime: 30 },
-    vibration: { targetPremiseCount: 40, targetAccuracy: 95, recentAnswers: [], currentDifficulty: 3, currentTime: 30 }
+    containment: { targetPremiseCount: 40, targetAccuracy: 95, recentAnswers: [], currentDifficulty: 3, currentTime: 30 }
   });
   const [showResetConfirmation, setShowResetConfirmation] = useState(false);
   const [showResetComplete, setShowResetComplete] = useState(false);
@@ -53,25 +53,27 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
     equality: true,
     temporal: false,
     spatial: false,
-    containment: false,
-    vibration: false
+    containment: false
   });
 
   const relationSets = {
     equality: ['SAME', 'OPPOSITE', 'DIFFERENT'],
     temporal: ['BEFORE', 'AFTER', 'AT'],
     spatial: ['NORTH', 'SOUTH', 'EAST', 'WEST', 'NORTHEAST', 'NORTHWEST', 'SOUTHEAST', 'SOUTHWEST'],
-    containment: ['CONTAINS', 'WITHIN'],
-    vibration: ['BUZZ', 'TAP', 'PULSE', 'WAVE']
+    containment: ['CONTAINS', 'WITHIN']
   };
 
-  // Vibration patterns in milliseconds [vibrate, pause, vibrate, ...]
-  const vibrationPatterns = {
-    'BUZZ': [500],                    // Long single buzz
-    'TAP': [100],                     // Short tap
-    'PULSE': [100, 100, 100, 100, 100], // Quick double pulse
-    'WAVE': [200, 100, 200]           // Wave pattern
-  };
+  // Vibration patterns for stimuli in milliseconds [vibrate, pause, vibrate, ...]
+  const vibrationPatterns = [
+    [500],                          // Pattern 0: Long buzz
+    [100],                          // Pattern 1: Short tap
+    [100, 100, 100, 100, 100],     // Pattern 2: Double pulse
+    [200, 100, 200],                // Pattern 3: Wave
+    [150, 50, 150, 50, 150],        // Pattern 4: Triple tap
+    [300, 100, 100],                // Pattern 5: Long-short
+    [100, 100, 300],                // Pattern 6: Short-long
+    [80, 80, 80, 80, 80, 80, 80],   // Pattern 7: Rapid
+  ];
 
   const oppositeRelations = {
     'CONTAINS': 'WITHIN',
@@ -167,17 +169,20 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
     if (useEmojis) availableTypes.push('emojis');
     if (useVoronoi) availableTypes.push('voronoi');
     if (useMandelbrot) availableTypes.push('mandelbrot');
-    
+    if (useVibration) availableTypes.push('vibration');
+
     if (availableTypes.length === 0) availableTypes.push('letters');
-    
+
     const selectedType = availableTypes[Math.floor(Math.random() * availableTypes.length)];
-    
+
     if (selectedType === 'emojis') {
       return emojiList[Math.floor(Math.random() * emojiList.length)];
     } else if (selectedType === 'voronoi') {
       return `voronoi_${Math.floor(Math.random() * 1000000)}`;
     } else if (selectedType === 'mandelbrot') {
       return `mandelbrot_${Math.floor(Math.random() * 1000000)}`;
+    } else if (selectedType === 'vibration') {
+      return `vibration_${Math.floor(Math.random() * vibrationPatterns.length)}`;
     } else {
       const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
       let result = '';
@@ -190,7 +195,6 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
     if (['SAME', 'OPPOSITE', 'DIFFERENT'].includes(relation)) return 'equality';
     if (['BEFORE', 'AFTER', 'AT'].includes(relation)) return 'temporal';
     if (['CONTAINS', 'WITHIN'].includes(relation)) return 'containment';
-    if (['BUZZ', 'TAP', 'PULSE', 'WAVE'].includes(relation)) return 'vibration';
     return 'spatial';
   };
 
@@ -246,12 +250,6 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
       if (rel1 === 'WITHIN' && rel2 === 'CONTAINS') return 'AMBIGUOUS';
 
       return 'AMBIGUOUS';
-    } else if (mode1 === 'vibration') {
-      // Vibration patterns - same patterns are transitive
-      if (rel1 === rel2) return rel1;
-
-      // Different patterns cannot be composed meaningfully
-      return 'AMBIGUOUS';
     } else {
       // Spatial relations
       const opposites = {
@@ -286,9 +284,6 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
     // Containment relations - reverse the hierarchy
     if (relation === 'CONTAINS') return 'WITHIN';
     if (relation === 'WITHIN') return 'CONTAINS';
-
-    // Vibration relations - symmetric (same in both directions)
-    if (['BUZZ', 'TAP', 'PULSE', 'WAVE'].includes(relation)) return relation;
 
     // Spatial relations - reverse the direction
     const spatialOpposites = {
@@ -479,7 +474,7 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
     }
 
     return { premises, question: { stimulus1: stimuli[startIdx], relation: questionRelation, stimulus2: stimuli[endIdx] }, correctAnswer, derivedRelation: derivedRelation || 'AMBIGUOUS', allPaths: findAllPaths(premises, stimuli[startIdx], stimuli[endIdx]), allStimuli: stimuli };
-  }, [difficulty, networkComplexity, useLetters, useEmojis, useVoronoi, letterLength, enabledRelationModes]);
+  }, [difficulty, networkComplexity, useLetters, useEmojis, useVoronoi, useMandelbrot, useVibration, letterLength, enabledRelationModes]);
 
   const startNewTrial = useCallback(() => {
     try {
@@ -497,7 +492,7 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
     try {
       const saveData = {
         score, history, statsHistory,
-        settings: { difficulty, timePerQuestion, networkComplexity, spoilerPremises, darkMode, useLetters, useEmojis, useVoronoi, useMandelbrot, letterLength, autoProgressMode, universalProgress, modeSpecificProgress, enabledRelationModes },
+        settings: { difficulty, timePerQuestion, networkComplexity, spoilerPremises, darkMode, useLetters, useEmojis, useVoronoi, useMandelbrot, useVibration, letterLength, autoProgressMode, universalProgress, modeSpecificProgress, enabledRelationModes },
       };
 
       if (user) {
@@ -532,7 +527,7 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
     } catch (error) {
       console.error('Save failed:', error);
     }
-  }, [user, score, history, statsHistory, difficulty, timePerQuestion, networkComplexity, spoilerPremises, darkMode, useLetters, useEmojis, useVoronoi, useMandelbrot, letterLength, autoProgressMode, universalProgress, modeSpecificProgress, enabledRelationModes]);
+  }, [user, score, history, statsHistory, difficulty, timePerQuestion, networkComplexity, spoilerPremises, darkMode, useLetters, useEmojis, useVoronoi, useMandelbrot, useVibration, letterLength, autoProgressMode, universalProgress, modeSpecificProgress, enabledRelationModes]);
 
   const loadFromStorage = useCallback(async () => {
     try {
@@ -565,6 +560,7 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
             if (data.settings.useEmojis !== undefined) setUseEmojis(data.settings.useEmojis);
             if (data.settings.useVoronoi !== undefined) setUseVoronoi(data.settings.useVoronoi);
             if (data.settings.useMandelbrot !== undefined) setUseMandelbrot(data.settings.useMandelbrot);
+            if (data.settings.useVibration !== undefined) setUseVibration(data.settings.useVibration);
             if (data.settings.letterLength !== undefined) setLetterLength(data.settings.letterLength);
             if (data.settings.autoProgressMode !== undefined) setAutoProgressMode(data.settings.autoProgressMode);
             if (data.settings.universalProgress !== undefined) setUniversalProgress(data.settings.universalProgress);
@@ -592,6 +588,7 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
             if (data.settings.useEmojis !== undefined) setUseEmojis(data.settings.useEmojis);
             if (data.settings.useVoronoi !== undefined) setUseVoronoi(data.settings.useVoronoi);
             if (data.settings.useMandelbrot !== undefined) setUseMandelbrot(data.settings.useMandelbrot);
+            if (data.settings.useVibration !== undefined) setUseVibration(data.settings.useVibration);
             if (data.settings.letterLength !== undefined) setLetterLength(data.settings.letterLength);
             if (data.settings.autoProgressMode !== undefined) setAutoProgressMode(data.settings.autoProgressMode);
             if (data.settings.universalProgress !== undefined) setUniversalProgress(data.settings.universalProgress);
@@ -623,6 +620,7 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
     setUseEmojis(false);
     setUseVoronoi(false);
     setUseMandelbrot(false);
+    setUseVibration(false);
     setLetterLength(3);
     setAutoProgressMode('universal');
     setUniversalProgress({
@@ -634,15 +632,13 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
       equality: { targetPremiseCount: 40, targetAccuracy: 95, recentAnswers: [], currentDifficulty: 3, currentTime: 30 },
       temporal: { targetPremiseCount: 40, targetAccuracy: 95, recentAnswers: [], currentDifficulty: 3, currentTime: 30 },
       spatial: { targetPremiseCount: 40, targetAccuracy: 95, recentAnswers: [], currentDifficulty: 3, currentTime: 30 },
-      containment: { targetPremiseCount: 40, targetAccuracy: 95, recentAnswers: [], currentDifficulty: 3, currentTime: 30 },
-      vibration: { targetPremiseCount: 40, targetAccuracy: 95, recentAnswers: [], currentDifficulty: 3, currentTime: 30 }
+      containment: { targetPremiseCount: 40, targetAccuracy: 95, recentAnswers: [], currentDifficulty: 3, currentTime: 30 }
     });
     setEnabledRelationModes({
       equality: true,
       temporal: false,
       spatial: false,
-      containment: false,
-      vibration: false
+      containment: false
     });
     startNewTrial();
     saveToStorage();
@@ -807,14 +803,32 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
     if (stimulus.startsWith('mandelbrot_')) {
       return <div className="inline-block w-16 h-16 align-middle border-2 border-gray-300 rounded-md overflow-hidden" dangerouslySetInnerHTML={{ __html: generateMandelbrotSVG(parseInt(stimulus.split('_')[1])) }} />;
     }
+    if (stimulus.startsWith('vibration_')) {
+      const patternIndex = parseInt(stimulus.split('_')[1]);
+      return (
+        <button
+          onClick={() => triggerVibration(stimulus)}
+          className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-lg font-bold text-sm transition-all ${
+            darkMode
+              ? 'bg-pink-900/40 text-pink-300 border-2 border-pink-500 hover:bg-pink-900/60'
+              : 'bg-pink-100 text-pink-700 border-2 border-pink-300 hover:bg-pink-200'
+          }`}
+        >
+          📳 V{patternIndex}
+        </button>
+      );
+    }
     const isEmoji = emojiList.includes(stimulus);
     return <span className={`font-bold ${isEmoji ? 'text-3xl' : ''} ${darkMode ? 'text-indigo-400' : 'text-indigo-600'}`}>{stimulus}</span>;
   };
 
-  const triggerVibration = (relation) => {
-    // Check if vibration API is available (mainly mobile browsers)
-    if ('vibrate' in navigator && vibrationPatterns[relation]) {
-      navigator.vibrate(vibrationPatterns[relation]);
+  const triggerVibration = (stimulus) => {
+    // Extract pattern index from stimulus (e.g., "vibration_3" -> 3)
+    if (stimulus && stimulus.startsWith('vibration_')) {
+      const patternIndex = parseInt(stimulus.split('_')[1]);
+      if ('vibrate' in navigator && vibrationPatterns[patternIndex]) {
+        navigator.vibrate(vibrationPatterns[patternIndex]);
+      }
     }
   };
 
@@ -831,9 +845,6 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
       if (['NORTH', 'SOUTH', 'EAST', 'WEST', 'NORTHEAST', 'NORTHWEST', 'SOUTHEAST', 'SOUTHWEST'].includes(relation)) {
         return 'bg-teal-900/40 text-teal-300 border-teal-500';
       }
-      if (['BUZZ', 'TAP', 'PULSE', 'WAVE'].includes(relation)) {
-        return 'bg-pink-900/40 text-pink-300 border-pink-500';
-      }
       return 'bg-blue-900/40 text-blue-300 border-blue-500';
     }
 
@@ -847,9 +858,6 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
     if (relation === 'WITHIN') return 'bg-green-100 text-green-700 border-green-300';
     if (['NORTH', 'SOUTH', 'EAST', 'WEST', 'NORTHEAST', 'NORTHWEST', 'SOUTHEAST', 'SOUTHWEST'].includes(relation)) {
       return 'bg-teal-100 text-teal-700 border-teal-300';
-    }
-    if (['BUZZ', 'TAP', 'PULSE', 'WAVE'].includes(relation)) {
-      return 'bg-pink-100 text-pink-700 border-pink-300';
     }
     return 'bg-blue-100 text-blue-700 border-blue-300';
   };
@@ -1332,18 +1340,6 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
                               <span className={`font-semibold px-2 sm:px-3 py-0.5 sm:py-1 rounded border text-sm sm:text-base ${getRelationColor(premise.relation)}`}>WITHIN</span>
                               {renderStimulus(premise.stimulus2)}
                             </>
-                          ) : mode === 'vibration' ? (
-                            <>
-                              <span className={`mx-1 text-sm sm:text-base ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>is</span>
-                              <button
-                                onClick={() => triggerVibration(premise.relation)}
-                                className={`font-semibold px-2 sm:px-3 py-0.5 sm:py-1 rounded border text-sm sm:text-base ${getRelationColor(premise.relation)} cursor-pointer hover:opacity-80 transition-opacity`}
-                              >
-                                📳 {premise.relation}
-                              </button>
-                              <span className={`mx-1 text-sm sm:text-base ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>to</span>
-                              {renderStimulus(premise.stimulus2)}
-                            </>
                           ) : (
                             <>
                               <span className={`mx-1 text-sm sm:text-base ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>is</span>
@@ -1384,22 +1380,6 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
                             <span className={`font-bold text-base sm:text-2xl ${darkMode ? 'text-indigo-300' : 'text-indigo-700'}`}>Is</span>
                             {renderStimulus(currentTrial.question.stimulus1)}
                             <span className={`mx-1 sm:mx-2 font-semibold px-3 sm:px-4 py-1 sm:py-2 rounded-lg border-2 text-sm sm:text-base ${getRelationColor(rel)}`}>WITHIN</span>
-                            {renderStimulus(currentTrial.question.stimulus2)}
-                            <span className={`font-bold text-base sm:text-2xl ${darkMode ? 'text-indigo-300' : 'text-indigo-700'}`}>?</span>
-                          </>
-                        );
-                      } else if (mode === 'vibration') {
-                        return (
-                          <>
-                            <span className={`font-bold text-base sm:text-2xl ${darkMode ? 'text-indigo-300' : 'text-indigo-700'}`}>Is</span>
-                            {renderStimulus(currentTrial.question.stimulus1)}
-                            <button
-                              onClick={() => triggerVibration(rel)}
-                              className={`mx-1 sm:mx-2 font-semibold px-3 sm:px-4 py-1 sm:py-2 rounded-lg border-2 text-sm sm:text-base ${getRelationColor(rel)} cursor-pointer hover:opacity-80 transition-opacity`}
-                            >
-                              📳 {rel}
-                            </button>
-                            <span className={`font-bold text-base sm:text-2xl ${darkMode ? 'text-indigo-300' : 'text-indigo-700'}`}>to</span>
                             {renderStimulus(currentTrial.question.stimulus2)}
                             <span className={`font-bold text-base sm:text-2xl ${darkMode ? 'text-indigo-300' : 'text-indigo-700'}`}>?</span>
                           </>
@@ -1557,15 +1537,6 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
                     <span className={`text-sm font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Containment (CONTAINS, WITHIN)</span>
                   </label>
 
-                  <label className="flex items-center space-x-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={enabledRelationModes.vibration}
-                      onChange={(e) => setEnabledRelationModes(prev => ({ ...prev, vibration: e.target.checked }))}
-                      className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
-                    />
-                    <span className={`text-sm font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Vibration — Mobile only (BUZZ, TAP, PULSE, WAVE)</span>
-                  </label>
                 </div>
               </div>
 
@@ -1596,7 +1567,12 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
                     <input type="checkbox" checked={useMandelbrot} onChange={(e) => setUseMandelbrot(e.target.checked)} className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500" />
                     <span className={`text-sm font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Use Mandelbrot Fractals</span>
                   </label>
-                  
+
+                  <label className="flex items-center space-x-2 cursor-pointer">
+                    <input type="checkbox" checked={useVibration} onChange={(e) => setUseVibration(e.target.checked)} className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500" />
+                    <span className={`text-sm font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Use Vibration Patterns 📳 (Mobile only)</span>
+                  </label>
+
                   <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                     Select one or more types. Stimuli will be randomly chosen from selected types.
                   </p>
