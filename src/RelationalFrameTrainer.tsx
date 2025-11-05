@@ -776,7 +776,39 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
-  
+
+  // Auto-save whenever settings or game state changes (debounced)
+  useEffect(() => {
+    // Skip initial mount - only save after data has been loaded
+    const timeoutId = setTimeout(() => {
+      saveToStorage();
+    }, 1000); // Debounce saves by 1 second
+
+    return () => clearTimeout(timeoutId);
+  }, [
+    // Settings that should trigger auto-save
+    difficulty,
+    timePerQuestion,
+    networkComplexity,
+    spoilerPremises,
+    darkMode,
+    useLetters,
+    useEmojis,
+    useVoronoi,
+    useMandelbrot,
+    letterLength,
+    autoProgressMode,
+    enabledRelationModes,
+    // Game state
+    score,
+    history,
+    statsHistory,
+    universalProgress,
+    modeSpecificProgress,
+    // Save function
+    saveToStorage
+  ]);
+
   const renderStimulus = (stimulus) => {
     if (stimulus.startsWith('voronoi_')) {
       return <div className="inline-block w-16 h-16 align-middle border-2 border-gray-300 rounded-md overflow-hidden" dangerouslySetInnerHTML={{ __html: generateVoronoiSVG(parseInt(stimulus.split('_')[1])) }} />;
