@@ -629,6 +629,18 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
+  // Auto-save to storage whenever important state changes
+  useEffect(() => {
+    // Don't save on initial mount (before data is loaded)
+    if (currentTrial || score.correct > 0 || score.incorrect > 0 || score.missed > 0) {
+      console.log('Auto-saving state to storage...');
+      saveToStorage();
+    }
+  }, [currentTrial, timeLeft, feedback, isPaused, score, history, statsHistory,
+      difficulty, timePerQuestion, networkComplexity, spoilerPremises, darkMode,
+      useLetters, useEmojis, useVoronoi, useMandelbrot, useVibration, letterLength,
+      autoProgressMode, universalProgress, modeSpecificProgress, enabledRelationModes, saveToStorage]);
+
   const resetGame = () => {
     setShowResetConfirmation(false);
     setScore({ correct: 0, incorrect: 0, missed: 0 });
