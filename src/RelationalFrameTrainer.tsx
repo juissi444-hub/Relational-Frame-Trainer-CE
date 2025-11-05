@@ -492,6 +492,7 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
     try {
       const saveData = {
         score, history, statsHistory,
+        currentTrial, timeLeft, feedback, isPaused,
         settings: { difficulty, timePerQuestion, networkComplexity, spoilerPremises, darkMode, useLetters, useEmojis, useVoronoi, useMandelbrot, useVibration, letterLength, autoProgressMode, universalProgress, modeSpecificProgress, enabledRelationModes },
       };
 
@@ -502,6 +503,10 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
           score: score,
           history: history,
           stats_history: statsHistory,
+          current_trial: currentTrial,
+          time_left: timeLeft,
+          feedback: feedback,
+          is_paused: isPaused,
           settings: saveData.settings,
           updated_at: new Date().toISOString()
         };
@@ -527,7 +532,7 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
     } catch (error) {
       console.error('Save failed:', error);
     }
-  }, [user, score, history, statsHistory, difficulty, timePerQuestion, networkComplexity, spoilerPremises, darkMode, useLetters, useEmojis, useVoronoi, useMandelbrot, useVibration, letterLength, autoProgressMode, universalProgress, modeSpecificProgress, enabledRelationModes]);
+  }, [user, score, history, statsHistory, currentTrial, timeLeft, feedback, isPaused, difficulty, timePerQuestion, networkComplexity, spoilerPremises, darkMode, useLetters, useEmojis, useVoronoi, useMandelbrot, useVibration, letterLength, autoProgressMode, universalProgress, modeSpecificProgress, enabledRelationModes]);
 
   const loadFromStorage = useCallback(async () => {
     try {
@@ -550,6 +555,10 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
           if (data.score) setScore(data.score);
           if (data.history) setHistory(data.history);
           if (data.stats_history) setStatsHistory(data.stats_history);
+          if (data.current_trial) setCurrentTrial(data.current_trial);
+          if (data.time_left !== undefined) setTimeLeft(data.time_left);
+          if (data.feedback !== undefined) setFeedback(data.feedback);
+          if (data.is_paused !== undefined) setIsPaused(data.is_paused);
           if (data.settings) {
             if (data.settings.difficulty !== undefined) setDifficulty(data.settings.difficulty);
             if (data.settings.timePerQuestion !== undefined) setTimePerQuestion(data.settings.timePerQuestion);
@@ -578,6 +587,10 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
           if (data.score) setScore(data.score);
           if (data.history) setHistory(data.history);
           if (data.statsHistory) setStatsHistory(data.statsHistory);
+          if (data.currentTrial) setCurrentTrial(data.currentTrial);
+          if (data.timeLeft !== undefined) setTimeLeft(data.timeLeft);
+          if (data.feedback !== undefined) setFeedback(data.feedback);
+          if (data.isPaused !== undefined) setIsPaused(data.isPaused);
           if (data.settings) {
             if (data.settings.difficulty !== undefined) setDifficulty(data.settings.difficulty);
             if (data.settings.timePerQuestion !== undefined) setTimePerQuestion(data.settings.timePerQuestion);
@@ -775,8 +788,14 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
       try {
         console.log('Initializing game...');
         await loadFromStorage();
-        console.log('Storage loaded, starting trial...');
-        startNewTrial();
+        console.log('Storage loaded, checking if trial exists...');
+        // Only start a new trial if there isn't one already loaded
+        if (!currentTrial) {
+          console.log('No trial found, starting new one...');
+          startNewTrial();
+        } else {
+          console.log('Trial loaded from storage, resuming...');
+        }
         console.log('Game initialized successfully');
       } catch (error) {
         console.error('Error initializing game:', error);
@@ -1273,14 +1292,16 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
               )}
             </div>
             
-            <div className="flex flex-wrap items-center gap-1.5 sm:gap-3">
-              <div className="text-center">
-                <div className={`text-base sm:text-xl font-bold tabular-nums ${darkMode ? 'text-indigo-400' : 'text-indigo-600'}`}>{timeLeft.toFixed(1)}s</div>
-                <div className={`text-xs hidden sm:block ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Time</div>
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="flex flex-col items-center gap-1">
+                <div className="text-center">
+                  <div className={`text-base sm:text-xl font-bold tabular-nums ${darkMode ? 'text-indigo-400' : 'text-indigo-600'}`}>{timeLeft.toFixed(1)}s</div>
+                  <div className={`text-xs hidden sm:block ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Time</div>
+                </div>
+                <button onClick={togglePause} className={`text-white p-1.5 sm:p-2 rounded-lg transition-colors ${isPaused ? 'bg-green-500 hover:bg-green-600' : (darkMode ? 'bg-yellow-600 hover:bg-yellow-700' : 'bg-yellow-500 hover:bg-yellow-600')}`} title="Pause/Resume">
+                  {isPaused ? <Play className="w-4 h-4 sm:w-5 sm:h-5" /> : <Pause className="w-4 h-4 sm:w-5 sm:h-5" />}
+                </button>
               </div>
-              <button onClick={togglePause} className={`text-white p-1.5 sm:p-2 rounded-lg transition-colors ${isPaused ? 'bg-green-500 hover:bg-green-600' : (darkMode ? 'bg-yellow-600 hover:bg-yellow-700' : 'bg-yellow-500 hover:bg-yellow-600')}`} title="Pause/Resume">
-                {isPaused ? <Play className="w-4 h-4 sm:w-5 sm:h-5" /> : <Pause className="w-4 h-4 sm:w-5 sm:h-5" />}
-              </button>
               <button
                 onClick={() => {
                   console.log('Settings button clicked, current state:', showSettings);
