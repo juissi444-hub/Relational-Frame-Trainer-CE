@@ -807,12 +807,16 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
       const patternIndex = parseInt(stimulus.split('_')[1]);
       return (
         <button
-          onClick={() => triggerVibration(stimulus)}
-          className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-lg font-bold text-sm transition-all ${
+          onClick={(e) => {
+            e.preventDefault();
+            triggerVibration(stimulus);
+          }}
+          className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-lg font-bold text-sm transition-all active:scale-95 ${
             darkMode
-              ? 'bg-pink-900/40 text-pink-300 border-2 border-pink-500 hover:bg-pink-900/60'
-              : 'bg-pink-100 text-pink-700 border-2 border-pink-300 hover:bg-pink-200'
+              ? 'bg-pink-900/40 text-pink-300 border-2 border-pink-500 hover:bg-pink-900/60 active:bg-pink-900/80'
+              : 'bg-pink-100 text-pink-700 border-2 border-pink-300 hover:bg-pink-200 active:bg-pink-300'
           }`}
+          title={`Vibration Pattern ${patternIndex} - ${vibrationPatterns[patternIndex]?.join(', ')}ms`}
         >
           📳 V{patternIndex}
         </button>
@@ -826,8 +830,26 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
     // Extract pattern index from stimulus (e.g., "vibration_3" -> 3)
     if (stimulus && stimulus.startsWith('vibration_')) {
       const patternIndex = parseInt(stimulus.split('_')[1]);
-      if ('vibrate' in navigator && vibrationPatterns[patternIndex]) {
-        navigator.vibrate(vibrationPatterns[patternIndex]);
+      const pattern = vibrationPatterns[patternIndex];
+
+      console.log('🔔 Vibration triggered:', {
+        stimulus,
+        patternIndex,
+        pattern,
+        hasVibrateAPI: 'vibrate' in navigator,
+        userAgent: navigator.userAgent
+      });
+
+      if ('vibrate' in navigator) {
+        if (pattern) {
+          const success = navigator.vibrate(pattern);
+          console.log('📳 Vibrate called, success:', success);
+        } else {
+          console.warn('⚠️ No pattern found for index:', patternIndex);
+        }
+      } else {
+        console.warn('⚠️ Vibration API not supported on this device/browser');
+        console.log('💡 Tip: Vibration only works on mobile browsers (Android Chrome, Firefox, etc.)');
       }
     }
   };
