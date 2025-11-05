@@ -1023,10 +1023,48 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
     return 'bg-blue-100 text-blue-700 border-blue-300';
   };
 
+  // Format relation for display (e.g., "ABOVE_NORTH" -> "ABOVE and NORTH")
+  const formatRelation = (relation) => {
+    if (relation.startsWith('ABOVE_')) {
+      return `ABOVE and ${relation.substring(6)}`;
+    }
+    if (relation.startsWith('BELOW_')) {
+      return `BELOW and ${relation.substring(6)}`;
+    }
+    return relation;
+  };
+
   // Render 3D grid visualization for spatial relations
-  const renderSpatialGrid = (relation, stimulus1, stimulus2) => {
-    const mode = getRelationMode(relation);
+  const renderSpatialGrid = (trial) => {
+    if (!trial || !trial.premises) return null;
+
+    const mode = getRelationMode(trial.question.relation);
     if (mode !== 'spatial' && mode !== 'space3d') return null;
+
+    // Calculate positions for all objects based on all premises
+    const positions = {}; // stimulus -> { v: vertical, h: horizontal, row: number, col: number }
+
+    // Start with the first premise's first stimulus at center
+    const firstStimulus = trial.premises[0].stimulus1;
+    positions[firstStimulus] = { v: 'CENTER', h: 'CENTER', row: 1, col: 1, vLevel: 0 };
+
+    // Helper to get row/col offset from direction
+    const getOffset = (direction) => {
+      const offsets = {
+        'NORTH': [-1, 0], 'SOUTH': [1, 0],
+        'EAST': [0, 1], 'WEST': [0, -1],
+        'NORTHEAST': [-1, 1], 'NORTHWEST': [-1, -1],
+        'SOUTHEAST': [1, 1], 'SOUTHWEST': [1, -1],
+        'CENTER': [0, 0]
+      };
+      return offsets[direction] || [0, 0];
+    };
+
+    const getVerticalLevel = (v) => {
+      if (v === 'ABOVE') return 1;
+      if (v === 'BELOW') return -1;
+      return 0;
+    };
 
     // Parse 3D relation
     const parse3D = (rel) => {
@@ -1035,29 +1073,63 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
       if (rel === 'BELOW') return { v: 'BELOW', h: 'CENTER' };
       if (rel.startsWith('ABOVE_')) return { v: 'ABOVE', h: rel.substring(6) };
       if (rel.startsWith('BELOW_')) return { v: 'BELOW', h: rel.substring(6) };
-      // Pure horizontal (2D spatial)
       return { v: 'CENTER', h: rel };
     };
 
-    const getGridPosition = (horizontal) => {
-      // Map direction to grid position (row, col) in 3x3 grid
-      const positions = {
-        'NORTHWEST': [0, 0], 'NORTH': [0, 1], 'NORTHEAST': [0, 2],
-        'WEST': [1, 0], 'CENTER': [1, 1], 'EAST': [1, 2],
-        'SOUTHWEST': [2, 0], 'SOUTH': [2, 1], 'SOUTHEAST': [2, 2]
-      };
-      return positions[horizontal] || [1, 1];
-    };
+    // Process all premises to calculate positions
+    for (const premise of trial.premises) {
+      const { v, h } = parse3D(premise.relation);
+      const [rowOffset, colOffset] = getOffset(h);
+      const vLevel = getVerticalLevel(v);
 
-    const { v, h } = parse3D(relation);
+      if (positions[premise.stimulus1]) {
+        // Calculate stimulus2 position relative to stimulus1
+        const pos1 = positions[premise.stimulus1];
+        positions[premise.stimulus2] = {
+          v: v,
+          h: h,
+          row: pos1.row + rowOffset,
+          col: pos1.col + colOffset,
+          vLevel: pos1.vLevel + vLevel
+        };
+      } else if (positions[premise.stimulus2]) {
+        // Calculate stimulus1 position relative to stimulus2 (reverse)
+        const pos2 = positions[premise.stimulus2];
+        positions[premise.stimulus1] = {
+          v: v === 'ABOVE' ? 'BELOW' : v === 'BELOW' ? 'ABOVE' : 'CENTER',
+          h: h,
+          row: pos2.row - rowOffset,
+          col: pos2.col - colOffset,
+          vLevel: pos2.vLevel - vLevel
+        };
+      }
+    }
+
     const is3D = mode === 'space3d';
+    const colors = ['bg-blue-500', 'bg-green-500', 'bg-purple-500', 'bg-orange-500', 'bg-pink-500', 'bg-cyan-500', 'bg-yellow-500', 'bg-red-500'];
+    const stimuliList = Object.keys(positions);
 
     // Render a single 3x3 grid for a level
     const render2DGrid = (verticalLevel, showLabels = false) => {
-      const [targetRow, targetCol] = getGridPosition(h);
-      const shouldHighlight = (verticalLevel === 'CENTER' && v === 'CENTER') ||
-                             (verticalLevel === 'ABOVE' && v === 'ABOVE') ||
-                             (verticalLevel === 'BELOW' && v === 'BELOW');
+      const vLevelNum = getVerticalLevel(verticalLevel);
+
+      // Find objects at this vertical level
+      const objectsHere = {};
+      for (const [stimulus, pos] of Object.entries(positions)) {
+        if (pos.vLevel === vLevelNum) {
+          const key = `${pos.row},${pos.col}`;
+          if (!objectsHere[key]) objectsHere[key] = [];
+          objectsHere[key].push(stimulus);
+        }
+      }
+
+      // Find min/max to determine grid bounds
+      const rows = Object.values(positions).filter(p => p.vLevel === vLevelNum).map(p => p.row);
+      const cols = Object.values(positions).filter(p => p.vLevel === vLevelNum).map(p => p.col);
+      const minRow = Math.min(...rows, 0);
+      const maxRow = Math.max(...rows, 2);
+      const minCol = Math.min(...cols, 0);
+      const maxCol = Math.max(...cols, 2);
 
       return (
         <div className="flex flex-col gap-0.5">
@@ -1065,22 +1137,22 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
             {verticalLevel}
           </div>}
           <div className="grid grid-cols-3 gap-0.5">
-            {[0, 1, 2].map(row =>
-              [0, 1, 2].map(col => {
-                const isStimulus1 = row === 1 && col === 1; // Center is always stimulus 1
-                const isStimulus2 = shouldHighlight && row === targetRow && col === targetCol;
+            {[minRow, minRow+1, minRow+2].map(row =>
+              [minCol, minCol+1, minCol+2].map(col => {
+                const key = `${row},${col}`;
+                const objectsInCell = objectsHere[key] || [];
 
                 return (
                   <div
                     key={`${row}-${col}`}
-                    className={`w-6 h-6 sm:w-8 sm:h-8 flex items-center justify-center text-xs border rounded ${
-                      isStimulus1 ? (darkMode ? 'bg-blue-600 border-blue-400 font-bold' : 'bg-blue-500 border-blue-600 font-bold text-white') :
-                      isStimulus2 ? (darkMode ? 'bg-green-600 border-green-400 font-bold' : 'bg-green-500 border-green-600 font-bold text-white') :
+                    className={`w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center text-[10px] border rounded ${
+                      objectsInCell.length > 0 ? (darkMode ? `${colors[stimuliList.indexOf(objectsInCell[0]) % colors.length]} border-gray-300 font-bold text-white` : `${colors[stimuliList.indexOf(objectsInCell[0]) % colors.length]} border-gray-600 font-bold text-white`) :
                       (darkMode ? 'bg-slate-700 border-slate-600' : 'bg-gray-100 border-gray-300')
                     }`}
                   >
-                    {isStimulus1 && '1'}
-                    {isStimulus2 && '2'}
+                    {objectsInCell.map((s, i) => (
+                      <span key={i}>{renderStimulus(s)}</span>
+                    ))}
                   </div>
                 );
               })
@@ -1091,7 +1163,6 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
     };
 
     if (is3D) {
-      // Render 3 stacked grids for 3D space
       return (
         <div className="flex flex-col gap-2 items-center">
           {render2DGrid('ABOVE', true)}
@@ -1100,7 +1171,6 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
         </div>
       );
     } else {
-      // Render single grid for 2D spatial
       return render2DGrid('CENTER', false);
     }
   };
@@ -1352,17 +1422,17 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
                     <div className="mb-1.5 sm:mb-2 text-xs space-y-0.5 sm:space-y-1">
                       {item.trial.premises.map((premise, pidx) => (
                         <div key={pidx} className={`flex items-center gap-1 flex-wrap ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                          {renderStimulus(premise.stimulus1)} is <span className={`px-1 rounded text-xs ${getRelationColor(premise.relation)}`}>{premise.relation}</span> to {renderStimulus(premise.stimulus2)}
+                          {renderStimulus(premise.stimulus1)} is <span className={`px-1 rounded text-xs ${getRelationColor(premise.relation)}`}>{formatRelation(premise.relation)}</span> to {renderStimulus(premise.stimulus2)}
                         </div>
                       ))}
                     </div>
                     {(getRelationMode(item.trial.question.relation) === 'spatial' || getRelationMode(item.trial.question.relation) === 'space3d') && (
                       <div className="mb-2 flex justify-center">
-                        {renderSpatialGrid(item.trial.question.relation, item.trial.question.stimulus1, item.trial.question.stimulus2)}
+                        {renderSpatialGrid(item.trial)}
                       </div>
                     )}
                     <div className={`text-xs sm:text-sm mb-1.5 sm:mb-2 font-semibold flex items-center gap-1 flex-wrap ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>
-                      Is {renderStimulus(item.trial.question.stimulus1)} {item.trial.question.relation} to {renderStimulus(item.trial.question.stimulus2)}?
+                      Is {renderStimulus(item.trial.question.stimulus1)} {formatRelation(item.trial.question.relation)} to {renderStimulus(item.trial.question.stimulus2)}?
                     </div>
                     <div className="text-xs space-y-0.5 sm:space-y-1">
                       <div className={darkMode ? 'text-gray-300' : 'text-gray-700'}>
@@ -1499,8 +1569,9 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
                 </button>
               )}
             </div>
-            
-            <div className="flex items-center justify-center gap-2 sm:gap-3">
+
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="flex-1"></div>
               <div className="flex flex-col items-center justify-center gap-1">
                 <div className="text-center">
                   <div className={`text-base sm:text-xl font-bold tabular-nums ${darkMode ? 'text-indigo-400' : 'text-indigo-600'}`}>{timeLeft.toFixed(1)}s</div>
@@ -1510,6 +1581,7 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
                   {isPaused ? <Play className="w-4 h-4 sm:w-5 sm:h-5" /> : <Pause className="w-4 h-4 sm:w-5 sm:h-5" />}
                 </button>
               </div>
+              <div className="flex-1 flex items-center justify-end gap-2 sm:gap-3">
               <button
                 onClick={() => {
                   console.log('Settings button clicked, current state:', showSettings);
@@ -1532,6 +1604,7 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
                 <Heart className="w-4 h-4" />
                 <span className="hidden sm:inline">Support Us</span>
               </button>
+              </div>
             </div>
           </div>
           
@@ -1594,7 +1667,7 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
                           ) : (
                             <>
                               <span className={`mx-1 text-sm sm:text-base ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>is</span>
-                              <span className={`font-semibold px-2 sm:px-3 py-0.5 sm:py-1 rounded border text-sm sm:text-base ${getRelationColor(premise.relation)}`}>{premise.relation}</span>
+                              <span className={`font-semibold px-2 sm:px-3 py-0.5 sm:py-1 rounded border text-sm sm:text-base ${getRelationColor(premise.relation)}`}>{formatRelation(premise.relation)}</span>
                               {preposition && <span className={`mx-1 text-sm sm:text-base ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>{preposition}</span>}
                               {renderStimulus(premise.stimulus2)}
                             </>
@@ -1641,7 +1714,7 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
                           <>
                             <span className={`font-bold text-base sm:text-2xl ${darkMode ? 'text-indigo-300' : 'text-indigo-700'}`}>Is</span>
                             {renderStimulus(currentTrial.question.stimulus1)}
-                            <span className={`mx-1 sm:mx-2 font-semibold px-3 sm:px-4 py-1 sm:py-2 rounded-lg border-2 text-sm sm:text-base ${getRelationColor(rel)}`}>{rel}</span>
+                            <span className={`mx-1 sm:mx-2 font-semibold px-3 sm:px-4 py-1 sm:py-2 rounded-lg border-2 text-sm sm:text-base ${getRelationColor(rel)}`}>{formatRelation(rel)}</span>
                             {preposition && <span className={`font-bold text-base sm:text-2xl ${darkMode ? 'text-indigo-300' : 'text-indigo-700'}`}>{preposition}</span>}
                             {renderStimulus(currentTrial.question.stimulus2)}
                             <span className={`font-bold text-base sm:text-2xl ${darkMode ? 'text-indigo-300' : 'text-indigo-700'}`}>?</span>
