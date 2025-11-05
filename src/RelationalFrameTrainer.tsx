@@ -49,6 +49,7 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
   const [feedback, setFeedback] = useState(null);
   const [history, setHistory] = useState([]);
   const [hoveredPremise, setHoveredPremise] = useState(null);
+  const [isInitialized, setIsInitialized] = useState(false);
   const [enabledRelationModes, setEnabledRelationModes] = useState({
     equality: true,
     temporal: false,
@@ -631,15 +632,15 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
 
   // Auto-save to storage whenever important state changes
   useEffect(() => {
-    // Don't save on initial mount (before data is loaded)
-    if (currentTrial || score.correct > 0 || score.incorrect > 0 || score.missed > 0) {
+    // Only save after initial load is complete
+    if (isInitialized) {
       console.log('Auto-saving state to storage...');
       saveToStorage();
     }
-  }, [currentTrial, timeLeft, feedback, isPaused, score, history, statsHistory,
+  }, [isInitialized, currentTrial, timeLeft, feedback, isPaused, score, history, statsHistory,
       difficulty, timePerQuestion, networkComplexity, spoilerPremises, darkMode,
       useLetters, useEmojis, useVoronoi, useMandelbrot, useVibration, letterLength,
-      autoProgressMode, universalProgress, modeSpecificProgress, enabledRelationModes, saveToStorage]);
+      autoProgressMode, universalProgress, modeSpecificProgress, enabledRelationModes]);
 
   const resetGame = () => {
     setShowResetConfirmation(false);
@@ -818,11 +819,14 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
         } else {
           console.log('Trial loaded from storage, resuming...');
         }
+        // Mark as initialized to enable auto-save
+        setIsInitialized(true);
         console.log('Game initialized successfully');
       } catch (error) {
         console.error('Error initializing game:', error);
         // Still start a trial even if loading fails
         startNewTrial();
+        setIsInitialized(true);
       }
     };
     initializeGame();
