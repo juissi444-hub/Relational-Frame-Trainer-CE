@@ -188,18 +188,20 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
     if (mode1 !== mode2) return 'AMBIGUOUS';
     
     if (mode1 === 'equality') {
-      // Identity element
+      // Identity element: SAME
       if (rel1 === 'SAME') return rel2;
       if (rel2 === 'SAME') return rel1;
-      
-      // OPPOSITE is its own inverse: OPPOSITE ∘ OPPOSITE = SAME
+
+      // OPPOSITE compositions
       if (rel1 === 'OPPOSITE' && rel2 === 'OPPOSITE') return 'SAME';
-      
-      // DIFFERENT cannot be composed - it's non-transitive
-      // X DIFFERENT Y, Y DIFFERENT Z tells us nothing about X and Z
+      if (rel1 === 'OPPOSITE' && rel2 === 'DIFFERENT') return 'DIFFERENT';
+      if (rel1 === 'DIFFERENT' && rel2 === 'OPPOSITE') return 'DIFFERENT';
+
+      // DIFFERENT cannot be composed with itself - it's non-transitive
+      // X DIFFERENT Y, Y DIFFERENT Z tells us nothing definitive about X and Z
       // (they could be SAME, OPPOSITE, or DIFFERENT)
-      if (rel1 === 'DIFFERENT' || rel2 === 'DIFFERENT') return 'AMBIGUOUS';
-      
+      if (rel1 === 'DIFFERENT' && rel2 === 'DIFFERENT') return 'AMBIGUOUS';
+
       return 'AMBIGUOUS';
     } else if (mode1 === 'temporal') {
       // AT is identity
@@ -250,6 +252,32 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
     }
   };
 
+  const getReverseRelation = (relation) => {
+    // Equality relations
+    if (relation === 'SAME') return 'SAME';
+    if (relation === 'OPPOSITE') return 'OPPOSITE';
+    if (relation === 'DIFFERENT') return 'DIFFERENT';
+
+    // Temporal relations - reverse the direction
+    if (relation === 'BEFORE') return 'AFTER';
+    if (relation === 'AFTER') return 'BEFORE';
+    if (relation === 'AT') return 'AT';
+
+    // Containment relations - reverse the hierarchy
+    if (relation === 'CONTAINS') return 'WITHIN';
+    if (relation === 'WITHIN') return 'CONTAINS';
+
+    // Spatial relations - reverse the direction
+    const spatialOpposites = {
+      'NORTH': 'SOUTH', 'SOUTH': 'NORTH',
+      'EAST': 'WEST', 'WEST': 'EAST',
+      'NORTHEAST': 'SOUTHWEST', 'SOUTHWEST': 'NORTHEAST',
+      'NORTHWEST': 'SOUTHEAST', 'SOUTHEAST': 'NORTHWEST'
+    };
+
+    return spatialOpposites[relation] || relation;
+  };
+
   const findAllPaths = (graph, start, end, currentPath = [], visited = new Set(), allPaths = []) => {
     if (start === end && currentPath.length > 0) {
       allPaths.push([...currentPath]);
@@ -263,9 +291,8 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
         edgeToAdd = { ...edge, reversed: false };
       } else if (edge.stimulus2 === start && !visited.has(edge.stimulus1)) {
         nextNode = edge.stimulus1;
-        // For containment, we need to reverse the relation
-        const reversedRelation = (edge.relation === 'CONTAINS') ? 'WITHIN' : 
-                                  (edge.relation === 'WITHIN') ? 'CONTAINS' : edge.relation;
+        // When traversing backwards, reverse the relation
+        const reversedRelation = getReverseRelation(edge.relation);
         edgeToAdd = { ...edge, relation: reversedRelation, reversed: true };
       }
       if (nextNode) {
