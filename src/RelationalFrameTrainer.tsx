@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Settings, History, Play, Pause, RotateCcw, X, Check, Clock, TrendingUp, Info, LogIn, LogOut, User, Heart, Users } from 'lucide-react';
+import { Settings, History, Play, Pause, RotateCcw, X, Check, Clock, TrendingUp, Info, LogIn, LogOut, User, Heart, Users, Mail } from 'lucide-react';
 import { supabase } from './supabaseClient';
 
 interface RelationalFrameTrainerProps {
@@ -40,6 +40,7 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
   const [showTutorial, setShowTutorial] = useState(false);
   const [showSupportModal, setShowSupportModal] = useState(false);
   const [showAboutModal, setShowAboutModal] = useState(false);
+  const [showContactModal, setShowContactModal] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [currentTrial, setCurrentTrial] = useState(null);
   const [timeLeft, setTimeLeft] = useState(timePerQuestion);
@@ -890,6 +891,52 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
         </div>
       )}
 
+      {showContactModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-2 sm:p-4">
+          <div className={`max-w-2xl w-full rounded-2xl p-6 sm:p-8 shadow-2xl ${darkMode ? 'bg-slate-800' : 'bg-white'}`}>
+            <div className="flex justify-between items-center mb-6">
+              <h2 className={`text-2xl sm:text-3xl font-bold flex items-center gap-2 ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>
+                <Mail className="w-6 h-6 sm:w-8 sm:h-8" />
+                Contact Us
+              </h2>
+              <button onClick={() => setShowContactModal(false)} className={`p-2 rounded-lg ${darkMode ? 'hover:bg-slate-700' : 'hover:bg-gray-100'}`}>
+                <X className={`w-5 h-5 sm:w-6 sm:h-6 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`} />
+              </button>
+            </div>
+            <div className={`space-y-6 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+              <div className="text-center">
+                <p className={`text-lg sm:text-xl mb-4 ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>
+                  If you have any questions or requests, feel free to contact us.
+                </p>
+              </div>
+
+              <div className={`p-6 rounded-lg border-2 ${darkMode ? 'border-blue-500 bg-blue-900/20' : 'border-blue-300 bg-blue-50'}`}>
+                <h3 className={`text-lg font-bold mb-3 ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>
+                  Email Address
+                </h3>
+                <a
+                  href="mailto:juissi444@gmail.com"
+                  className={`inline-flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-colors text-lg ${darkMode ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-blue-500 hover:bg-blue-600 text-white'}`}
+                >
+                  <Mail className="w-5 h-5" />
+                  juissi444@gmail.com
+                </a>
+                <p className={`mt-4 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                  Click to open in your email client, or copy the address above.
+                </p>
+              </div>
+
+              <button
+                onClick={() => setShowContactModal(false)}
+                className={`w-full py-3 rounded-lg font-semibold transition-colors ${darkMode ? 'bg-slate-600 hover:bg-slate-700 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-900'}`}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showAboutModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-2 sm:p-4">
           <div className={`max-w-2xl w-full rounded-2xl p-6 sm:p-8 shadow-2xl ${darkMode ? 'bg-slate-800' : 'bg-white'}`}>
@@ -1181,6 +1228,10 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
               <button onClick={() => setShowAboutModal(true)} className={`flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-colors text-xs sm:text-sm ${darkMode ? 'bg-indigo-900/50 hover:bg-indigo-900/70 text-indigo-200' : 'bg-indigo-100 hover:bg-indigo-200 text-gray-900'}`}>
                 <Users className="w-4 h-4" />
                 <span className="hidden sm:inline">About Us</span>
+              </button>
+              <button onClick={() => setShowContactModal(true)} className={`flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-colors text-xs sm:text-sm ${darkMode ? 'bg-blue-900/50 hover:bg-blue-900/70 text-blue-200' : 'bg-blue-100 hover:bg-blue-200 text-gray-900'}`}>
+                <Mail className="w-4 h-4" />
+                <span className="hidden sm:inline">Contact</span>
               </button>
               <button onClick={() => setShowSupportModal(true)} className={`flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-colors text-xs sm:text-sm ${darkMode ? 'bg-pink-900/50 hover:bg-pink-900/70 text-pink-200' : 'bg-pink-100 hover:bg-pink-200 text-gray-900'}`}>
                 <Heart className="w-4 h-4" />
