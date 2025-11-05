@@ -11,40 +11,54 @@ function App() {
   // Check for existing session on mount and listen to auth changes
   useEffect(() => {
     console.log('App mounting, checking auth...');
+    console.log('Current URL:', window.location.href);
+    console.log('URL hash:', window.location.hash);
 
     // Check if we're returning from OAuth (has hash in URL)
-    const hasOAuthHash = window.location.hash.includes('access_token');
+    const hasOAuthHash = window.location.hash.includes('access_token') ||
+                         window.location.hash.includes('error');
     if (hasOAuthHash) {
-      console.log('OAuth callback detected in URL - giving Supabase time to process');
+      console.log('OAuth callback detected in URL hash');
+      console.log('Full hash:', window.location.hash);
     }
 
     // Set timeout based on whether we're processing OAuth
-    // OAuth needs more time (10s), normal page load is quick (2s)
-    const timeoutDuration = hasOAuthHash ? 10000 : 2000;
+    // OAuth needs more time (15s), normal page load is quick (2s)
+    const timeoutDuration = hasOAuthHash ? 15000 : 2000;
+    console.log('Setting timeout duration:', timeoutDuration, 'ms');
+
     const timeout = setTimeout(() => {
       console.warn('Session loading timeout - forcing app to load');
+      console.log('User state at timeout:', user);
       setLoading(false);
     }, timeoutDuration);
 
     // Listen for auth changes FIRST (before getSession)
+    console.log('Setting up auth state listener...');
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log('Auth state changed:', event, session?.user?.email);
+      console.log('=== AUTH STATE CHANGE ===');
+      console.log('Event:', event);
+      console.log('Session exists:', !!session);
+      console.log('User email:', session?.user?.email);
+      console.log('User metadata:', session?.user?.user_metadata);
 
       // Handle SIGNED_OUT first (before checking session)
       if (event === 'SIGNED_OUT') {
         console.log('User signed out');
         setUser(null);
+        setLoading(false);
         return;
       }
 
       // Handle any event that results in a valid session
       if (session?.user) {
-        console.log('User session detected, event:', event);
+        console.log('Processing user session...');
         clearTimeout(timeout);
         const username = session.user.user_metadata?.username ||
                         session.user.user_metadata?.full_name ||
                         session.user.email?.split('@')[0] ||
                         'User';
+        console.log('Setting user:', { id: session.user.id, username });
         setUser({ id: session.user.id, username });
         setLoading(false);
 
@@ -61,37 +75,48 @@ function App() {
       }
     });
 
-    // Get initial session
-    supabase.auth.getSession()
-      .then(({ data: { session }, error }) => {
-        console.log('getSession result:', { hasSession: !!session, error });
-        clearTimeout(timeout);
+    // Get initial session - delay if OAuth callback to let Supabase process the hash
+    const getSessionDelay = hasOAuthHash ? 1000 : 0;
+    console.log('Will check session in', getSessionDelay, 'ms');
 
-        if (error) {
-          console.error('Error getting session:', error);
+    setTimeout(() => {
+      console.log('Calling getSession...');
+      supabase.auth.getSession()
+        .then(({ data: { session }, error }) => {
+          console.log('=== GET SESSION RESULT ===');
+          console.log('Has session:', !!session);
+          console.log('Error:', error);
+          console.log('User:', session?.user?.email);
+
+          clearTimeout(timeout);
+
+          if (error) {
+            console.error('Error getting session:', error);
+            setLoading(false);
+            return;
+          }
+
+          if (session?.user) {
+            const username = session.user.user_metadata?.username ||
+                            session.user.user_metadata?.full_name ||
+                            session.user.email?.split('@')[0] ||
+                            'User';
+            console.log('Setting user from getSession:', { id: session.user.id, username });
+            setUser({ id: session.user.id, username });
+          } else {
+            console.log('No existing session found');
+          }
           setLoading(false);
-          return;
-        }
-
-        if (session?.user) {
-          const username = session.user.user_metadata?.username ||
-                          session.user.user_metadata?.full_name ||
-                          session.user.email?.split('@')[0] ||
-                          'User';
-          setUser({ id: session.user.id, username });
-          console.log('Session loaded, user:', username);
-        } else {
-          console.log('No existing session found');
-        }
-        setLoading(false);
-      })
-      .catch((err) => {
-        clearTimeout(timeout);
-        console.error('Exception getting session:', err);
-        setLoading(false);
-      });
+        })
+        .catch((err) => {
+          clearTimeout(timeout);
+          console.error('Exception getting session:', err);
+          setLoading(false);
+        });
+    }, getSessionDelay);
 
     return () => {
+      console.log('Cleaning up auth listeners');
       clearTimeout(timeout);
       subscription.unsubscribe();
     };
