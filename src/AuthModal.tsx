@@ -19,8 +19,10 @@ export default function AuthModal({ onClose, onAuthSuccess }: AuthModalProps) {
     setLoading(true);
 
     try {
+      console.log('Starting Google OAuth flow...');
       // Use environment variable for redirect URL, fallback to current origin
       const redirectUrl = import.meta.env.VITE_REDIRECT_URL || window.location.origin;
+      console.log('Redirect URL:', redirectUrl);
 
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
@@ -30,12 +32,18 @@ export default function AuthModal({ onClose, onAuthSuccess }: AuthModalProps) {
       });
 
       if (error) {
+        console.error('Google OAuth error:', error);
         setError('Failed to sign in with Google: ' + error.message);
         setLoading(false);
+        return;
       }
-      // User will be redirected to Google, then back to the app
-      // The auth state listener in App.tsx will handle the success
+
+      console.log('Google OAuth initiated successfully');
+      // Close modal immediately - user will be redirected to Google
+      onClose();
+      // The auth state listener in App.tsx will handle the success after redirect
     } catch (err: any) {
+      console.error('Google OAuth exception:', err);
       setError('An error occurred: ' + err.message);
       setLoading(false);
     }
@@ -46,8 +54,10 @@ export default function AuthModal({ onClose, onAuthSuccess }: AuthModalProps) {
     setLoading(true);
 
     try {
+      console.log('Starting Discord OAuth flow...');
       // Use environment variable for redirect URL, fallback to current origin
       const redirectUrl = import.meta.env.VITE_REDIRECT_URL || window.location.origin;
+      console.log('Redirect URL:', redirectUrl);
 
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'discord',
@@ -57,12 +67,18 @@ export default function AuthModal({ onClose, onAuthSuccess }: AuthModalProps) {
       });
 
       if (error) {
+        console.error('Discord OAuth error:', error);
         setError('Failed to sign in with Discord: ' + error.message);
         setLoading(false);
+        return;
       }
-      // User will be redirected to Discord, then back to the app
-      // The auth state listener in App.tsx will handle the success
+
+      console.log('Discord OAuth initiated successfully');
+      // Close modal immediately - user will be redirected to Discord
+      onClose();
+      // The auth state listener in App.tsx will handle the success after redirect
     } catch (err: any) {
+      console.error('Discord OAuth exception:', err);
       setError('An error occurred: ' + err.message);
       setLoading(false);
     }

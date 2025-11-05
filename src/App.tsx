@@ -48,6 +48,9 @@ function App() {
         setUser({ id: session.user.id, username });
         setLoading(false);
 
+        // Close auth modal if it's open (e.g., after OAuth redirect)
+        setShowAuthModal(false);
+
         // Clean up URL hash after successful auth
         setTimeout(() => {
           if (window.location.hash) {
