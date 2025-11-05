@@ -54,14 +54,21 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
     equality: true,
     temporal: false,
     spatial: false,
-    containment: false
+    containment: false,
+    space3d: false
   });
 
   const relationSets = {
     equality: ['SAME', 'OPPOSITE', 'DIFFERENT'],
     temporal: ['BEFORE', 'AFTER', 'AT'],
     spatial: ['NORTH', 'SOUTH', 'EAST', 'WEST', 'NORTHEAST', 'NORTHWEST', 'SOUTHEAST', 'SOUTHWEST'],
-    containment: ['CONTAINS', 'WITHIN']
+    containment: ['CONTAINS', 'WITHIN'],
+    space3d: [
+      'AT', 'ABOVE', 'BELOW',
+      'NORTH', 'SOUTH', 'EAST', 'WEST', 'NORTHEAST', 'NORTHWEST', 'SOUTHEAST', 'SOUTHWEST',
+      'ABOVE_NORTH', 'ABOVE_SOUTH', 'ABOVE_EAST', 'ABOVE_WEST', 'ABOVE_NORTHEAST', 'ABOVE_NORTHWEST', 'ABOVE_SOUTHEAST', 'ABOVE_SOUTHWEST',
+      'BELOW_NORTH', 'BELOW_SOUTH', 'BELOW_EAST', 'BELOW_WEST', 'BELOW_NORTHEAST', 'BELOW_NORTHWEST', 'BELOW_SOUTHEAST', 'BELOW_SOUTHWEST'
+    ]
   };
 
   // Vibration patterns for stimuli in milliseconds [vibrate, pause, vibrate, ...]
@@ -196,6 +203,11 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
     if (['SAME', 'OPPOSITE', 'DIFFERENT'].includes(relation)) return 'equality';
     if (['BEFORE', 'AFTER', 'AT'].includes(relation)) return 'temporal';
     if (['CONTAINS', 'WITHIN'].includes(relation)) return 'containment';
+    if (relation === 'ABOVE' || relation === 'BELOW' || relation.startsWith('ABOVE_') || relation.startsWith('BELOW_') ||
+        (relation === 'AT' && enabledRelationModes.space3d) ||
+        (enabledRelationModes.space3d && !enabledRelationModes.spatial && ['NORTH', 'SOUTH', 'EAST', 'WEST', 'NORTHEAST', 'NORTHWEST', 'SOUTHEAST', 'SOUTHWEST'].includes(relation))) {
+      return 'space3d';
+    }
     return 'spatial';
   };
 
@@ -251,6 +263,61 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
       if (rel1 === 'WITHIN' && rel2 === 'CONTAINS') return 'AMBIGUOUS';
 
       return 'AMBIGUOUS';
+    } else if (mode1 === 'space3d') {
+      // 3D Space relations
+      // AT is identity
+      if (rel1 === 'AT') return rel2;
+      if (rel2 === 'AT') return rel1;
+
+      // Parse 3D relations into vertical and horizontal components
+      const parse3D = (rel) => {
+        if (rel === 'AT') return { v: 'AT', h: 'AT' };
+        if (rel === 'ABOVE') return { v: 'ABOVE', h: 'AT' };
+        if (rel === 'BELOW') return { v: 'BELOW', h: 'AT' };
+        if (rel.startsWith('ABOVE_')) return { v: 'ABOVE', h: rel.substring(6) };
+        if (rel.startsWith('BELOW_')) return { v: 'BELOW', h: rel.substring(6) };
+        // Pure horizontal
+        return { v: 'AT', h: rel };
+      };
+
+      const compose3D = (v, h) => {
+        if (v === 'AT' && h === 'AT') return 'AT';
+        if (v === 'AT') return h;
+        if (h === 'AT') return v;
+        return `${v}_${h}`;
+      };
+
+      const p1 = parse3D(rel1);
+      const p2 = parse3D(rel2);
+
+      // Compose vertical components
+      let vResult;
+      if (p1.v === 'AT') vResult = p2.v;
+      else if (p2.v === 'AT') vResult = p1.v;
+      else if (p1.v === p2.v) vResult = p1.v; // ABOVE + ABOVE = ABOVE
+      else if (p1.v === 'ABOVE' && p2.v === 'BELOW') vResult = 'AMBIGUOUS';
+      else if (p1.v === 'BELOW' && p2.v === 'ABOVE') vResult = 'AMBIGUOUS';
+      else vResult = 'AMBIGUOUS';
+
+      // Compose horizontal components (same logic as spatial)
+      const opposites = {
+        'NORTH': 'SOUTH', 'SOUTH': 'NORTH',
+        'EAST': 'WEST', 'WEST': 'EAST',
+        'NORTHEAST': 'SOUTHWEST', 'SOUTHWEST': 'NORTHEAST',
+        'NORTHWEST': 'SOUTHEAST', 'SOUTHEAST': 'NORTHWEST'
+      };
+
+      let hResult;
+      if (p1.h === 'AT') hResult = p2.h;
+      else if (p2.h === 'AT') hResult = p1.h;
+      else if (p1.h === p2.h) hResult = p1.h;
+      else if (opposites[p1.h] === p2.h) hResult = 'AMBIGUOUS';
+      else hResult = 'AMBIGUOUS';
+
+      // If either component is ambiguous, the whole relation is ambiguous
+      if (vResult === 'AMBIGUOUS' || hResult === 'AMBIGUOUS') return 'AMBIGUOUS';
+
+      return compose3D(vResult, hResult);
     } else {
       // Spatial relations
       const opposites = {
@@ -285,6 +352,27 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
     // Containment relations - reverse the hierarchy
     if (relation === 'CONTAINS') return 'WITHIN';
     if (relation === 'WITHIN') return 'CONTAINS';
+
+    // 3D Space relations - reverse both vertical and horizontal
+    if (relation === 'ABOVE' || relation === 'BELOW' || relation.startsWith('ABOVE_') || relation.startsWith('BELOW_')) {
+      const horizontalOpposites = {
+        'NORTH': 'SOUTH', 'SOUTH': 'NORTH',
+        'EAST': 'WEST', 'WEST': 'EAST',
+        'NORTHEAST': 'SOUTHWEST', 'SOUTHWEST': 'NORTHEAST',
+        'NORTHWEST': 'SOUTHEAST', 'SOUTHEAST': 'NORTHWEST'
+      };
+
+      if (relation === 'ABOVE') return 'BELOW';
+      if (relation === 'BELOW') return 'ABOVE';
+      if (relation.startsWith('ABOVE_')) {
+        const horizontal = relation.substring(6);
+        return `BELOW_${horizontalOpposites[horizontal] || horizontal}`;
+      }
+      if (relation.startsWith('BELOW_')) {
+        const horizontal = relation.substring(6);
+        return `ABOVE_${horizontalOpposites[horizontal] || horizontal}`;
+      }
+    }
 
     // Spatial relations - reverse the direction
     const spatialOpposites = {
@@ -912,6 +1000,9 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
       if (['NORTH', 'SOUTH', 'EAST', 'WEST', 'NORTHEAST', 'NORTHWEST', 'SOUTHEAST', 'SOUTHWEST'].includes(relation)) {
         return 'bg-teal-900/40 text-teal-300 border-teal-500';
       }
+      if (relation === 'ABOVE' || relation === 'BELOW' || relation.startsWith('ABOVE_') || relation.startsWith('BELOW_')) {
+        return 'bg-indigo-900/40 text-indigo-300 border-indigo-500';
+      }
       return 'bg-blue-900/40 text-blue-300 border-blue-500';
     }
 
@@ -926,7 +1017,92 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
     if (['NORTH', 'SOUTH', 'EAST', 'WEST', 'NORTHEAST', 'NORTHWEST', 'SOUTHEAST', 'SOUTHWEST'].includes(relation)) {
       return 'bg-teal-100 text-teal-700 border-teal-300';
     }
+    if (relation === 'ABOVE' || relation === 'BELOW' || relation.startsWith('ABOVE_') || relation.startsWith('BELOW_')) {
+      return 'bg-indigo-100 text-indigo-700 border-indigo-300';
+    }
     return 'bg-blue-100 text-blue-700 border-blue-300';
+  };
+
+  // Render 3D grid visualization for spatial relations
+  const renderSpatialGrid = (relation, stimulus1, stimulus2) => {
+    const mode = getRelationMode(relation);
+    if (mode !== 'spatial' && mode !== 'space3d') return null;
+
+    // Parse 3D relation
+    const parse3D = (rel) => {
+      if (rel === 'AT') return { v: 'CENTER', h: 'CENTER' };
+      if (rel === 'ABOVE') return { v: 'ABOVE', h: 'CENTER' };
+      if (rel === 'BELOW') return { v: 'BELOW', h: 'CENTER' };
+      if (rel.startsWith('ABOVE_')) return { v: 'ABOVE', h: rel.substring(6) };
+      if (rel.startsWith('BELOW_')) return { v: 'BELOW', h: rel.substring(6) };
+      // Pure horizontal (2D spatial)
+      return { v: 'CENTER', h: rel };
+    };
+
+    const getGridPosition = (horizontal) => {
+      // Map direction to grid position (row, col) in 3x3 grid
+      const positions = {
+        'NORTHWEST': [0, 0], 'NORTH': [0, 1], 'NORTHEAST': [0, 2],
+        'WEST': [1, 0], 'CENTER': [1, 1], 'EAST': [1, 2],
+        'SOUTHWEST': [2, 0], 'SOUTH': [2, 1], 'SOUTHEAST': [2, 2]
+      };
+      return positions[horizontal] || [1, 1];
+    };
+
+    const { v, h } = parse3D(relation);
+    const is3D = mode === 'space3d';
+
+    // Render a single 3x3 grid for a level
+    const render2DGrid = (verticalLevel, showLabels = false) => {
+      const [targetRow, targetCol] = getGridPosition(h);
+      const shouldHighlight = (verticalLevel === 'CENTER' && v === 'CENTER') ||
+                             (verticalLevel === 'ABOVE' && v === 'ABOVE') ||
+                             (verticalLevel === 'BELOW' && v === 'BELOW');
+
+      return (
+        <div className="flex flex-col gap-0.5">
+          {showLabels && <div className={`text-xs text-center font-semibold mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+            {verticalLevel}
+          </div>}
+          <div className="grid grid-cols-3 gap-0.5">
+            {[0, 1, 2].map(row =>
+              [0, 1, 2].map(col => {
+                const isStimulus1 = row === 1 && col === 1; // Center is always stimulus 1
+                const isStimulus2 = shouldHighlight && row === targetRow && col === targetCol;
+
+                return (
+                  <div
+                    key={`${row}-${col}`}
+                    className={`w-6 h-6 sm:w-8 sm:h-8 flex items-center justify-center text-xs border rounded ${
+                      isStimulus1 ? (darkMode ? 'bg-blue-600 border-blue-400 font-bold' : 'bg-blue-500 border-blue-600 font-bold text-white') :
+                      isStimulus2 ? (darkMode ? 'bg-green-600 border-green-400 font-bold' : 'bg-green-500 border-green-600 font-bold text-white') :
+                      (darkMode ? 'bg-slate-700 border-slate-600' : 'bg-gray-100 border-gray-300')
+                    }`}
+                  >
+                    {isStimulus1 && '1'}
+                    {isStimulus2 && '2'}
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+      );
+    };
+
+    if (is3D) {
+      // Render 3 stacked grids for 3D space
+      return (
+        <div className="flex flex-col gap-2 items-center">
+          {render2DGrid('ABOVE', true)}
+          {render2DGrid('CENTER', true)}
+          {render2DGrid('BELOW', true)}
+        </div>
+      );
+    } else {
+      // Render single grid for 2D spatial
+      return render2DGrid('CENTER', false);
+    }
   };
 
   return (
@@ -964,6 +1140,7 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
                   <li><strong>Temporal:</strong> BEFORE, AFTER, AT (time relationships)</li>
                   <li><strong>Spatial:</strong> NORTH, SOUTH, EAST, WEST, etc. (directional)</li>
                   <li><strong>Containment:</strong> CONTAINS, WITHIN (hierarchical relationships)</li>
+                  <li><strong>3D Space:</strong> ABOVE, BELOW, ABOVE_NORTH, BELOW_SOUTH, etc. (3D positioning)</li>
                 </ul>
               </div>
               <div className="hidden sm:block">
@@ -1179,6 +1356,11 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
                         </div>
                       ))}
                     </div>
+                    {(getRelationMode(item.trial.question.relation) === 'spatial' || getRelationMode(item.trial.question.relation) === 'space3d') && (
+                      <div className="mb-2 flex justify-center">
+                        {renderSpatialGrid(item.trial.question.relation, item.trial.question.stimulus1, item.trial.question.stimulus2)}
+                      </div>
+                    )}
                     <div className={`text-xs sm:text-sm mb-1.5 sm:mb-2 font-semibold flex items-center gap-1 flex-wrap ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>
                       Is {renderStimulus(item.trial.question.stimulus1)} {item.trial.question.relation} to {renderStimulus(item.trial.question.stimulus2)}?
                     </div>
@@ -1318,8 +1500,8 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
               )}
             </div>
             
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="flex flex-col items-center gap-1">
+            <div className="flex items-center justify-center gap-2 sm:gap-3">
+              <div className="flex flex-col items-center justify-center gap-1">
                 <div className="text-center">
                   <div className={`text-base sm:text-xl font-bold tabular-nums ${darkMode ? 'text-indigo-400' : 'text-indigo-600'}`}>{timeLeft.toFixed(1)}s</div>
                   <div className={`text-xs hidden sm:block ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Time</div>
@@ -1604,6 +1786,16 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
                       className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
                     />
                     <span className={`text-sm font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Containment (CONTAINS, WITHIN)</span>
+                  </label>
+
+                  <label className="flex items-center space-x-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={enabledRelationModes.space3d}
+                      onChange={(e) => setEnabledRelationModes(prev => ({ ...prev, space3d: e.target.checked }))}
+                      className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                    />
+                    <span className={`text-sm font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>3D Space (ABOVE, BELOW, ABOVE_NORTH, etc.)</span>
                   </label>
 
                 </div>
