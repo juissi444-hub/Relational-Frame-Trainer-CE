@@ -915,11 +915,11 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
                   Email Address
                 </h3>
                 <a
-                  href="mailto:juissi444@gmail.com"
+                  href="mailto:stimlus44@gmail.com"
                   className={`inline-flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-colors text-lg ${darkMode ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-blue-500 hover:bg-blue-600 text-white'}`}
                 >
                   <Mail className="w-5 h-5" />
-                  juissi444@gmail.com
+                  stimlus44@gmail.com
                 </a>
                 <p className={`mt-4 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                   Click to open in your email client, or copy the address above.
