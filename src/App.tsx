@@ -136,10 +136,13 @@ function App() {
         console.error('Logout error:', error);
       } else {
         console.log('Logout successful');
+        // Explicitly set user to null to ensure immediate UI update
+        setUser(null);
       }
-      // Don't set user here - let onAuthStateChange handle it
     } catch (err) {
       console.error('Logout exception:', err);
+      // On error, still try to clear the user state locally
+      setUser(null);
     }
   };
 

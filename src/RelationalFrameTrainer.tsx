@@ -887,13 +887,13 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
                   <li><strong>Containment:</strong> CONTAINS, WITHIN (hierarchical relationships)</li>
                 </ul>
               </div>
-              <div className="hidden sm:block">
+              <div>
                 <h3 className={`font-bold mb-2 ${darkMode ? 'text-indigo-400' : 'text-indigo-600'}`}>Keyboard Shortcuts:</h3>
-                <ul className="list-disc pl-6 space-y-2">
-                  <li><kbd className={`px-2 py-1 rounded ${darkMode ? 'bg-slate-700' : 'bg-gray-200'}`}>1</kbd> - Answer YES</li>
-                  <li><kbd className={`px-2 py-1 rounded ${darkMode ? 'bg-slate-700' : 'bg-gray-200'}`}>2</kbd> - Answer NO</li>
-                  <li><kbd className={`px-2 py-1 rounded ${darkMode ? 'bg-slate-700' : 'bg-gray-200'}`}>3</kbd> - Answer CAN'T TELL</li>
-                  <li><kbd className={`px-2 py-1 rounded ${darkMode ? 'bg-slate-700' : 'bg-gray-200'}`}>Space</kbd> - Pause/Resume</li>
+                <ul className="list-disc pl-5 sm:pl-6 space-y-1 sm:space-y-2">
+                  <li><kbd className={`px-2 py-1 rounded text-xs sm:text-sm ${darkMode ? 'bg-slate-700' : 'bg-gray-200'}`}>1</kbd> - Answer YES</li>
+                  <li><kbd className={`px-2 py-1 rounded text-xs sm:text-sm ${darkMode ? 'bg-slate-700' : 'bg-gray-200'}`}>2</kbd> - Answer NO</li>
+                  <li><kbd className={`px-2 py-1 rounded text-xs sm:text-sm ${darkMode ? 'bg-slate-700' : 'bg-gray-200'}`}>3</kbd> - Answer CAN'T TELL</li>
+                  <li><kbd className={`px-2 py-1 rounded text-xs sm:text-sm ${darkMode ? 'bg-slate-700' : 'bg-gray-200'}`}>Space</kbd> - Pause/Resume</li>
                 </ul>
               </div>
               <div>
@@ -1208,41 +1208,41 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
 
       <div className="flex-1 flex flex-col min-h-0">
         <div className={`shadow-md p-2 sm:p-3 flex flex-col gap-2 transition-colors duration-300 ${darkMode ? 'bg-slate-800/90 backdrop-blur' : 'bg-white'}`}>
-          <div className="flex justify-between items-center gap-2">
-            <div className="flex gap-1 sm:gap-2">
+          <div className="flex flex-wrap justify-between items-center gap-2">
+            <div className="flex flex-wrap gap-1 sm:gap-2">
               <button onClick={() => setShowHistory(!showHistory)} className={`flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-colors text-xs sm:text-sm ${darkMode ? 'bg-indigo-900/50 hover:bg-indigo-900/70 text-indigo-200' : 'bg-indigo-100 hover:bg-indigo-200 text-gray-900'}`}>
                 <History className="w-4 h-4" />
-                <span className="hidden sm:inline">History</span>
+                <span>History</span>
               </button>
-              
+
               <button onClick={() => setShowStats(!showStats)} className={`flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-colors text-xs sm:text-sm ${darkMode ? 'bg-purple-900/50 hover:bg-purple-900/70 text-purple-200' : 'bg-purple-100 hover:bg-purple-200 text-gray-900'}`}>
                 <TrendingUp className="w-4 h-4" />
-                <span className="hidden sm:inline">Stats</span>
+                <span>Stats</span>
               </button>
 
               <button onClick={() => setShowTutorial(true)} className={`flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-colors text-xs sm:text-sm ${darkMode ? 'bg-cyan-900/50 hover:bg-cyan-900/70 text-cyan-200' : 'bg-cyan-100 hover:bg-cyan-200 text-gray-900'}`}>
                 <Info className="w-4 h-4" />
-                <span className="hidden sm:inline">Help</span>
+                <span>Help</span>
               </button>
 
               {user ? (
                 <button onClick={onLogout} className={`flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-colors text-xs sm:text-sm ${darkMode ? 'bg-red-900/50 hover:bg-red-900/70 text-red-200' : 'bg-red-100 hover:bg-red-200 text-gray-900'}`} title={`Logged in as ${user.username}`}>
                   <User className="w-4 h-4" />
-                  <span className="hidden sm:inline">{user.username}</span>
+                  <span className="max-w-[60px] sm:max-w-none truncate">{user.username}</span>
                   <LogOut className="w-3 h-3 ml-0.5" />
                 </button>
               ) : (
                 <button onClick={onShowLogin} className={`flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-colors text-xs sm:text-sm ${darkMode ? 'bg-green-900/50 hover:bg-green-900/70 text-green-200' : 'bg-green-100 hover:bg-green-200 text-gray-900'}`}>
                   <LogIn className="w-4 h-4" />
-                  <span className="hidden sm:inline">Login</span>
+                  <span>Login</span>
                 </button>
               )}
             </div>
             
-            <div className="flex items-center gap-2 sm:gap-3">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
               <div className="text-center">
                 <div className={`text-base sm:text-xl font-bold tabular-nums ${darkMode ? 'text-indigo-400' : 'text-indigo-600'}`}>{timeLeft.toFixed(1)}s</div>
-                <div className={`text-xs hidden sm:block ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Time</div>
+                <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Time</div>
               </div>
               <button onClick={togglePause} className={`text-white p-1.5 sm:p-2 rounded-lg transition-colors ${isPaused ? 'bg-green-500 hover:bg-green-600' : (darkMode ? 'bg-yellow-600 hover:bg-yellow-700' : 'bg-yellow-500 hover:bg-yellow-600')}`} title="Pause/Resume">
                 {isPaused ? <Play className="w-4 h-4 sm:w-5 sm:h-5" /> : <Pause className="w-4 h-4 sm:w-5 sm:h-5" />}
@@ -1255,19 +1255,19 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
                 className={`flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-colors text-xs sm:text-sm ${darkMode ? 'bg-indigo-900/50 hover:bg-indigo-900/70 text-indigo-200' : 'bg-indigo-100 hover:bg-indigo-200 text-gray-900'}`}
               >
                 <Settings className="w-4 h-4" />
-                <span className="hidden sm:inline">Settings</span>
+                <span>Settings</span>
               </button>
               <button onClick={() => setShowAboutModal(true)} className={`flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-colors text-xs sm:text-sm ${darkMode ? 'bg-indigo-900/50 hover:bg-indigo-900/70 text-indigo-200' : 'bg-indigo-100 hover:bg-indigo-200 text-gray-900'}`}>
                 <Users className="w-4 h-4" />
-                <span className="hidden sm:inline">About Us</span>
+                <span>About</span>
               </button>
               <button onClick={() => setShowContactModal(true)} className={`flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-colors text-xs sm:text-sm ${darkMode ? 'bg-blue-900/50 hover:bg-blue-900/70 text-blue-200' : 'bg-blue-100 hover:bg-blue-200 text-gray-900'}`}>
                 <Mail className="w-4 h-4" />
-                <span className="hidden sm:inline">Contact</span>
+                <span>Contact</span>
               </button>
               <button onClick={() => setShowSupportModal(true)} className={`flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-colors text-xs sm:text-sm ${darkMode ? 'bg-pink-900/50 hover:bg-pink-900/70 text-pink-200' : 'bg-pink-100 hover:bg-pink-200 text-gray-900'}`}>
                 <Heart className="w-4 h-4" />
-                <span className="hidden sm:inline">Support Us</span>
+                <span>Support</span>
               </button>
             </div>
           </div>
