@@ -537,6 +537,8 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
   const loadFromStorage = useCallback(async () => {
     try {
       console.log('loadFromStorage called, user:', user ? user.id : 'null');
+      let hasTrialData = false;
+
       if (user) {
         // Load from Supabase if logged in
         const { data, error } = await supabase
@@ -547,7 +549,7 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
 
         if (error) {
           console.log('No saved data found in Supabase');
-          return;
+          return hasTrialData;
         }
 
         if (data) {
@@ -555,7 +557,10 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
           if (data.score) setScore(data.score);
           if (data.history) setHistory(data.history);
           if (data.stats_history) setStatsHistory(data.stats_history);
-          if (data.current_trial) setCurrentTrial(data.current_trial);
+          if (data.current_trial) {
+            setCurrentTrial(data.current_trial);
+            hasTrialData = true;
+          }
           if (data.time_left !== undefined) setTimeLeft(data.time_left);
           if (data.feedback !== undefined) setFeedback(data.feedback);
           if (data.is_paused !== undefined) setIsPaused(data.is_paused);
@@ -587,7 +592,10 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
           if (data.score) setScore(data.score);
           if (data.history) setHistory(data.history);
           if (data.statsHistory) setStatsHistory(data.statsHistory);
-          if (data.currentTrial) setCurrentTrial(data.currentTrial);
+          if (data.currentTrial) {
+            setCurrentTrial(data.currentTrial);
+            hasTrialData = true;
+          }
           if (data.timeLeft !== undefined) setTimeLeft(data.timeLeft);
           if (data.feedback !== undefined) setFeedback(data.feedback);
           if (data.isPaused !== undefined) setIsPaused(data.isPaused);
@@ -612,8 +620,10 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
           console.log('No localStorage data found');
         }
       }
+      return hasTrialData;
     } catch (error) {
       console.error('Error loading data:', error);
+      return false;
     }
     // Intentionally empty dependencies - setState functions are stable
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -787,10 +797,10 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
     const initializeGame = async () => {
       try {
         console.log('Initializing game...');
-        await loadFromStorage();
-        console.log('Storage loaded, checking if trial exists...');
+        const hasTrialData = await loadFromStorage();
+        console.log('Storage loaded, hasTrialData:', hasTrialData);
         // Only start a new trial if there isn't one already loaded
-        if (!currentTrial) {
+        if (!hasTrialData) {
           console.log('No trial found, starting new one...');
           startNewTrial();
         } else {
