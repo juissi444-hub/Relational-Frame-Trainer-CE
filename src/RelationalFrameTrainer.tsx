@@ -1077,12 +1077,14 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
     positions[firstStimulus] = { v: 'CENTER', h: 'CENTER', row: 1, col: 1, vLevel: 0 };
 
     // Helper to get row/col offset from direction
+    // Note: In grid visualization, row 0 is at top, row 2 is at bottom
+    // NORTH/SOUTH are flipped to match visual expectation
     const getOffset = (direction) => {
       const offsets = {
-        'NORTH': [-1, 0], 'SOUTH': [1, 0],
+        'NORTH': [1, 0], 'SOUTH': [-1, 0],
         'EAST': [0, 1], 'WEST': [0, -1],
-        'NORTHEAST': [-1, 1], 'NORTHWEST': [-1, -1],
-        'SOUTHEAST': [1, 1], 'SOUTHWEST': [1, -1],
+        'NORTHEAST': [1, 1], 'NORTHWEST': [1, -1],
+        'SOUTHEAST': [-1, 1], 'SOUTHWEST': [-1, -1],
         'CENTER': [0, 0]
       };
       return offsets[direction] || [0, 0];
