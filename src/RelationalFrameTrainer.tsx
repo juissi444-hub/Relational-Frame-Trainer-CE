@@ -673,6 +673,43 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
       let hasTrialData = false;
 
       if (user) {
+        // Check if there's localStorage data from anonymous session
+        const localData = localStorage.getItem('rft_local_progress');
+        if (localData) {
+          console.log('Found localStorage data, migrating to Supabase for logged-in user...');
+          const parsedLocalData = JSON.parse(localData);
+
+          // Prepare data for migration to Supabase
+          const migrateData = {
+            user_id: user.id,
+            score: parsedLocalData.score || { correct: 0, incorrect: 0, missed: 0 },
+            history: parsedLocalData.history || [],
+            stats_history: parsedLocalData.statsHistory || [],
+            current_trial: parsedLocalData.currentTrial || null,
+            time_left: parsedLocalData.timeLeft !== undefined ? parsedLocalData.timeLeft : 30,
+            feedback: parsedLocalData.feedback || null,
+            is_paused: parsedLocalData.isPaused || false,
+            settings: parsedLocalData.settings || {},
+            updated_at: new Date().toISOString()
+          };
+
+          // Save localStorage data to Supabase
+          const { error: migrateError } = await supabase
+            .from('user_progress')
+            .upsert(migrateData, {
+              onConflict: 'user_id',
+              ignoreDuplicates: false
+            });
+
+          if (migrateError) {
+            console.error('Failed to migrate localStorage to Supabase:', migrateError);
+          } else {
+            console.log('Successfully migrated localStorage data to Supabase');
+            // Clear localStorage after successful migration
+            localStorage.removeItem('rft_local_progress');
+          }
+        }
+
         // Load from Supabase if logged in
         const { data, error } = await supabase
           .from('user_progress')
