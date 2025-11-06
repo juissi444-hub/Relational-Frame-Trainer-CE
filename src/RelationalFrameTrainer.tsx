@@ -1127,17 +1127,18 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
     positions[firstStimulus] = { v: 'CENTER', h: 'CENTER', row: 0, col: 0, vLevel: 0 };
 
     // Helper to get row/col offset from direction
-    // "X is NORTH of Y" means Y is NORTH of X, so X is SOUTH (below) of Y
+    // "X is NORTH of Y" means X is positioned north (above) of Y
+    // Grid layout: row 0 is top, col 0 is left
     const getOffset = (direction) => {
       const offsets = {
-        'NORTH': [1, 0],   // Y is NORTH, so X moves down (increase row)
-        'SOUTH': [-1, 0],  // Y is SOUTH, so X moves up (decrease row)
-        'EAST': [0, -1],   // Y is EAST, so X moves left (decrease col)
-        'WEST': [0, 1],    // Y is WEST, so X moves right (increase col)
-        'NORTHEAST': [1, -1],   // Y is NE, so X moves down + left
-        'NORTHWEST': [1, 1],    // Y is NW, so X moves down + right
-        'SOUTHEAST': [-1, -1],  // Y is SE, so X moves up + left
-        'SOUTHWEST': [-1, 1],   // Y is SW, so X moves up + right
+        'NORTH': [-1, 0],   // X is above Y (decrease row)
+        'SOUTH': [1, 0],    // X is below Y (increase row)
+        'EAST': [0, 1],     // X is right of Y (increase col)
+        'WEST': [0, -1],    // X is left of Y (decrease col)
+        'NORTHEAST': [-1, 1],   // X is above-right of Y
+        'NORTHWEST': [-1, -1],  // X is above-left of Y
+        'SOUTHEAST': [1, 1],    // X is below-right of Y
+        'SOUTHWEST': [1, -1],   // X is below-left of Y
         'CENTER': [0, 0]
       };
       return offsets[direction] || [0, 0];
@@ -1502,7 +1503,7 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
       )}
 
       {showExplanationModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-2 sm:p-4">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm p-2 sm:p-4">
           <div className={`max-w-4xl w-full rounded-2xl p-4 sm:p-6 shadow-2xl max-h-[90vh] overflow-y-auto ${darkMode ? 'bg-slate-800/95 backdrop-blur-sm' : 'bg-white'}`}>
             <div className="flex justify-between items-center mb-4">
               <h2 className={`text-xl sm:text-2xl font-bold ${darkMode ? 'text-slate-50' : 'text-slate-800'}`}>Spatial Explanation</h2>
@@ -1715,13 +1716,13 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
         <div className={`shadow-md p-2 sm:p-3 flex flex-col gap-2 transition-colors duration-300 ${darkMode ? 'bg-slate-800/95 backdrop-blur-sm/90 backdrop-blur' : 'bg-white'}`}>
           {/* Timer and Pause - Centered at top */}
           <div className="flex justify-center items-center">
-            <div className="flex flex-col items-center gap-1">
+            <div className="flex flex-col items-center gap-2">
               <div className="text-center">
-                <div className={`text-base sm:text-xl font-bold tabular-nums ${darkMode ? 'text-indigo-300' : 'text-indigo-600'}`}>{timeLeft.toFixed(1)}s</div>
-                <div className={`text-xs hidden sm:block ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>Time</div>
+                <div className={`text-2xl sm:text-4xl font-bold tabular-nums ${darkMode ? 'text-indigo-300' : 'text-indigo-600'}`}>{timeLeft.toFixed(1)}s</div>
+                <div className={`text-xs sm:text-sm ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>Time</div>
               </div>
-              <button onClick={togglePause} className={`text-white p-1.5 sm:p-2 rounded-lg transition-colors ${isPaused ? 'bg-green-500 hover:bg-green-600' : (darkMode ? 'bg-yellow-600 hover:bg-yellow-700' : 'bg-yellow-500 hover:bg-yellow-600')}`} title="Pause/Resume">
-                {isPaused ? <Play className="w-4 h-4 sm:w-5 sm:h-5" /> : <Pause className="w-4 h-4 sm:w-5 sm:h-5" />}
+              <button onClick={togglePause} className={`text-white p-3 sm:p-4 rounded-xl transition-colors shadow-lg ${isPaused ? 'bg-green-500 hover:bg-green-600' : (darkMode ? 'bg-yellow-600 hover:bg-yellow-700' : 'bg-yellow-500 hover:bg-yellow-600')}`} title="Pause/Resume">
+                {isPaused ? <Play className="w-6 h-6 sm:w-8 sm:h-8" /> : <Pause className="w-6 h-6 sm:w-8 sm:h-8" />}
               </button>
             </div>
           </div>
