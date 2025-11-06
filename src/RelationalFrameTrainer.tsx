@@ -633,6 +633,7 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
 
   const saveToStorage = useCallback(async () => {
     try {
+      console.log('🔍 saveToStorage called, user:', user ? `${user.id} (${user.username})` : 'null');
       const saveData = {
         score, history, statsHistory,
         currentTrial, timeLeft, feedback, isPaused,
@@ -641,7 +642,7 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
 
       if (user) {
         // Save to Supabase if logged in
-        console.log('💾 Saving to Supabase for user:', user.id);
+        console.log('💾 Saving to Supabase for user:', user.id, '| Score:', score);
         const progressData = {
           user_id: user.id,
           score: score,
@@ -654,6 +655,13 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
           settings: saveData.settings,
           updated_at: new Date().toISOString()
         };
+
+        console.log('📦 Data being saved:', {
+          user_id: progressData.user_id,
+          score: progressData.score,
+          history_length: progressData.history.length,
+          has_current_trial: !!progressData.current_trial
+        });
 
         // Use upsert to insert or update
         const { error } = await supabase
@@ -682,8 +690,9 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
   // Keep a ref to the latest saveToStorage to avoid stale closures
   const saveToStorageRef = useRef(saveToStorage);
   useEffect(() => {
+    console.log('🔄 Updating saveToStorageRef with latest saveToStorage (user:', user ? user.id : 'null', ')');
     saveToStorageRef.current = saveToStorage;
-  }, [saveToStorage]);
+  }, [saveToStorage, user]);
 
   const loadFromStorage = useCallback(async () => {
     try {
@@ -1136,9 +1145,10 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
 
   // Handle login: save current state to Supabase
   useEffect(() => {
+    console.log('👤 User-change effect triggered. user:', user ? user.id : 'null', '| isInitialized:', isInitialized);
     const handleUserLogin = async () => {
       if (user && isInitialized) {
-        console.log('User logged in, saving current state to Supabase:', user.id);
+        console.log('🚀 User logged in, saving current state to Supabase:', user.id);
 
         // Save current in-memory state to Supabase
         // This preserves the active session when logging in
@@ -1146,6 +1156,8 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
         await saveToStorageRef.current();
 
         console.log('✅ Current session saved to Supabase for user:', user.id);
+      } else {
+        console.log('⏭️ Skipping save - user:', user ? 'exists' : 'null', ', isInitialized:', isInitialized);
       }
     };
     handleUserLogin();
