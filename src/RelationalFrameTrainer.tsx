@@ -51,6 +51,7 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
   const [feedback, setFeedback] = useState(null);
   const [history, setHistory] = useState([]);
   const [hoveredPremise, setHoveredPremise] = useState(null);
+  const [showExplanationModal, setShowExplanationModal] = useState(null);
   const [isInitialized, setIsInitialized] = useState(false);
   const [enabledRelationModes, setEnabledRelationModes] = useState({
     equality: true,
@@ -1497,6 +1498,61 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
         </div>
       )}
 
+      {showExplanationModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-2 sm:p-4">
+          <div className={`max-w-4xl w-full rounded-2xl p-4 sm:p-6 shadow-2xl max-h-[90vh] overflow-y-auto ${darkMode ? 'bg-slate-800/95 backdrop-blur-sm' : 'bg-white'}`}>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className={`text-xl sm:text-2xl font-bold ${darkMode ? 'text-slate-50' : 'text-slate-800'}`}>Spatial Explanation</h2>
+              <button onClick={() => setShowExplanationModal(null)} className={`p-2 rounded-lg ${darkMode ? 'hover:bg-slate-700/80' : 'hover:bg-slate-100'}`}>
+                <X className={`w-5 h-5 sm:w-6 sm:h-6 ${darkMode ? 'text-slate-200' : 'text-slate-700'}`} />
+              </button>
+            </div>
+            <div className={`space-y-4 ${darkMode ? 'text-slate-200' : 'text-slate-700'}`}>
+              {(() => {
+                const item = history.find(h => h.timestamp === showExplanationModal);
+                if (!item) return null;
+                return (
+                  <>
+                    <div>
+                      <h3 className={`text-sm font-semibold mb-2 ${darkMode ? 'text-slate-300' : 'text-slate-600'}`}>Premises:</h3>
+                      <div className="space-y-1">
+                        {item.trial.premises.map((premise, pidx) => (
+                          <div key={pidx} className={`text-sm flex items-center gap-1 flex-wrap ${darkMode ? 'text-slate-200' : 'text-slate-700'}`}>
+                            {renderStimulus(premise.stimulus1)} is {renderRelationStyled(premise.relation, 'sm')} to {renderStimulus(premise.stimulus2)}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <h3 className={`text-sm font-semibold mb-2 ${darkMode ? 'text-slate-300' : 'text-slate-600'}`}>Visual Representation:</h3>
+                      <div className="flex justify-center">
+                        {renderSpatialGrid(item.trial)}
+                      </div>
+                    </div>
+                    <div>
+                      <h3 className={`text-sm font-semibold mb-2 ${darkMode ? 'text-slate-300' : 'text-slate-600'}`}>Question:</h3>
+                      <div className={`text-sm font-semibold ${darkMode ? 'text-slate-100' : 'text-slate-800'}`}>
+                        Is {renderStimulus(item.trial.question.stimulus1)} {renderRelationStyled(item.trial.question.relation, 'sm')} to {renderStimulus(item.trial.question.stimulus2)}?
+                      </div>
+                    </div>
+                    <div className={`p-3 rounded-lg ${item.isCorrect ? (darkMode ? 'bg-green-900/20 border-2 border-green-500/50' : 'bg-green-50 border-2 border-green-300') : (darkMode ? 'bg-red-900/20 border-2 border-red-500/50' : 'bg-red-50 border-2 border-red-300')}`}>
+                      <div className="text-sm space-y-1">
+                        <div>
+                          <span className="font-semibold">Your answer:</span> <span className={item.isCorrect ? (darkMode ? 'text-green-400' : 'text-green-700') : (darkMode ? 'text-red-400' : 'text-red-700')}>{getAnswerLabel(item.userAnswer)}</span>
+                        </div>
+                        <div>
+                          <span className="font-semibold">Correct answer:</span> <span className={darkMode ? 'text-green-400' : 'text-green-700'}>{getAnswerLabel(item.trial.correctAnswer)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                );
+              })()}
+            </div>
+          </div>
+        </div>
+      )}
+
       {(showHistory || showStats) && (
         <div className="sm:hidden fixed inset-0 z-40 bg-black/50 backdrop-blur-sm" onClick={() => { setShowHistory(false); setShowStats(false); }} />
       )}
@@ -1530,8 +1586,13 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
                       ))}
                     </div>
                     {(getRelationMode(item.trial.question.relation) === 'spatial' || getRelationMode(item.trial.question.relation) === 'space3d') && (
-                      <div className="mb-2 flex justify-center">
-                        {renderSpatialGrid(item.trial)}
+                      <div className="mb-2">
+                        <button
+                          onClick={() => setShowExplanationModal(item.timestamp)}
+                          className={`w-full px-3 py-2 rounded-lg text-xs font-semibold transition-colors ${darkMode ? 'bg-indigo-600 hover:bg-indigo-700 text-white' : 'bg-indigo-500 hover:bg-indigo-600 text-white'}`}
+                        >
+                          Show Explanation
+                        </button>
                       </div>
                     )}
                     <div className={`text-xs sm:text-sm mb-1.5 sm:mb-2 font-semibold flex items-center gap-1 flex-wrap ${darkMode ? 'text-slate-100' : 'text-slate-800'}`}>
