@@ -268,8 +268,12 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
 
       // OPPOSITE compositions
       if (rel1 === 'OPPOSITE' && rel2 === 'OPPOSITE') return 'SAME';
-      if (rel1 === 'OPPOSITE' && rel2 === 'DIFFERENT') return 'DIFFERENT';
-      if (rel1 === 'DIFFERENT' && rel2 === 'OPPOSITE') return 'DIFFERENT';
+
+      // OPPOSITE + DIFFERENT is ambiguous
+      // If A is OPPOSITE to B, and B is DIFFERENT to C, we can't determine A and C
+      // (DIFFERENT just means "not same", doesn't specify if it's OPPOSITE or just different)
+      if (rel1 === 'OPPOSITE' && rel2 === 'DIFFERENT') return 'AMBIGUOUS';
+      if (rel1 === 'DIFFERENT' && rel2 === 'OPPOSITE') return 'AMBIGUOUS';
 
       // DIFFERENT cannot be composed with itself - it's non-transitive
       // X DIFFERENT Y, Y DIFFERENT Z tells us nothing definitive about X and Z
@@ -1713,10 +1717,11 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
       </div>
 
       <div className="flex-1 flex flex-col min-h-0">
-        <div className={`shadow-md p-2 sm:p-3 flex flex-col gap-2 transition-colors duration-300 ${darkMode ? 'bg-slate-800/95 backdrop-blur-sm/90 backdrop-blur' : 'bg-white'}`}>
-          {/* Timer and Pause - Centered at top */}
-          <div className="flex justify-center items-center">
-            <div className="flex flex-col items-center gap-2">
+        <div className={`shadow-md p-2 sm:p-3 transition-colors duration-300 ${darkMode ? 'bg-slate-800/95 backdrop-blur-sm/90 backdrop-blur' : 'bg-white'}`}>
+          {/* All buttons at top in single row */}
+          <div className="flex flex-wrap justify-between items-center gap-2 mb-2">
+            {/* Left side: Timer and Play button */}
+            <div className="flex items-center gap-3">
               <div className="text-center">
                 <div className={`text-2xl sm:text-4xl font-bold tabular-nums ${darkMode ? 'text-indigo-300' : 'text-indigo-600'}`}>{timeLeft.toFixed(1)}s</div>
                 <div className={`text-xs sm:text-sm ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>Time</div>
@@ -1725,10 +1730,8 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
                 {isPaused ? <Play className="w-6 h-6 sm:w-8 sm:h-8" /> : <Pause className="w-6 h-6 sm:w-8 sm:h-8" />}
               </button>
             </div>
-          </div>
 
-          {/* All other buttons */}
-          <div className="flex justify-between items-center gap-2 flex-wrap">
+            {/* Center: Main action buttons */}
             <div className="flex gap-1 sm:gap-2 flex-wrap">
               <button onClick={() => setShowHistory(!showHistory)} className={`flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-colors text-xs sm:text-sm ${darkMode ? 'bg-indigo-900/50 hover:bg-indigo-900/70 text-indigo-200' : 'bg-indigo-100 hover:bg-indigo-200 text-slate-900'}`}>
                 <History className="w-4 h-4" />
@@ -1759,6 +1762,7 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
               )}
             </div>
 
+            {/* Right side: Settings and other buttons */}
             <div className="flex gap-1 sm:gap-2 flex-wrap">
               <button
                 onClick={() => {
@@ -1782,8 +1786,8 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
                 <Heart className="w-4 h-4" />
                 <span className="hidden sm:inline">Support Us</span>
               </button>
-              </div>
             </div>
+          </div>
 
           <div className="flex gap-2 sm:gap-4 justify-center sm:justify-start">
             <div className="text-center">
