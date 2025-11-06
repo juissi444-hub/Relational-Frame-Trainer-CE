@@ -41,6 +41,13 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
   const [showSettings, setShowSettings] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [showStats, setShowStats] = useState(false);
+  const [statsFilter, setStatsFilter] = useState({
+    equality: true,
+    temporal: true,
+    spatial: true,
+    containment: true,
+    space3d: true
+  });
   const [showTutorial, setShowTutorial] = useState(false);
   const [showSupportModal, setShowSupportModal] = useState(false);
   const [showAboutModal, setShowAboutModal] = useState(false);
@@ -1017,8 +1024,9 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
     setScore(prev => ({ ...prev, correct: prev.correct + (isCorrect ? 1 : 0), incorrect: prev.incorrect + (isCorrect ? 0 : 1) }));
     setFeedback(isCorrect ? 'correct' : 'incorrect');
     const entry = { trial: currentTrial, userAnswer, isCorrect, timestamp: Date.now(), timeUsed, premiseCount: currentTrial.premises.length };
+    const mode = getRelationMode(currentTrial.question.relation);
     setHistory(prev => [...prev, entry]);
-    setStatsHistory(prev => [...prev, { timestamp: Date.now(), timeUsed, premiseCount: currentTrial.premises.length, isCorrect }]);
+    setStatsHistory(prev => [...prev, { timestamp: Date.now(), timeUsed, premiseCount: currentTrial.premises.length, isCorrect, mode }]);
     
     if (autoProgressMode === 'universal') {
       const updatedAnswers = [...universalProgress.recentAnswers, isCorrect];
@@ -1058,8 +1066,9 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
       const timeUsed = timePerQuestion;
       setScore(prev => ({ ...prev, missed: prev.missed + 1 }));
       setFeedback('missed');
+      const mode = getRelationMode(currentTrial.question.relation);
       setHistory(prev => [...prev, { trial: currentTrial, userAnswer: null, isCorrect: false, timestamp: Date.now(), timeUsed, premiseCount: currentTrial.premises.length }]);
-      setStatsHistory(prev => [...prev, { timestamp: Date.now(), timeUsed, premiseCount: currentTrial.premises.length, isCorrect: false }]);
+      setStatsHistory(prev => [...prev, { timestamp: Date.now(), timeUsed, premiseCount: currentTrial.premises.length, isCorrect: false, mode }]);
       setTimeout(() => { startNewTrial(); saveToStorage(); }, 1500);
     } else if (isPaused) {
       setTimeLeft(timePerQuestion);
@@ -1460,8 +1469,16 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
 
   return (
     <div className={`min-h-screen flex flex-col transition-colors duration-300 ${darkMode ? 'bg-gradient-to-br from-gray-900 via-slate-900 to-gray-900' : 'bg-gradient-to-br from-slate-50 to-slate-100'}`}>
-      
 
+      {/* Hover zones for corners - desktop only */}
+      <div
+        className="hidden sm:block fixed top-0 left-0 w-16 h-screen z-30"
+        onMouseEnter={() => setShowHistory(true)}
+      />
+      <div
+        className="hidden sm:block fixed top-0 right-0 w-16 h-screen z-30"
+        onMouseEnter={() => setShowSettings(true)}
+      />
 
       {showTutorial && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-2 sm:p-4">
@@ -1817,69 +1834,127 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
                 <p className={`text-xs sm:text-sm ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>No statistics yet</p>
               ) : (
                 <>
-                  <div className={`p-3 sm:p-4 rounded-lg ${darkMode ? 'bg-slate-700' : 'bg-slate-50'}`}>
-                    <h3 className={`text-xs sm:text-sm font-semibold mb-2 sm:mb-3 ${darkMode ? 'text-slate-200' : 'text-slate-700'}`}>Overall</h3>
-                    <div className="space-y-1.5 sm:space-y-2">
-                      <div className="flex justify-between">
-                        <span className={`text-xs sm:text-sm ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>Total Questions:</span>
-                        <span className={`text-xs sm:text-sm font-bold ${darkMode ? 'text-slate-100' : 'text-slate-800'}`}>{statsHistory.length}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className={`text-xs sm:text-sm ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>Accuracy:</span>
-                        <span className={`text-xs sm:text-sm font-bold ${darkMode ? 'text-green-400' : 'text-green-600'}`}>
-                          {((statsHistory.filter(s => s.isCorrect).length / statsHistory.length) * 100).toFixed(1)}%
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className={`text-xs sm:text-sm ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>Avg Time:</span>
-                        <span className={`text-xs sm:text-sm font-bold ${darkMode ? 'text-indigo-300' : 'text-indigo-600'}`}>
-                          {(statsHistory.reduce((sum, s) => sum + s.timeUsed, 0) / statsHistory.length).toFixed(1)}s
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className={`text-xs sm:text-sm ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>Avg Premises:</span>
-                        <span className={`text-xs sm:text-sm font-bold ${darkMode ? 'text-purple-400' : 'text-purple-600'}`}>
-                          {(statsHistory.reduce((sum, s) => sum + s.premiseCount, 0) / statsHistory.length).toFixed(1)}
-                        </span>
-                      </div>
+                  {/* Filter Controls */}
+                  <div className={`p-3 rounded-lg ${darkMode ? 'bg-slate-700' : 'bg-slate-50'}`}>
+                    <h3 className={`text-xs font-semibold mb-2 ${darkMode ? 'text-slate-200' : 'text-slate-700'}`}>Filter by Type:</h3>
+                    <div className="flex flex-wrap gap-2">
+                      {Object.keys(statsFilter).map(mode => (
+                        <button
+                          key={mode}
+                          onClick={() => setStatsFilter(prev => ({ ...prev, [mode]: !prev[mode] }))}
+                          className={`px-2 py-1 text-xs rounded transition-colors capitalize ${
+                            statsFilter[mode]
+                              ? (darkMode ? 'bg-indigo-600 text-white' : 'bg-indigo-500 text-white')
+                              : (darkMode ? 'bg-slate-600 text-slate-300' : 'bg-slate-200 text-slate-600')
+                          }`}
+                        >
+                          {mode}
+                        </button>
+                      ))}
                     </div>
                   </div>
 
-                  <div>
-                    <h3 className={`text-xs sm:text-sm font-semibold mb-2 sm:mb-3 ${darkMode ? 'text-slate-200' : 'text-slate-700'}`}>Time per Question (Last 20)</h3>
-                    <div className={`p-2 sm:p-3 rounded-lg ${darkMode ? 'bg-slate-700' : 'bg-slate-50'}`}>
-                      <div className="flex items-end h-24 sm:h-32 gap-0.5 sm:gap-1">
-                        {statsHistory.slice(-20).map((stat, idx) => {
-                          const maxTime = Math.max(...statsHistory.slice(-20).map(s => s.timeUsed));
-                          const height = (stat.timeUsed / maxTime) * 100;
-                          return (
-                            <div key={idx} className="flex-1 flex flex-col items-center">
-                              <div className={`w-full rounded-t transition-all ${stat.isCorrect ? (darkMode ? 'bg-green-500' : 'bg-green-400') : (darkMode ? 'bg-red-500' : 'bg-red-400')}`} style={{ height: `${height}%` }} title={`Q${statsHistory.length - 19 + idx}: ${stat.timeUsed.toFixed(1)}s`} />
-                            </div>
-                          );
-                        })}
-                      </div>
-                      <div className={`text-xs text-center mt-1.5 sm:mt-2 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Questions (most recent →)</div>
-                    </div>
-                  </div>
+                  {(() => {
+                    const filteredStats = statsHistory.filter(s => s.mode && statsFilter[s.mode]);
+                    if (filteredStats.length === 0) {
+                      return <p className={`text-xs ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>No data for selected filters</p>;
+                    }
 
-                  <div>
-                    <h3 className={`text-xs sm:text-sm font-semibold mb-2 sm:mb-3 ${darkMode ? 'text-slate-200' : 'text-slate-700'}`}>Premise Count (Last 20)</h3>
-                    <div className={`p-2 sm:p-3 rounded-lg ${darkMode ? 'bg-slate-700' : 'bg-slate-50'}`}>
-                      <div className="flex items-end h-24 sm:h-32 gap-0.5 sm:gap-1">
-                        {statsHistory.slice(-20).map((stat, idx) => {
-                          const maxPremises = Math.max(...statsHistory.slice(-20).map(s => s.premiseCount));
-                          const height = (stat.premiseCount / maxPremises) * 100;
-                          return (
-                            <div key={idx} className="flex-1 flex flex-col items-center">
-                              <div className={`w-full rounded-t transition-all ${stat.isCorrect ? (darkMode ? 'bg-purple-500' : 'bg-purple-400') : (darkMode ? 'bg-orange-500' : 'bg-orange-400')}`} style={{ height: `${height}%` }} title={`Q${statsHistory.length - 19 + idx}: ${stat.premiseCount} premises`} />
+                    const avgTimePerPremise = filteredStats.reduce((sum, s) => sum + (s.timeUsed / s.premiseCount), 0) / filteredStats.length;
+
+                    return (
+                      <>
+                        <div className={`p-3 sm:p-4 rounded-lg ${darkMode ? 'bg-slate-700' : 'bg-slate-50'}`}>
+                          <h3 className={`text-xs sm:text-sm font-semibold mb-2 sm:mb-3 ${darkMode ? 'text-slate-200' : 'text-slate-700'}`}>Overall</h3>
+                          <div className="space-y-1.5 sm:space-y-2">
+                            <div className="flex justify-between">
+                              <span className={`text-xs sm:text-sm ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>Total Questions:</span>
+                              <span className={`text-xs sm:text-sm font-bold ${darkMode ? 'text-slate-100' : 'text-slate-800'}`}>{filteredStats.length}</span>
                             </div>
-                          );
-                        })}
-                      </div>
-                      <div className={`text-xs text-center mt-1.5 sm:mt-2 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Questions (most recent →)</div>
-                    </div>
-                  </div>
+                            <div className="flex justify-between">
+                              <span className={`text-xs sm:text-sm ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>Accuracy:</span>
+                              <span className={`text-xs sm:text-sm font-bold ${darkMode ? 'text-green-400' : 'text-green-600'}`}>
+                                {((filteredStats.filter(s => s.isCorrect).length / filteredStats.length) * 100).toFixed(1)}%
+                              </span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className={`text-xs sm:text-sm ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>Avg Time:</span>
+                              <span className={`text-xs sm:text-sm font-bold ${darkMode ? 'text-indigo-300' : 'text-indigo-600'}`}>
+                                {(filteredStats.reduce((sum, s) => sum + s.timeUsed, 0) / filteredStats.length).toFixed(1)}s
+                              </span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className={`text-xs sm:text-sm ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>Avg Premises:</span>
+                              <span className={`text-xs sm:text-sm font-bold ${darkMode ? 'text-purple-400' : 'text-purple-600'}`}>
+                                {(filteredStats.reduce((sum, s) => sum + s.premiseCount, 0) / filteredStats.length).toFixed(1)}
+                              </span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className={`text-xs sm:text-sm ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>Avg Time/Premise:</span>
+                              <span className={`text-xs sm:text-sm font-bold ${darkMode ? 'text-cyan-400' : 'text-cyan-600'}`}>
+                                {avgTimePerPremise.toFixed(2)}s
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div>
+                          <h3 className={`text-xs sm:text-sm font-semibold mb-2 sm:mb-3 ${darkMode ? 'text-slate-200' : 'text-slate-700'}`}>Time per Question (Last 20)</h3>
+                          <div className={`p-2 sm:p-3 rounded-lg ${darkMode ? 'bg-slate-700' : 'bg-slate-50'}`}>
+                            <div className="flex items-end h-24 sm:h-32 gap-0.5 sm:gap-1">
+                              {filteredStats.slice(-20).map((stat, idx) => {
+                                const maxTime = Math.max(...filteredStats.slice(-20).map(s => s.timeUsed));
+                                const height = (stat.timeUsed / maxTime) * 100;
+                                return (
+                                  <div key={idx} className="flex-1 flex flex-col items-center">
+                                    <div className={`w-full rounded-t transition-all ${stat.isCorrect ? (darkMode ? 'bg-green-500' : 'bg-green-400') : (darkMode ? 'bg-red-500' : 'bg-red-400')}`} style={{ height: `${height}%` }} title={`${stat.timeUsed.toFixed(1)}s`} />
+                                  </div>
+                                );
+                              })}
+                            </div>
+                            <div className={`text-xs text-center mt-1.5 sm:mt-2 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Questions (most recent →)</div>
+                          </div>
+                        </div>
+
+                        <div>
+                          <h3 className={`text-xs sm:text-sm font-semibold mb-2 sm:mb-3 ${darkMode ? 'text-slate-200' : 'text-slate-700'}`}>Premise Count (Last 20)</h3>
+                          <div className={`p-2 sm:p-3 rounded-lg ${darkMode ? 'bg-slate-700' : 'bg-slate-50'}`}>
+                            <div className="flex items-end h-24 sm:h-32 gap-0.5 sm:gap-1">
+                              {filteredStats.slice(-20).map((stat, idx) => {
+                                const maxPremises = Math.max(...filteredStats.slice(-20).map(s => s.premiseCount));
+                                const height = (stat.premiseCount / maxPremises) * 100;
+                                return (
+                                  <div key={idx} className="flex-1 flex flex-col items-center">
+                                    <div className={`w-full rounded-t transition-all ${stat.isCorrect ? (darkMode ? 'bg-purple-500' : 'bg-purple-400') : (darkMode ? 'bg-orange-500' : 'bg-orange-400')}`} style={{ height: `${height}%` }} title={`${stat.premiseCount} premises`} />
+                                  </div>
+                                );
+                              })}
+                            </div>
+                            <div className={`text-xs text-center mt-1.5 sm:mt-2 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Questions (most recent →)</div>
+                          </div>
+                        </div>
+
+                        <div>
+                          <h3 className={`text-xs sm:text-sm font-semibold mb-2 sm:mb-3 ${darkMode ? 'text-slate-200' : 'text-slate-700'}`}>Time per Premise (Last 20)</h3>
+                          <div className={`p-2 sm:p-3 rounded-lg ${darkMode ? 'bg-slate-700' : 'bg-slate-50'}`}>
+                            <div className="flex items-end h-24 sm:h-32 gap-0.5 sm:gap-1">
+                              {filteredStats.slice(-20).map((stat, idx) => {
+                                const timePerPremise = stat.timeUsed / stat.premiseCount;
+                                const maxTimePerPremise = Math.max(...filteredStats.slice(-20).map(s => s.timeUsed / s.premiseCount));
+                                const height = (timePerPremise / maxTimePerPremise) * 100;
+                                return (
+                                  <div key={idx} className="flex-1 flex flex-col items-center">
+                                    <div className={`w-full rounded-t transition-all ${stat.isCorrect ? (darkMode ? 'bg-cyan-500' : 'bg-cyan-400') : (darkMode ? 'bg-yellow-500' : 'bg-yellow-400')}`} style={{ height: `${height}%` }} title={`${timePerPremise.toFixed(2)}s/premise`} />
+                                  </div>
+                                );
+                              })}
+                            </div>
+                            <div className={`text-xs text-center mt-1.5 sm:mt-2 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Questions (most recent →)</div>
+                          </div>
+                        </div>
+                      </>
+                    );
+                  })()}
                 </>
               )}
             </div>

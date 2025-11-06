@@ -1,8 +1,13 @@
 -- Supabase Database Setup for Relational Frame Trainer
 -- Run this SQL in your Supabase SQL Editor to set up the database
 
+-- Drop existing objects if they exist (to avoid conflicts)
+DROP TRIGGER IF EXISTS update_user_progress_updated_at ON user_progress;
+DROP FUNCTION IF EXISTS update_updated_at_column();
+DROP TABLE IF EXISTS user_progress CASCADE;
+
 -- Create the user_progress table
-CREATE TABLE IF NOT EXISTS user_progress (
+CREATE TABLE user_progress (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id UUID NOT NULL UNIQUE,
   score JSONB DEFAULT '{"correct": 0, "incorrect": 0, "missed": 0}'::jsonb,
@@ -19,10 +24,10 @@ CREATE TABLE IF NOT EXISTS user_progress (
 );
 
 -- Create an index on user_id for faster lookups
-CREATE INDEX IF NOT EXISTS idx_user_progress_user_id ON user_progress(user_id);
+CREATE INDEX idx_user_progress_user_id ON user_progress(user_id);
 
 -- Create an index on updated_at for ordering
-CREATE INDEX IF NOT EXISTS idx_user_progress_updated_at ON user_progress(updated_at);
+CREATE INDEX idx_user_progress_updated_at ON user_progress(updated_at);
 
 -- Enable Row Level Security (RLS)
 ALTER TABLE user_progress ENABLE ROW LEVEL SECURITY;
