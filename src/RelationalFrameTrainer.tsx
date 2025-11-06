@@ -32,7 +32,8 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
     equality: { targetPremiseCount: 40, targetAccuracy: 95, recentAnswers: [], currentDifficulty: 3, currentTime: 30 },
     temporal: { targetPremiseCount: 40, targetAccuracy: 95, recentAnswers: [], currentDifficulty: 3, currentTime: 30 },
     spatial: { targetPremiseCount: 40, targetAccuracy: 95, recentAnswers: [], currentDifficulty: 3, currentTime: 30 },
-    containment: { targetPremiseCount: 40, targetAccuracy: 95, recentAnswers: [], currentDifficulty: 3, currentTime: 30 }
+    containment: { targetPremiseCount: 40, targetAccuracy: 95, recentAnswers: [], currentDifficulty: 3, currentTime: 30 },
+    space3d: { targetPremiseCount: 40, targetAccuracy: 95, recentAnswers: [], currentDifficulty: 3, currentTime: 30 }
   });
   const [showResetConfirmation, setShowResetConfirmation] = useState(false);
   const [showResetComplete, setShowResetComplete] = useState(false);
@@ -814,13 +815,15 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
       equality: { targetPremiseCount: 40, targetAccuracy: 95, recentAnswers: [], currentDifficulty: 3, currentTime: 30 },
       temporal: { targetPremiseCount: 40, targetAccuracy: 95, recentAnswers: [], currentDifficulty: 3, currentTime: 30 },
       spatial: { targetPremiseCount: 40, targetAccuracy: 95, recentAnswers: [], currentDifficulty: 3, currentTime: 30 },
-      containment: { targetPremiseCount: 40, targetAccuracy: 95, recentAnswers: [], currentDifficulty: 3, currentTime: 30 }
+      containment: { targetPremiseCount: 40, targetAccuracy: 95, recentAnswers: [], currentDifficulty: 3, currentTime: 30 },
+      space3d: { targetPremiseCount: 40, targetAccuracy: 95, recentAnswers: [], currentDifficulty: 3, currentTime: 30 }
     };
     const resetEnabledRelationModes = {
       equality: true,
       temporal: false,
       spatial: false,
-      containment: false
+      containment: false,
+      space3d: false
     };
 
     // Save reset data to storage immediately
@@ -856,6 +859,7 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
 
       if (user) {
         // Reset in Supabase for logged-in users
+        console.log('Resetting data for logged-in user:', user.id);
         const progressData = {
           user_id: user.id,
           score: resetScore,
@@ -869,23 +873,22 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
           updated_at: new Date().toISOString()
         };
 
-        const { error: updateError } = await supabase
+        // Use upsert to insert or update
+        const { error } = await supabase
           .from('user_progress')
-          .update(progressData)
-          .eq('user_id', user.id);
+          .upsert(progressData, {
+            onConflict: 'user_id',
+            ignoreDuplicates: false
+          });
 
-        if (updateError) {
-          // If update fails, try insert
-          const { error: insertError } = await supabase
-            .from('user_progress')
-            .insert([progressData]);
-
-          if (insertError) {
-            console.error('Reset save failed:', insertError);
-          }
+        if (error) {
+          console.error('Reset save to Supabase failed:', error);
+        } else {
+          console.log('Reset data successfully saved to Supabase');
         }
       } else {
         // Reset in localStorage for anonymous users
+        console.log('Resetting data for anonymous user (localStorage)');
         localStorage.setItem('rft_local_progress', JSON.stringify(resetData));
       }
     } catch (error) {
