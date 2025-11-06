@@ -980,10 +980,10 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
   
   const renderStimulus = (stimulus) => {
     if (stimulus.startsWith('voronoi_')) {
-      return <div className="inline-block w-16 h-16 align-middle border-2 border-gray-300 rounded-md overflow-hidden" dangerouslySetInnerHTML={{ __html: generateVoronoiSVG(parseInt(stimulus.split('_')[1])) }} />;
+      return <div className="inline-block w-16 h-16 align-middle border-2 border-slate-300 rounded-md overflow-hidden" dangerouslySetInnerHTML={{ __html: generateVoronoiSVG(parseInt(stimulus.split('_')[1])) }} />;
     }
     if (stimulus.startsWith('mandelbrot_')) {
-      return <div className="inline-block w-16 h-16 align-middle border-2 border-gray-300 rounded-md overflow-hidden" dangerouslySetInnerHTML={{ __html: generateMandelbrotSVG(parseInt(stimulus.split('_')[1])) }} />;
+      return <div className="inline-block w-16 h-16 align-middle border-2 border-slate-300 rounded-md overflow-hidden" dangerouslySetInnerHTML={{ __html: generateMandelbrotSVG(parseInt(stimulus.split('_')[1])) }} />;
     }
     if (stimulus.startsWith('vibration_')) {
       const patternIndex = parseInt(stimulus.split('_')[1]);
@@ -1005,7 +1005,7 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
       );
     }
     const isEmoji = emojiList.includes(stimulus);
-    return <span className={`font-bold ${isEmoji ? 'text-3xl' : ''} ${darkMode ? 'text-indigo-400' : 'text-indigo-600'}`}>{stimulus}</span>;
+    return <span className={`font-bold ${isEmoji ? 'text-3xl' : ''} ${darkMode ? 'text-indigo-300' : 'text-indigo-600'}`}>{stimulus}</span>;
   };
 
   const triggerVibration = (stimulus) => {
@@ -1092,7 +1092,7 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
       return (
         <>
           <span className={`font-bold rounded border ${darkMode ? 'bg-indigo-900/40 text-indigo-300 border-indigo-500' : 'bg-indigo-100 text-indigo-700 border-indigo-300'} ${sizeClasses}`}>ABOVE</span>
-          <span className={`mx-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>and</span>
+          <span className={`mx-1 ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>and</span>
           <span className={`font-bold rounded border ${darkMode ? 'bg-teal-900/40 text-teal-300 border-teal-500' : 'bg-teal-100 text-teal-700 border-teal-300'} ${sizeClasses}`}>{horizontal}</span>
         </>
       );
@@ -1102,7 +1102,7 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
       return (
         <>
           <span className={`font-bold rounded border ${darkMode ? 'bg-indigo-900/40 text-indigo-300 border-indigo-500' : 'bg-indigo-100 text-indigo-700 border-indigo-300'} ${sizeClasses}`}>BELOW</span>
-          <span className={`mx-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>and</span>
+          <span className={`mx-1 ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>and</span>
           <span className={`font-bold rounded border ${darkMode ? 'bg-teal-900/40 text-teal-300 border-teal-500' : 'bg-teal-100 text-teal-700 border-teal-300'} ${sizeClasses}`}>{horizontal}</span>
         </>
       );
@@ -1236,7 +1236,7 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
 
       return (
         <div className="flex flex-col gap-0.5">
-          {showLabels && <div className={`text-xs text-center font-semibold mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+          {showLabels && <div className={`text-xs text-center font-semibold mb-1 ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>
             {verticalLevel}
           </div>}
           <div className="grid gap-0.5" style={{ gridTemplateColumns: `repeat(${numCols}, minmax(0, 1fr))` }}>
@@ -1249,8 +1249,8 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
                   <div
                     key={`${row}-${col}`}
                     className={`w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center text-[10px] border rounded ${
-                      objectsInCell.length > 0 ? (darkMode ? `${colors[stimuliList.indexOf(objectsInCell[0]) % colors.length]} border-gray-300 font-bold text-white` : `${colors[stimuliList.indexOf(objectsInCell[0]) % colors.length]} border-gray-600 font-bold text-white`) :
-                      (darkMode ? 'bg-slate-700 border-slate-600' : 'bg-gray-100 border-gray-300')
+                      objectsInCell.length > 0 ? (darkMode ? `${colors[stimuliList.indexOf(objectsInCell[0]) % colors.length]} border-slate-300 font-bold text-white` : `${colors[stimuliList.indexOf(objectsInCell[0]) % colors.length]} border-slate-600 font-bold text-white`) :
+                      (darkMode ? 'bg-slate-700 border-slate-600' : 'bg-slate-100 border-slate-300')
                     }`}
                   >
                     {objectsInCell.map((stimulus, i) => (
@@ -1279,25 +1279,25 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
   };
 
   return (
-    <div className={`min-h-screen flex flex-col transition-colors duration-300 ${darkMode ? 'bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900' : 'bg-gradient-to-br from-slate-50 to-slate-100'}`}>
+    <div className={`min-h-screen flex flex-col transition-colors duration-300 ${darkMode ? 'bg-gradient-to-br from-gray-900 via-slate-900 to-gray-900' : 'bg-gradient-to-br from-slate-50 to-slate-100'}`}>
       
 
 
       {showTutorial && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-2 sm:p-4">
-          <div className={`max-w-2xl w-full rounded-2xl p-4 sm:p-6 shadow-2xl max-h-[90vh] overflow-y-auto ${darkMode ? 'bg-slate-800' : 'bg-white'}`}>
+          <div className={`max-w-2xl w-full rounded-2xl p-4 sm:p-6 shadow-2xl max-h-[90vh] overflow-y-auto ${darkMode ? 'bg-slate-800/95 backdrop-blur-sm' : 'bg-white'}`}>
             <div className="flex justify-between items-center mb-4">
-              <h2 className={`text-xl sm:text-2xl font-bold ${darkMode ? 'text-indigo-400' : 'text-indigo-600'}`}>How to Play</h2>
-              <button onClick={() => setShowTutorial(false)} className={`p-2 rounded-lg ${darkMode ? 'hover:bg-slate-700' : 'hover:bg-gray-100'}`}>
-                <X className={`w-5 h-5 sm:w-6 sm:h-6 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`} />
+              <h2 className={`text-xl sm:text-2xl font-bold ${darkMode ? 'text-indigo-300' : 'text-indigo-600'}`}>How to Play</h2>
+              <button onClick={() => setShowTutorial(false)} className={`p-2 rounded-lg ${darkMode ? 'hover:bg-slate-700/80' : 'hover:bg-slate-100'}`}>
+                <X className={`w-5 h-5 sm:w-6 sm:h-6 ${darkMode ? 'text-slate-200' : 'text-slate-700'}`} />
               </button>
             </div>
-            <div className={`space-y-3 sm:space-y-4 text-sm sm:text-base ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+            <div className={`space-y-3 sm:space-y-4 text-sm sm:text-base ${darkMode ? 'text-slate-200' : 'text-slate-700'}`}>
               <p>
-                <strong className={darkMode ? 'text-indigo-400' : 'text-indigo-600'}>Relational Frame Training</strong> helps you practice deriving logical relationships between stimuli.
+                <strong className={darkMode ? 'text-indigo-300' : 'text-indigo-600'}>Relational Frame Training</strong> helps you practice deriving logical relationships between stimuli.
               </p>
               <div>
-                <h3 className={`font-bold mb-2 ${darkMode ? 'text-indigo-400' : 'text-indigo-600'}`}>Game Rules:</h3>
+                <h3 className={`font-bold mb-2 ${darkMode ? 'text-indigo-300' : 'text-indigo-600'}`}>Game Rules:</h3>
                 <ul className="list-disc pl-5 sm:pl-6 space-y-1 sm:space-y-2">
                   <li>You will be given several <strong>premises</strong> that establish relationships between stimuli</li>
                   <li>Based on these premises, you must answer whether a <strong>question relationship</strong> is true</li>
@@ -1307,7 +1307,7 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
                 </ul>
               </div>
               <div>
-                <h3 className={`font-bold mb-2 ${darkMode ? 'text-indigo-400' : 'text-indigo-600'}`}>Relation Types:</h3>
+                <h3 className={`font-bold mb-2 ${darkMode ? 'text-indigo-300' : 'text-indigo-600'}`}>Relation Types:</h3>
                 <ul className="list-disc pl-5 sm:pl-6 space-y-1 sm:space-y-2">
                   <li><strong>Equality:</strong> SAME (identical), OPPOSITE (inverse), DIFFERENT (distinct)</li>
                   <li><strong>Temporal:</strong> BEFORE, AFTER, AT (time relationships)</li>
@@ -1317,17 +1317,17 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
                 </ul>
               </div>
               <div className="hidden sm:block">
-                <h3 className={`font-bold mb-2 ${darkMode ? 'text-indigo-400' : 'text-indigo-600'}`}>Keyboard Shortcuts:</h3>
+                <h3 className={`font-bold mb-2 ${darkMode ? 'text-indigo-300' : 'text-indigo-600'}`}>Keyboard Shortcuts:</h3>
                 <ul className="list-disc pl-6 space-y-2">
-                  <li><kbd className={`px-2 py-1 rounded ${darkMode ? 'bg-slate-700' : 'bg-gray-200'}`}>1</kbd> - Answer YES</li>
-                  <li><kbd className={`px-2 py-1 rounded ${darkMode ? 'bg-slate-700' : 'bg-gray-200'}`}>2</kbd> - Answer NO</li>
-                  <li><kbd className={`px-2 py-1 rounded ${darkMode ? 'bg-slate-700' : 'bg-gray-200'}`}>3</kbd> - Answer CAN'T TELL</li>
-                  <li><kbd className={`px-2 py-1 rounded ${darkMode ? 'bg-slate-700' : 'bg-gray-200'}`}>Space</kbd> - Pause/Resume</li>
+                  <li><kbd className={`px-2 py-1 rounded ${darkMode ? 'bg-slate-700' : 'bg-slate-200'}`}>1</kbd> - Answer YES</li>
+                  <li><kbd className={`px-2 py-1 rounded ${darkMode ? 'bg-slate-700' : 'bg-slate-200'}`}>2</kbd> - Answer NO</li>
+                  <li><kbd className={`px-2 py-1 rounded ${darkMode ? 'bg-slate-700' : 'bg-slate-200'}`}>3</kbd> - Answer CAN'T TELL</li>
+                  <li><kbd className={`px-2 py-1 rounded ${darkMode ? 'bg-slate-700' : 'bg-slate-200'}`}>Space</kbd> - Pause/Resume</li>
                 </ul>
               </div>
               <div>
-                <h3 className={`font-bold mb-2 ${darkMode ? 'text-indigo-400' : 'text-indigo-600'}`}>Example:</h3>
-                <div className={`p-3 sm:p-4 rounded-lg ${darkMode ? 'bg-slate-700' : 'bg-gray-100'}`}>
+                <h3 className={`font-bold mb-2 ${darkMode ? 'text-indigo-300' : 'text-indigo-600'}`}>Example:</h3>
+                <div className={`p-3 sm:p-4 rounded-lg ${darkMode ? 'bg-slate-700' : 'bg-slate-100'}`}>
                   <p className="mb-2">Given premises:</p>
                   <ul className="list-disc pl-5 sm:pl-6 space-y-1 mb-3">
                     <li>A is SAME to B</li>
@@ -1339,7 +1339,7 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
                 </div>
               </div>
               <div>
-                <h3 className={`font-bold mb-2 ${darkMode ? 'text-indigo-400' : 'text-indigo-600'}`}>Tips:</h3>
+                <h3 className={`font-bold mb-2 ${darkMode ? 'text-indigo-300' : 'text-indigo-600'}`}>Tips:</h3>
                 <ul className="list-disc pl-5 sm:pl-6 space-y-1 sm:space-y-2">
                   <li>Start with easier difficulties to understand the logic</li>
                   <li>Enable auto-progression to automatically increase difficulty as you improve</li>
@@ -1354,19 +1354,19 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
 
       {showContactModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-2 sm:p-4">
-          <div className={`max-w-2xl w-full rounded-2xl p-6 sm:p-8 shadow-2xl ${darkMode ? 'bg-slate-800' : 'bg-white'}`}>
+          <div className={`max-w-2xl w-full rounded-2xl p-6 sm:p-8 shadow-2xl ${darkMode ? 'bg-slate-800/95 backdrop-blur-sm' : 'bg-white'}`}>
             <div className="flex justify-between items-center mb-6">
               <h2 className={`text-2xl sm:text-3xl font-bold flex items-center gap-2 ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>
                 <Mail className="w-6 h-6 sm:w-8 sm:h-8" />
                 Contact Us
               </h2>
-              <button onClick={() => setShowContactModal(false)} className={`p-2 rounded-lg ${darkMode ? 'hover:bg-slate-700' : 'hover:bg-gray-100'}`}>
-                <X className={`w-5 h-5 sm:w-6 sm:h-6 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`} />
+              <button onClick={() => setShowContactModal(false)} className={`p-2 rounded-lg ${darkMode ? 'hover:bg-slate-700/80' : 'hover:bg-slate-100'}`}>
+                <X className={`w-5 h-5 sm:w-6 sm:h-6 ${darkMode ? 'text-slate-200' : 'text-slate-700'}`} />
               </button>
             </div>
-            <div className={`space-y-6 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+            <div className={`space-y-6 ${darkMode ? 'text-slate-200' : 'text-slate-700'}`}>
               <div className="text-center">
-                <p className={`text-lg sm:text-xl mb-4 ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>
+                <p className={`text-lg sm:text-xl mb-4 ${darkMode ? 'text-slate-100' : 'text-slate-800'}`}>
                   If you have any questions or requests, feel free to contact us.
                 </p>
               </div>
@@ -1382,14 +1382,14 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
                   <Mail className="w-5 h-5" />
                   stimlus44@gmail.com
                 </a>
-                <p className={`mt-4 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                <p className={`mt-4 text-sm ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>
                   Click to open in your email client, or copy the address above.
                 </p>
               </div>
 
               <button
                 onClick={() => setShowContactModal(false)}
-                className={`w-full py-3 rounded-lg font-semibold transition-colors ${darkMode ? 'bg-slate-600 hover:bg-slate-700 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-900'}`}
+                className={`w-full py-3 rounded-lg font-semibold transition-colors ${darkMode ? 'bg-slate-600 hover:bg-slate-700/80 text-white' : 'bg-slate-200 hover:bg-slate-300 text-slate-900'}`}
               >
                 Close
               </button>
@@ -1400,28 +1400,28 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
 
       {showAboutModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-2 sm:p-4">
-          <div className={`max-w-2xl w-full rounded-2xl p-6 sm:p-8 shadow-2xl ${darkMode ? 'bg-slate-800' : 'bg-white'}`}>
+          <div className={`max-w-2xl w-full rounded-2xl p-6 sm:p-8 shadow-2xl ${darkMode ? 'bg-slate-800/95 backdrop-blur-sm' : 'bg-white'}`}>
             <div className="flex justify-between items-center mb-6">
-              <h2 className={`text-2xl sm:text-3xl font-bold flex items-center gap-2 ${darkMode ? 'text-indigo-400' : 'text-indigo-600'}`}>
+              <h2 className={`text-2xl sm:text-3xl font-bold flex items-center gap-2 ${darkMode ? 'text-indigo-300' : 'text-indigo-600'}`}>
                 <Users className="w-6 h-6 sm:w-8 sm:h-8" />
                 About Us
               </h2>
-              <button onClick={() => setShowAboutModal(false)} className={`p-2 rounded-lg ${darkMode ? 'hover:bg-slate-700' : 'hover:bg-gray-100'}`}>
-                <X className={`w-5 h-5 sm:w-6 sm:h-6 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`} />
+              <button onClick={() => setShowAboutModal(false)} className={`p-2 rounded-lg ${darkMode ? 'hover:bg-slate-700/80' : 'hover:bg-slate-100'}`}>
+                <X className={`w-5 h-5 sm:w-6 sm:h-6 ${darkMode ? 'text-slate-200' : 'text-slate-700'}`} />
               </button>
             </div>
-            <div className={`space-y-6 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+            <div className={`space-y-6 ${darkMode ? 'text-slate-200' : 'text-slate-700'}`}>
               <div className="text-center">
-                <p className={`text-lg sm:text-xl mb-4 ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>
+                <p className={`text-lg sm:text-xl mb-4 ${darkMode ? 'text-slate-100' : 'text-slate-800'}`}>
                   We are a team of like-minded people who share the same goal of helping people to increase their intelligence.
                 </p>
               </div>
 
               <div className={`p-6 rounded-lg border-2 ${darkMode ? 'border-indigo-500 bg-indigo-900/20' : 'border-indigo-300 bg-indigo-50'}`}>
-                <h3 className={`text-lg font-bold mb-3 ${darkMode ? 'text-indigo-400' : 'text-indigo-600'}`}>
+                <h3 className={`text-lg font-bold mb-3 ${darkMode ? 'text-indigo-300' : 'text-indigo-600'}`}>
                   Join Our Community
                 </h3>
-                <p className={`mb-4 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                <p className={`mb-4 ${darkMode ? 'text-slate-200' : 'text-slate-700'}`}>
                   If you aren't already in our Discord server, join now to stay tuned to the latest research:
                 </p>
                 <a
@@ -1439,7 +1439,7 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
 
               <button
                 onClick={() => setShowAboutModal(false)}
-                className={`w-full py-3 rounded-lg font-semibold transition-colors ${darkMode ? 'bg-slate-600 hover:bg-slate-700 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-900'}`}
+                className={`w-full py-3 rounded-lg font-semibold transition-colors ${darkMode ? 'bg-slate-600 hover:bg-slate-700/80 text-white' : 'bg-slate-200 hover:bg-slate-300 text-slate-900'}`}
               >
                 Close
               </button>
@@ -1450,38 +1450,38 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
 
       {showSupportModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-2 sm:p-4">
-          <div className={`max-w-2xl w-full rounded-2xl p-6 sm:p-8 shadow-2xl ${darkMode ? 'bg-slate-800' : 'bg-white'}`}>
+          <div className={`max-w-2xl w-full rounded-2xl p-6 sm:p-8 shadow-2xl ${darkMode ? 'bg-slate-800/95 backdrop-blur-sm' : 'bg-white'}`}>
             <div className="flex justify-between items-center mb-6">
               <h2 className={`text-2xl sm:text-3xl font-bold flex items-center gap-2 ${darkMode ? 'text-pink-400' : 'text-pink-600'}`}>
                 <Heart className="w-6 h-6 sm:w-8 sm:h-8 fill-current" />
                 Support Us!
               </h2>
-              <button onClick={() => setShowSupportModal(false)} className={`p-2 rounded-lg ${darkMode ? 'hover:bg-slate-700' : 'hover:bg-gray-100'}`}>
-                <X className={`w-5 h-5 sm:w-6 sm:h-6 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`} />
+              <button onClick={() => setShowSupportModal(false)} className={`p-2 rounded-lg ${darkMode ? 'hover:bg-slate-700/80' : 'hover:bg-slate-100'}`}>
+                <X className={`w-5 h-5 sm:w-6 sm:h-6 ${darkMode ? 'text-slate-200' : 'text-slate-700'}`} />
               </button>
             </div>
-            <div className={`space-y-6 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+            <div className={`space-y-6 ${darkMode ? 'text-slate-200' : 'text-slate-700'}`}>
               <div className="text-center">
                 <p className={`text-xl sm:text-2xl font-semibold mb-4 ${darkMode ? 'text-pink-300' : 'text-pink-700'}`}>
                   Thank you so much for supporting us!
                 </p>
-                <p className={`text-sm sm:text-base ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                <p className={`text-sm sm:text-base ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>
                   Your support helps us keep this training tool free and continuously improve it for everyone.
                 </p>
               </div>
 
               {/* Placeholder for Google AdSense */}
-              <div className={`border-2 border-dashed rounded-lg p-12 min-h-[280px] flex flex-col items-center justify-center text-center ${darkMode ? 'border-slate-600 bg-slate-700/50' : 'border-gray-300 bg-gray-50'}`}>
-                <p className={`text-base ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+              <div className={`border-2 border-dashed rounded-lg p-12 min-h-[280px] flex flex-col items-center justify-center text-center ${darkMode ? 'border-slate-600 bg-slate-700/50' : 'border-slate-300 bg-slate-50'}`}>
+                <p className={`text-base ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
                   Advertisement space
                 </p>
-                <p className={`text-sm mt-3 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                <p className={`text-sm mt-3 ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>
                   (Google AdSense will be displayed here)
                 </p>
               </div>
 
               <div className={`p-4 rounded-lg ${darkMode ? 'bg-slate-700' : 'bg-pink-50'}`}>
-                <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                <p className={`text-sm ${darkMode ? 'text-slate-200' : 'text-slate-700'}`}>
                   💡 <strong>Did you know?</strong> This training tool helps improve cognitive flexibility and relational reasoning skills, which are valuable for learning, problem-solving, and academic success.
                 </p>
               </div>
@@ -1501,30 +1501,30 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
         <div className="sm:hidden fixed inset-0 z-40 bg-black/50 backdrop-blur-sm" onClick={() => { setShowHistory(false); setShowStats(false); }} />
       )}
 
-      <div className={`${darkMode ? 'bg-slate-800' : 'bg-white'} shadow-xl transition-all duration-300 overflow-hidden ${showHistory ? 'fixed sm:relative inset-y-0 left-0 w-[90vw] sm:w-96 z-50' : 'w-0'}`}>
+      <div className={`${darkMode ? 'bg-slate-800/95 backdrop-blur-sm' : 'bg-white'} shadow-xl transition-all duration-300 overflow-hidden ${showHistory ? 'fixed sm:relative inset-y-0 left-0 w-[90vw] sm:w-96 z-50' : 'w-0'}`}>
         {showHistory && (
           <div className="h-full flex flex-col p-3 sm:p-4">
             <div className="flex items-center justify-between mb-3 sm:mb-4">
               <div className="flex items-center">
-                <History className={`w-4 h-4 sm:w-5 sm:h-5 mr-2 ${darkMode ? 'text-indigo-400' : 'text-indigo-600'}`} />
-                <h2 className={`text-base sm:text-lg font-bold ${darkMode ? 'text-gray-100' : 'text-gray-800'}`}>History</h2>
+                <History className={`w-4 h-4 sm:w-5 sm:h-5 mr-2 ${darkMode ? 'text-indigo-300' : 'text-indigo-600'}`} />
+                <h2 className={`text-base sm:text-lg font-bold ${darkMode ? 'text-slate-50' : 'text-slate-800'}`}>History</h2>
               </div>
-              <button onClick={() => setShowHistory(false)} className={`p-1.5 sm:p-1 rounded ${darkMode ? 'hover:bg-slate-700' : 'hover:bg-gray-100'}`}>
-                <X className={`w-5 h-5 sm:w-4 sm:h-4 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`} />
+              <button onClick={() => setShowHistory(false)} className={`p-1.5 sm:p-1 rounded ${darkMode ? 'hover:bg-slate-700/80' : 'hover:bg-slate-100'}`}>
+                <X className={`w-5 h-5 sm:w-4 sm:h-4 ${darkMode ? 'text-slate-200' : 'text-slate-700'}`} />
               </button>
             </div>
             <div className="flex-1 overflow-y-auto space-y-2 sm:space-y-3">
               {history.length === 0 ? (
-                <p className={`text-xs sm:text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>No questions answered yet</p>
+                <p className={`text-xs sm:text-sm ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>No questions answered yet</p>
               ) : (
                 history.slice().reverse().map((item, idx) => (
                   <div key={item.timestamp} className={`p-2.5 sm:p-3 rounded-lg border-2 ${darkMode ? (item.isCorrect ? 'border-green-500/50 bg-green-900/20' : 'border-red-500/50 bg-red-900/20') : (item.isCorrect ? 'border-green-300 bg-green-50' : 'border-red-300 bg-red-50')}`}>
-                    <div className={`text-xs font-semibold mb-1.5 sm:mb-2 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                    <div className={`text-xs font-semibold mb-1.5 sm:mb-2 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
                       Question #{history.length - idx} • {item.timeUsed.toFixed(1)}s
                     </div>
                     <div className="mb-1.5 sm:mb-2 text-xs space-y-0.5 sm:space-y-1">
                       {item.trial.premises.map((premise, pidx) => (
-                        <div key={pidx} className={`flex items-center gap-1 flex-wrap ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                        <div key={pidx} className={`flex items-center gap-1 flex-wrap ${darkMode ? 'text-slate-200' : 'text-slate-700'}`}>
                           {renderStimulus(premise.stimulus1)} is {renderRelationStyled(premise.relation, 'sm')} to {renderStimulus(premise.stimulus2)}
                         </div>
                       ))}
@@ -1534,14 +1534,14 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
                         {renderSpatialGrid(item.trial)}
                       </div>
                     )}
-                    <div className={`text-xs sm:text-sm mb-1.5 sm:mb-2 font-semibold flex items-center gap-1 flex-wrap ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>
+                    <div className={`text-xs sm:text-sm mb-1.5 sm:mb-2 font-semibold flex items-center gap-1 flex-wrap ${darkMode ? 'text-slate-100' : 'text-slate-800'}`}>
                       Is {renderStimulus(item.trial.question.stimulus1)} {renderRelationStyled(item.trial.question.relation, 'sm')} to {renderStimulus(item.trial.question.stimulus2)}?
                     </div>
                     <div className="text-xs space-y-0.5 sm:space-y-1">
-                      <div className={darkMode ? 'text-gray-300' : 'text-gray-700'}>
+                      <div className={darkMode ? 'text-slate-200' : 'text-slate-700'}>
                         <span className="font-semibold">Your answer:</span> <span className={item.isCorrect ? (darkMode ? 'text-green-400' : 'text-green-700') : (darkMode ? 'text-red-400' : 'text-red-700')}>{getAnswerLabel(item.userAnswer)}</span>
                       </div>
-                      <div className={darkMode ? 'text-gray-300' : 'text-gray-700'}>
+                      <div className={darkMode ? 'text-slate-200' : 'text-slate-700'}>
                         <span className="font-semibold">Correct:</span> <span className={darkMode ? 'text-green-400' : 'text-green-700'}>{getAnswerLabel(item.trial.correctAnswer)}</span>
                       </div>
                     </div>
@@ -1553,44 +1553,44 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
         )}
       </div>
 
-      <div className={`${darkMode ? 'bg-slate-800' : 'bg-white'} shadow-xl transition-all duration-300 overflow-hidden ${showStats ? 'fixed sm:relative inset-y-0 left-0 w-[90vw] sm:w-96 z-50' : 'w-0'}`}>
+      <div className={`${darkMode ? 'bg-slate-800/95 backdrop-blur-sm' : 'bg-white'} shadow-xl transition-all duration-300 overflow-hidden ${showStats ? 'fixed sm:relative inset-y-0 left-0 w-[90vw] sm:w-96 z-50' : 'w-0'}`}>
         {showStats && (
           <div className="h-full flex flex-col p-3 sm:p-4">
             <div className="flex items-center justify-between mb-3 sm:mb-4">
               <div className="flex items-center">
                 <TrendingUp className={`w-4 h-4 sm:w-5 sm:h-5 mr-2 ${darkMode ? 'text-purple-400' : 'text-purple-600'}`} />
-                <h2 className={`text-base sm:text-lg font-bold ${darkMode ? 'text-gray-100' : 'text-gray-800'}`}>Statistics</h2>
+                <h2 className={`text-base sm:text-lg font-bold ${darkMode ? 'text-slate-50' : 'text-slate-800'}`}>Statistics</h2>
               </div>
-              <button onClick={() => setShowStats(false)} className={`p-1.5 sm:p-1 rounded ${darkMode ? 'hover:bg-slate-700' : 'hover:bg-gray-100'}`}>
-                <X className={`w-5 h-5 sm:w-4 sm:h-4 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`} />
+              <button onClick={() => setShowStats(false)} className={`p-1.5 sm:p-1 rounded ${darkMode ? 'hover:bg-slate-700/80' : 'hover:bg-slate-100'}`}>
+                <X className={`w-5 h-5 sm:w-4 sm:h-4 ${darkMode ? 'text-slate-200' : 'text-slate-700'}`} />
               </button>
             </div>
             <div className="flex-1 overflow-y-auto space-y-4 sm:space-y-6">
               {statsHistory.length === 0 ? (
-                <p className={`text-xs sm:text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>No statistics yet</p>
+                <p className={`text-xs sm:text-sm ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>No statistics yet</p>
               ) : (
                 <>
-                  <div className={`p-3 sm:p-4 rounded-lg ${darkMode ? 'bg-slate-700' : 'bg-gray-50'}`}>
-                    <h3 className={`text-xs sm:text-sm font-semibold mb-2 sm:mb-3 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Overall</h3>
+                  <div className={`p-3 sm:p-4 rounded-lg ${darkMode ? 'bg-slate-700' : 'bg-slate-50'}`}>
+                    <h3 className={`text-xs sm:text-sm font-semibold mb-2 sm:mb-3 ${darkMode ? 'text-slate-200' : 'text-slate-700'}`}>Overall</h3>
                     <div className="space-y-1.5 sm:space-y-2">
                       <div className="flex justify-between">
-                        <span className={`text-xs sm:text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Total Questions:</span>
-                        <span className={`text-xs sm:text-sm font-bold ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>{statsHistory.length}</span>
+                        <span className={`text-xs sm:text-sm ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>Total Questions:</span>
+                        <span className={`text-xs sm:text-sm font-bold ${darkMode ? 'text-slate-100' : 'text-slate-800'}`}>{statsHistory.length}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className={`text-xs sm:text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Accuracy:</span>
+                        <span className={`text-xs sm:text-sm ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>Accuracy:</span>
                         <span className={`text-xs sm:text-sm font-bold ${darkMode ? 'text-green-400' : 'text-green-600'}`}>
                           {((statsHistory.filter(s => s.isCorrect).length / statsHistory.length) * 100).toFixed(1)}%
                         </span>
                       </div>
                       <div className="flex justify-between">
-                        <span className={`text-xs sm:text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Avg Time:</span>
-                        <span className={`text-xs sm:text-sm font-bold ${darkMode ? 'text-indigo-400' : 'text-indigo-600'}`}>
+                        <span className={`text-xs sm:text-sm ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>Avg Time:</span>
+                        <span className={`text-xs sm:text-sm font-bold ${darkMode ? 'text-indigo-300' : 'text-indigo-600'}`}>
                           {(statsHistory.reduce((sum, s) => sum + s.timeUsed, 0) / statsHistory.length).toFixed(1)}s
                         </span>
                       </div>
                       <div className="flex justify-between">
-                        <span className={`text-xs sm:text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Avg Premises:</span>
+                        <span className={`text-xs sm:text-sm ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>Avg Premises:</span>
                         <span className={`text-xs sm:text-sm font-bold ${darkMode ? 'text-purple-400' : 'text-purple-600'}`}>
                           {(statsHistory.reduce((sum, s) => sum + s.premiseCount, 0) / statsHistory.length).toFixed(1)}
                         </span>
@@ -1599,8 +1599,8 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
                   </div>
 
                   <div>
-                    <h3 className={`text-xs sm:text-sm font-semibold mb-2 sm:mb-3 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Time per Question (Last 20)</h3>
-                    <div className={`p-2 sm:p-3 rounded-lg ${darkMode ? 'bg-slate-700' : 'bg-gray-50'}`}>
+                    <h3 className={`text-xs sm:text-sm font-semibold mb-2 sm:mb-3 ${darkMode ? 'text-slate-200' : 'text-slate-700'}`}>Time per Question (Last 20)</h3>
+                    <div className={`p-2 sm:p-3 rounded-lg ${darkMode ? 'bg-slate-700' : 'bg-slate-50'}`}>
                       <div className="flex items-end h-24 sm:h-32 gap-0.5 sm:gap-1">
                         {statsHistory.slice(-20).map((stat, idx) => {
                           const maxTime = Math.max(...statsHistory.slice(-20).map(s => s.timeUsed));
@@ -1612,13 +1612,13 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
                           );
                         })}
                       </div>
-                      <div className={`text-xs text-center mt-1.5 sm:mt-2 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Questions (most recent →)</div>
+                      <div className={`text-xs text-center mt-1.5 sm:mt-2 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Questions (most recent →)</div>
                     </div>
                   </div>
 
                   <div>
-                    <h3 className={`text-xs sm:text-sm font-semibold mb-2 sm:mb-3 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Premise Count (Last 20)</h3>
-                    <div className={`p-2 sm:p-3 rounded-lg ${darkMode ? 'bg-slate-700' : 'bg-gray-50'}`}>
+                    <h3 className={`text-xs sm:text-sm font-semibold mb-2 sm:mb-3 ${darkMode ? 'text-slate-200' : 'text-slate-700'}`}>Premise Count (Last 20)</h3>
+                    <div className={`p-2 sm:p-3 rounded-lg ${darkMode ? 'bg-slate-700' : 'bg-slate-50'}`}>
                       <div className="flex items-end h-24 sm:h-32 gap-0.5 sm:gap-1">
                         {statsHistory.slice(-20).map((stat, idx) => {
                           const maxPremises = Math.max(...statsHistory.slice(-20).map(s => s.premiseCount));
@@ -1630,7 +1630,7 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
                           );
                         })}
                       </div>
-                      <div className={`text-xs text-center mt-1.5 sm:mt-2 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Questions (most recent →)</div>
+                      <div className={`text-xs text-center mt-1.5 sm:mt-2 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Questions (most recent →)</div>
                     </div>
                   </div>
                 </>
@@ -1641,13 +1641,13 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
       </div>
 
       <div className="flex-1 flex flex-col min-h-0">
-        <div className={`shadow-md p-2 sm:p-3 flex flex-col gap-2 transition-colors duration-300 ${darkMode ? 'bg-slate-800/90 backdrop-blur' : 'bg-white'}`}>
+        <div className={`shadow-md p-2 sm:p-3 flex flex-col gap-2 transition-colors duration-300 ${darkMode ? 'bg-slate-800/95 backdrop-blur-sm/90 backdrop-blur' : 'bg-white'}`}>
           {/* Timer and Pause - Centered at top */}
           <div className="flex justify-center items-center">
             <div className="flex flex-col items-center gap-1">
               <div className="text-center">
-                <div className={`text-base sm:text-xl font-bold tabular-nums ${darkMode ? 'text-indigo-400' : 'text-indigo-600'}`}>{timeLeft.toFixed(1)}s</div>
-                <div className={`text-xs hidden sm:block ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Time</div>
+                <div className={`text-base sm:text-xl font-bold tabular-nums ${darkMode ? 'text-indigo-300' : 'text-indigo-600'}`}>{timeLeft.toFixed(1)}s</div>
+                <div className={`text-xs hidden sm:block ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>Time</div>
               </div>
               <button onClick={togglePause} className={`text-white p-1.5 sm:p-2 rounded-lg transition-colors ${isPaused ? 'bg-green-500 hover:bg-green-600' : (darkMode ? 'bg-yellow-600 hover:bg-yellow-700' : 'bg-yellow-500 hover:bg-yellow-600')}`} title="Pause/Resume">
                 {isPaused ? <Play className="w-4 h-4 sm:w-5 sm:h-5" /> : <Pause className="w-4 h-4 sm:w-5 sm:h-5" />}
@@ -1658,29 +1658,29 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
           {/* All other buttons */}
           <div className="flex justify-between items-center gap-2 flex-wrap">
             <div className="flex gap-1 sm:gap-2 flex-wrap">
-              <button onClick={() => setShowHistory(!showHistory)} className={`flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-colors text-xs sm:text-sm ${darkMode ? 'bg-indigo-900/50 hover:bg-indigo-900/70 text-indigo-200' : 'bg-indigo-100 hover:bg-indigo-200 text-gray-900'}`}>
+              <button onClick={() => setShowHistory(!showHistory)} className={`flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-colors text-xs sm:text-sm ${darkMode ? 'bg-indigo-900/50 hover:bg-indigo-900/70 text-indigo-200' : 'bg-indigo-100 hover:bg-indigo-200 text-slate-900'}`}>
                 <History className="w-4 h-4" />
                 <span className="hidden sm:inline">History</span>
               </button>
 
-              <button onClick={() => setShowStats(!showStats)} className={`flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-colors text-xs sm:text-sm ${darkMode ? 'bg-purple-900/50 hover:bg-purple-900/70 text-purple-200' : 'bg-purple-100 hover:bg-purple-200 text-gray-900'}`}>
+              <button onClick={() => setShowStats(!showStats)} className={`flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-colors text-xs sm:text-sm ${darkMode ? 'bg-purple-900/50 hover:bg-purple-900/70 text-purple-200' : 'bg-purple-100 hover:bg-purple-200 text-slate-900'}`}>
                 <TrendingUp className="w-4 h-4" />
                 <span className="hidden sm:inline">Stats</span>
               </button>
 
-              <button onClick={() => setShowTutorial(true)} className={`flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-colors text-xs sm:text-sm ${darkMode ? 'bg-cyan-900/50 hover:bg-cyan-900/70 text-cyan-200' : 'bg-cyan-100 hover:bg-cyan-200 text-gray-900'}`}>
+              <button onClick={() => setShowTutorial(true)} className={`flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-colors text-xs sm:text-sm ${darkMode ? 'bg-cyan-900/50 hover:bg-cyan-900/70 text-cyan-200' : 'bg-cyan-100 hover:bg-cyan-200 text-slate-900'}`}>
                 <Info className="w-4 h-4" />
                 <span className="hidden sm:inline">Help</span>
               </button>
 
               {user ? (
-                <button onClick={onLogout} className={`flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-colors text-xs sm:text-sm ${darkMode ? 'bg-red-900/50 hover:bg-red-900/70 text-red-200' : 'bg-red-100 hover:bg-red-200 text-gray-900'}`} title={`Logged in as ${user.username}`}>
+                <button onClick={onLogout} className={`flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-colors text-xs sm:text-sm ${darkMode ? 'bg-red-900/50 hover:bg-red-900/70 text-red-200' : 'bg-red-100 hover:bg-red-200 text-slate-900'}`} title={`Logged in as ${user.username}`}>
                   <User className="w-4 h-4" />
                   <span className="hidden sm:inline">{user.username}</span>
                   <LogOut className="w-3 h-3 ml-0.5" />
                 </button>
               ) : (
-                <button onClick={onShowLogin} className={`flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-colors text-xs sm:text-sm ${darkMode ? 'bg-green-900/50 hover:bg-green-900/70 text-green-200' : 'bg-green-100 hover:bg-green-200 text-gray-900'}`}>
+                <button onClick={onShowLogin} className={`flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-colors text-xs sm:text-sm ${darkMode ? 'bg-green-900/50 hover:bg-green-900/70 text-green-200' : 'bg-green-100 hover:bg-green-200 text-slate-900'}`}>
                   <LogIn className="w-4 h-4" />
                   <span className="hidden sm:inline">Login</span>
                 </button>
@@ -1693,20 +1693,20 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
                   console.log('Settings button clicked, current state:', showSettings);
                   setShowSettings(!showSettings);
                 }}
-                className={`flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-colors text-xs sm:text-sm ${darkMode ? 'bg-indigo-900/50 hover:bg-indigo-900/70 text-indigo-200' : 'bg-indigo-100 hover:bg-indigo-200 text-gray-900'}`}
+                className={`flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-colors text-xs sm:text-sm ${darkMode ? 'bg-indigo-900/50 hover:bg-indigo-900/70 text-indigo-200' : 'bg-indigo-100 hover:bg-indigo-200 text-slate-900'}`}
               >
                 <Settings className="w-4 h-4" />
                 <span className="hidden sm:inline">Settings</span>
               </button>
-              <button onClick={() => setShowAboutModal(true)} className={`flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-colors text-xs sm:text-sm ${darkMode ? 'bg-indigo-900/50 hover:bg-indigo-900/70 text-indigo-200' : 'bg-indigo-100 hover:bg-indigo-200 text-gray-900'}`}>
+              <button onClick={() => setShowAboutModal(true)} className={`flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-colors text-xs sm:text-sm ${darkMode ? 'bg-indigo-900/50 hover:bg-indigo-900/70 text-indigo-200' : 'bg-indigo-100 hover:bg-indigo-200 text-slate-900'}`}>
                 <Users className="w-4 h-4" />
                 <span className="hidden sm:inline">About Us</span>
               </button>
-              <button onClick={() => setShowContactModal(true)} className={`flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-colors text-xs sm:text-sm ${darkMode ? 'bg-blue-900/50 hover:bg-blue-900/70 text-blue-200' : 'bg-blue-100 hover:bg-blue-200 text-gray-900'}`}>
+              <button onClick={() => setShowContactModal(true)} className={`flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-colors text-xs sm:text-sm ${darkMode ? 'bg-blue-900/50 hover:bg-blue-900/70 text-blue-200' : 'bg-blue-100 hover:bg-blue-200 text-slate-900'}`}>
                 <Mail className="w-4 h-4" />
                 <span className="hidden sm:inline">Contact</span>
               </button>
-              <button onClick={() => setShowSupportModal(true)} className={`flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-colors text-xs sm:text-sm ${darkMode ? 'bg-pink-900/50 hover:bg-pink-900/70 text-pink-200' : 'bg-pink-100 hover:bg-pink-200 text-gray-900'}`}>
+              <button onClick={() => setShowSupportModal(true)} className={`flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-colors text-xs sm:text-sm ${darkMode ? 'bg-pink-900/50 hover:bg-pink-900/70 text-pink-200' : 'bg-pink-100 hover:bg-pink-200 text-slate-900'}`}>
                 <Heart className="w-4 h-4" />
                 <span className="hidden sm:inline">Support Us</span>
               </button>
@@ -1716,21 +1716,21 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
           <div className="flex gap-2 sm:gap-4 justify-center sm:justify-start">
             <div className="text-center">
               <div className={`text-base sm:text-xl font-bold ${darkMode ? 'text-green-400' : 'text-green-600'}`}>{score.correct}</div>
-              <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Correct</div>
+              <div className={`text-xs ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>Correct</div>
             </div>
             <div className="text-center">
               <div className={`text-base sm:text-xl font-bold ${darkMode ? 'text-red-400' : 'text-red-600'}`}>{score.incorrect}</div>
-              <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Incorrect</div>
+              <div className={`text-xs ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>Incorrect</div>
             </div>
             <div className="text-center">
               <div className={`text-base sm:text-xl font-bold ${darkMode ? 'text-orange-400' : 'text-orange-600'}`}>{score.missed}</div>
-              <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Missed</div>
+              <div className={`text-xs ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>Missed</div>
             </div>
           </div>
         </div>
 
-        <div className={`shadow-sm p-1 sm:p-2 transition-colors duration-300 ${darkMode ? 'bg-slate-800/50' : 'bg-white'}`}>
-          <div className={`h-2 sm:h-3 rounded-full overflow-hidden ${darkMode ? 'bg-slate-700' : 'bg-gray-200'}`}>
+        <div className={`shadow-sm p-1 sm:p-2 transition-colors duration-300 ${darkMode ? 'bg-slate-800/95 backdrop-blur-sm/50' : 'bg-white'}`}>
+          <div className={`h-2 sm:h-3 rounded-full overflow-hidden ${darkMode ? 'bg-slate-700' : 'bg-slate-200'}`}>
             <div className={`h-full transition-all duration-100 ${isPaused ? (darkMode ? 'bg-yellow-600' : 'bg-yellow-500') : (darkMode ? 'bg-indigo-500' : 'bg-indigo-600')}`} style={{ width: `${(timeLeft / timePerQuestion) * 100}%` }} />
           </div>
         </div>
@@ -1748,14 +1748,14 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
             )}
 
                           {currentTrial && !isPaused && (
-              <div className={`rounded-xl sm:rounded-2xl shadow-xl p-4 sm:p-8 transition-colors duration-300 ${darkMode ? 'bg-slate-800/90 backdrop-blur' : 'bg-white'}`}>
-                <h3 className={`text-xs sm:text-sm font-semibold uppercase tracking-wide mb-3 sm:mb-4 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Given:</h3>
+              <div className={`rounded-xl sm:rounded-2xl shadow-xl p-4 sm:p-8 transition-colors duration-300 ${darkMode ? 'bg-slate-800/95 backdrop-blur-sm/90 backdrop-blur' : 'bg-white'}`}>
+                <h3 className={`text-xs sm:text-sm font-semibold uppercase tracking-wide mb-3 sm:mb-4 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Given:</h3>
                 <div className="space-y-2 sm:space-y-3 mb-6 sm:mb-8">
                   {currentTrial.premises.map((premise, idx) => {
                     const mode = getRelationMode(premise.relation);
                     const preposition = mode === 'equality' ? 'to' : mode === 'containment' ? '' : mode === 'temporal' ? '' : 'of';
                     return (
-                      <div key={idx} className={`relative flex items-center justify-center text-base sm:text-xl p-3 sm:p-4 rounded-lg overflow-hidden transition-colors duration-300 ${darkMode ? 'bg-slate-700/50' : 'bg-gray-50'}`} onMouseEnter={() => spoilerPremises && setHoveredPremise(idx)} onMouseLeave={() => spoilerPremises && setHoveredPremise(null)}>
+                      <div key={idx} className={`relative flex items-center justify-center text-base sm:text-xl p-3 sm:p-4 rounded-lg overflow-hidden transition-colors duration-300 ${darkMode ? 'bg-slate-700/50' : 'bg-slate-50'}`} onMouseEnter={() => spoilerPremises && setHoveredPremise(idx)} onMouseLeave={() => spoilerPremises && setHoveredPremise(null)}>
                         <div className="relative z-0 flex items-center gap-1.5 sm:gap-2 flex-wrap justify-center">
                           {renderStimulus(premise.stimulus1)}
                           {premise.relation === 'CONTAINS' ? (
@@ -1765,15 +1765,15 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
                             </>
                           ) : premise.relation === 'WITHIN' ? (
                             <>
-                              <span className={`mx-1 text-sm sm:text-base ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>is</span>
+                              <span className={`mx-1 text-sm sm:text-base ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>is</span>
                               <span className={`font-semibold px-2 sm:px-3 py-0.5 sm:py-1 rounded border text-sm sm:text-base ${getRelationColor(premise.relation)}`}>WITHIN</span>
                               {renderStimulus(premise.stimulus2)}
                             </>
                           ) : (
                             <>
-                              <span className={`mx-1 text-sm sm:text-base ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>is</span>
+                              <span className={`mx-1 text-sm sm:text-base ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>is</span>
                               {renderRelationStyled(premise.relation, 'lg')}
-                              {preposition && <span className={`mx-1 text-sm sm:text-base ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>{preposition}</span>}
+                              {preposition && <span className={`mx-1 text-sm sm:text-base ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>{preposition}</span>}
                               {renderStimulus(premise.stimulus2)}
                             </>
                           )}
@@ -1787,7 +1787,7 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
                 </div>
 
                 <div className={`border-t-4 pt-6 sm:pt-8 ${feedback === 'correct' ? (darkMode ? 'border-green-500' : 'border-green-500') : feedback === 'incorrect' ? (darkMode ? 'border-red-500' : 'border-red-500') : feedback === 'missed' ? (darkMode ? 'border-orange-500' : 'border-orange-500') : (darkMode ? 'border-indigo-500' : 'border-indigo-500')}`}>
-                  <h3 className={`text-base sm:text-lg font-semibold mb-3 sm:mb-4 ${darkMode ? 'text-indigo-400' : 'text-indigo-600'}`}>Question:</h3>
+                  <h3 className={`text-base sm:text-lg font-semibold mb-3 sm:mb-4 ${darkMode ? 'text-indigo-300' : 'text-indigo-600'}`}>Question:</h3>
                   <div className={`flex items-center justify-center text-lg sm:text-2xl p-4 sm:p-6 rounded-xl mb-4 sm:mb-6 transition-colors duration-300 gap-1.5 sm:gap-2 flex-wrap ${darkMode ? 'bg-indigo-900/30' : 'bg-indigo-50'}`}>
                     {(() => {
                       const rel = currentTrial.question.relation;
@@ -1843,7 +1843,7 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
                       <button onClick={() => handleAnswer(false)} className={`w-full px-6 py-3 sm:py-4 text-white text-lg sm:text-xl font-bold rounded-xl transition-all transform active:scale-95 sm:hover:scale-105 ${darkMode ? 'bg-red-600 hover:bg-red-700 shadow-lg shadow-red-900/50' : 'bg-red-500 hover:bg-red-600'}`}>
                         NO <span className="text-sm">(2)</span>
                       </button>
-                      <button onClick={() => handleAnswer('ambiguous')} className={`w-full px-6 py-3 sm:py-4 text-white text-lg sm:text-xl font-bold rounded-xl transition-all transform active:scale-95 sm:hover:scale-105 ${darkMode ? 'bg-slate-600 hover:bg-slate-700 shadow-lg shadow-slate-900/50' : 'bg-gray-500 hover:bg-gray-600'}`}>
+                      <button onClick={() => handleAnswer('ambiguous')} className={`w-full px-6 py-3 sm:py-4 text-white text-lg sm:text-xl font-bold rounded-xl transition-all transform active:scale-95 sm:hover:scale-105 ${darkMode ? 'bg-slate-600 hover:bg-slate-700/80 shadow-lg shadow-slate-900/50' : 'bg-slate-500 hover:bg-gray-600'}`}>
                         CAN'T TELL <span className="text-sm">(3)</span>
                       </button>
                     </div>
@@ -1859,27 +1859,27 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
         <div className="sm:hidden fixed inset-0 z-40 bg-black/50 backdrop-blur-sm" onClick={() => setShowSettings(false)} />
       )}
       
-      <div className={`${darkMode ? 'bg-slate-800' : 'bg-white'} shadow-xl transition-all duration-300 overflow-hidden ${showSettings ? 'fixed sm:relative inset-y-0 right-0 w-[90vw] sm:w-96 z-50' : 'w-0'}`}>
+      <div className={`${darkMode ? 'bg-slate-800/95 backdrop-blur-sm' : 'bg-white'} shadow-xl transition-all duration-300 overflow-hidden ${showSettings ? 'fixed sm:relative inset-y-0 right-0 w-[90vw] sm:w-96 z-50' : 'w-0'}`}>
         {showSettings && (
           <div className="h-full flex flex-col p-3 sm:p-4">
             <div className="flex items-center justify-between mb-3 sm:mb-4">
               <div className="flex items-center">
-                <Settings className={`w-4 h-4 sm:w-5 sm:h-5 mr-2 ${darkMode ? 'text-indigo-400' : 'text-indigo-600'}`} />
-                <h2 className={`text-base sm:text-lg font-bold ${darkMode ? 'text-gray-100' : 'text-gray-800'}`}>Settings</h2>
+                <Settings className={`w-4 h-4 sm:w-5 sm:h-5 mr-2 ${darkMode ? 'text-indigo-300' : 'text-indigo-600'}`} />
+                <h2 className={`text-base sm:text-lg font-bold ${darkMode ? 'text-slate-50' : 'text-slate-800'}`}>Settings</h2>
               </div>
-              <button onClick={() => setShowSettings(false)} className={`p-1.5 sm:p-1 rounded ${darkMode ? 'hover:bg-slate-700' : 'hover:bg-gray-100'}`}>
-                <X className={`w-5 h-5 sm:w-4 sm:h-4 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`} />
+              <button onClick={() => setShowSettings(false)} className={`p-1.5 sm:p-1 rounded ${darkMode ? 'hover:bg-slate-700/80' : 'hover:bg-slate-100'}`}>
+                <X className={`w-5 h-5 sm:w-4 sm:h-4 ${darkMode ? 'text-slate-200' : 'text-slate-700'}`} />
               </button>
             </div>
             
             <div className="flex-1 overflow-y-auto space-y-4 sm:space-y-6">
               <div>
-                <label className={`block text-sm font-semibold mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Dark Mode</label>
+                <label className={`block text-sm font-semibold mb-2 ${darkMode ? 'text-slate-200' : 'text-slate-700'}`}>Dark Mode</label>
                 <button onClick={() => setDarkMode(!darkMode)} className="w-full flex items-center justify-between">
-                  <div className={`relative w-14 h-7 rounded-full transition-colors ${darkMode ? 'bg-indigo-600' : 'bg-gray-300'}`}>
+                  <div className={`relative w-14 h-7 rounded-full transition-colors ${darkMode ? 'bg-indigo-600' : 'bg-slate-300'}`}>
                     <div className={`absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full transition-transform shadow-md ${darkMode ? 'transform translate-x-7' : ''}`}></div>
                   </div>
-                  <span className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{darkMode ? 'Enabled' : 'Disabled'}</span>
+                  <span className={`text-sm font-medium ${darkMode ? 'text-slate-200' : 'text-slate-700'}`}>{darkMode ? 'Enabled' : 'Disabled'}</span>
                 </button>
               </div>
 
@@ -1895,7 +1895,7 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
               {showResetConfirmation && (
                 <div className={`p-4 rounded-xl border-2 ${darkMode ? 'bg-red-900/30 border-red-500' : 'bg-red-50 border-red-300'}`}>
                   <h2 className={`text-lg font-bold mb-3 ${darkMode ? 'text-red-400' : 'text-red-600'}`}>Are you sure?</h2>
-                  <p className={`mb-4 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                  <p className={`mb-4 text-sm ${darkMode ? 'text-slate-200' : 'text-slate-700'}`}>
                     This will reset all progress, settings, and statistics to default values. This action cannot be undone.
                   </p>
                   <div className="flex gap-3">
@@ -1907,7 +1907,7 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
                     </button>
                     <button 
                       onClick={() => setShowResetConfirmation(false)}
-                      className={`flex-1 px-4 py-2 rounded-lg font-semibold transition-colors ${darkMode ? 'bg-slate-600 hover:bg-slate-700 text-white' : 'bg-gray-300 hover:bg-gray-400 text-gray-800'}`}
+                      className={`flex-1 px-4 py-2 rounded-lg font-semibold transition-colors ${darkMode ? 'bg-slate-600 hover:bg-slate-700/80 text-white' : 'bg-slate-300 hover:bg-slate-400 text-slate-800'}`}
                     >
                       Cancel
                     </button>
@@ -1915,25 +1915,25 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
                 </div>
               )}
 
-              <div className={`border-t pt-4 ${darkMode ? 'border-slate-700' : 'border-gray-200'}`}>
+              <div className={`border-t pt-4 ${darkMode ? 'border-slate-600' : 'border-slate-200'}`}>
                 <button onClick={() => setShowResetConfirmation(true)} className={`w-full px-4 py-3 rounded-lg transition-colors flex items-center justify-center gap-2 ${darkMode ? 'bg-red-900/50 hover:bg-red-900/70 text-red-200' : 'bg-red-100 hover:bg-red-200 text-red-700'}`}>
                   <RotateCcw className="w-4 h-4" />
                   <span className="font-semibold">Reset All to Default</span>
                 </button>
               </div>
 
-              <div className={`border-t pt-4 ${darkMode ? 'border-slate-700' : 'border-gray-200'}`}>
-                <h3 className={`text-sm font-bold mb-3 ${darkMode ? 'text-indigo-400' : 'text-indigo-600'}`}>Relation Modes</h3>
-                <p className={`text-xs mb-3 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Enable one or more relation types to use in training</p>
+              <div className={`border-t pt-4 ${darkMode ? 'border-slate-600' : 'border-slate-200'}`}>
+                <h3 className={`text-sm font-bold mb-3 ${darkMode ? 'text-indigo-300' : 'text-indigo-600'}`}>Relation Modes</h3>
+                <p className={`text-xs mb-3 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Enable one or more relation types to use in training</p>
                 <div className="space-y-3">
                   <label className="flex items-center space-x-2 cursor-pointer">
                     <input 
                       type="checkbox" 
                       checked={enabledRelationModes.equality} 
                       onChange={(e) => setEnabledRelationModes(prev => ({ ...prev, equality: e.target.checked }))} 
-                      className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500" 
+                      className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500" 
                     />
-                    <span className={`text-sm font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Equality (SAME, OPPOSITE, DIFFERENT)</span>
+                    <span className={`text-sm font-semibold ${darkMode ? 'text-slate-200' : 'text-slate-700'}`}>Equality (SAME, OPPOSITE, DIFFERENT)</span>
                   </label>
                   
                   <label className="flex items-center space-x-2 cursor-pointer">
@@ -1941,9 +1941,9 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
                       type="checkbox" 
                       checked={enabledRelationModes.temporal} 
                       onChange={(e) => setEnabledRelationModes(prev => ({ ...prev, temporal: e.target.checked }))} 
-                      className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500" 
+                      className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500" 
                     />
-                    <span className={`text-sm font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Temporal (BEFORE, AFTER, AT)</span>
+                    <span className={`text-sm font-semibold ${darkMode ? 'text-slate-200' : 'text-slate-700'}`}>Temporal (BEFORE, AFTER, AT)</span>
                   </label>
 
                   <label className="flex items-center space-x-2 cursor-pointer">
@@ -1951,9 +1951,9 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
                       type="checkbox" 
                       checked={enabledRelationModes.spatial} 
                       onChange={(e) => setEnabledRelationModes(prev => ({ ...prev, spatial: e.target.checked }))} 
-                      className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500" 
+                      className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500" 
                     />
-                    <span className={`text-sm font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Space 2D (NORTH, SOUTH, EAST, WEST, etc.)</span>
+                    <span className={`text-sm font-semibold ${darkMode ? 'text-slate-200' : 'text-slate-700'}`}>Space 2D (NORTH, SOUTH, EAST, WEST, etc.)</span>
                   </label>
 
                   <label className="flex items-center space-x-2 cursor-pointer">
@@ -1961,9 +1961,9 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
                       type="checkbox"
                       checked={enabledRelationModes.containment}
                       onChange={(e) => setEnabledRelationModes(prev => ({ ...prev, containment: e.target.checked }))}
-                      className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                      className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500"
                     />
-                    <span className={`text-sm font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Containment (CONTAINS, WITHIN)</span>
+                    <span className={`text-sm font-semibold ${darkMode ? 'text-slate-200' : 'text-slate-700'}`}>Containment (CONTAINS, WITHIN)</span>
                   </label>
 
                   <label className="flex items-center space-x-2 cursor-pointer">
@@ -1971,67 +1971,67 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
                       type="checkbox"
                       checked={enabledRelationModes.space3d}
                       onChange={(e) => setEnabledRelationModes(prev => ({ ...prev, space3d: e.target.checked }))}
-                      className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                      className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500"
                     />
-                    <span className={`text-sm font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Space 3D (ABOVE, BELOW, ABOVE_NORTH, etc.)</span>
+                    <span className={`text-sm font-semibold ${darkMode ? 'text-slate-200' : 'text-slate-700'}`}>Space 3D (ABOVE, BELOW, ABOVE_NORTH, etc.)</span>
                   </label>
 
                 </div>
               </div>
 
               <div>
-                <label className={`block text-sm font-semibold mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Premise Count</label>
-                <input type="number" min="2" max="20" value={difficulty} onChange={(e) => setDifficulty(Math.max(2, parseInt(e.target.value) || 2))} className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors ${darkMode ? 'bg-slate-700 border-slate-600 text-gray-100' : 'bg-white border-gray-300 text-gray-900'}`} />
+                <label className={`block text-sm font-semibold mb-2 ${darkMode ? 'text-slate-200' : 'text-slate-700'}`}>Premise Count</label>
+                <input type="number" min="2" max="20" value={difficulty} onChange={(e) => setDifficulty(Math.max(2, parseInt(e.target.value) || 2))} className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors ${darkMode ? 'bg-slate-700 border-slate-600 text-slate-50' : 'bg-white border-slate-300 text-slate-900'}`} />
               </div>
 
-              <div className={`border-t pt-4 ${darkMode ? 'border-slate-700' : 'border-gray-200'}`}>
-                <h3 className={`text-sm font-bold mb-3 ${darkMode ? 'text-indigo-400' : 'text-indigo-600'}`}>Stimulus Display</h3>
+              <div className={`border-t pt-4 ${darkMode ? 'border-slate-600' : 'border-slate-200'}`}>
+                <h3 className={`text-sm font-bold mb-3 ${darkMode ? 'text-indigo-300' : 'text-indigo-600'}`}>Stimulus Display</h3>
                 <div className="space-y-3">
                   <label className="flex items-center space-x-2 cursor-pointer">
-                    <input type="checkbox" checked={useRealWords} onChange={(e) => setUseRealWords(e.target.checked)} className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500" />
-                    <span className={`text-sm font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Real Words</span>
+                    <input type="checkbox" checked={useRealWords} onChange={(e) => setUseRealWords(e.target.checked)} className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500" />
+                    <span className={`text-sm font-semibold ${darkMode ? 'text-slate-200' : 'text-slate-700'}`}>Real Words</span>
                   </label>
 
                   <label className="flex items-center space-x-2 cursor-pointer">
-                    <input type="checkbox" checked={useNonsenseWords} onChange={(e) => setUseNonsenseWords(e.target.checked)} className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500" />
-                    <span className={`text-sm font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Nonsense Words</span>
+                    <input type="checkbox" checked={useNonsenseWords} onChange={(e) => setUseNonsenseWords(e.target.checked)} className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500" />
+                    <span className={`text-sm font-semibold ${darkMode ? 'text-slate-200' : 'text-slate-700'}`}>Nonsense Words</span>
                   </label>
 
                   <label className="flex items-center space-x-2 cursor-pointer">
-                    <input type="checkbox" checked={useRandomLetters} onChange={(e) => setUseRandomLetters(e.target.checked)} className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500" />
-                    <span className={`text-sm font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Random Letters</span>
+                    <input type="checkbox" checked={useRandomLetters} onChange={(e) => setUseRandomLetters(e.target.checked)} className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500" />
+                    <span className={`text-sm font-semibold ${darkMode ? 'text-slate-200' : 'text-slate-700'}`}>Random Letters</span>
                   </label>
 
                   <label className="flex items-center space-x-2 cursor-pointer">
-                    <input type="checkbox" checked={useEmojis} onChange={(e) => setUseEmojis(e.target.checked)} className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500" />
-                    <span className={`text-sm font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Emojis 🎨</span>
+                    <input type="checkbox" checked={useEmojis} onChange={(e) => setUseEmojis(e.target.checked)} className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500" />
+                    <span className={`text-sm font-semibold ${darkMode ? 'text-slate-200' : 'text-slate-700'}`}>Emojis 🎨</span>
                   </label>
 
                   <label className="flex items-center space-x-2 cursor-pointer">
-                    <input type="checkbox" checked={useVoronoi} onChange={(e) => setUseVoronoi(e.target.checked)} className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500" />
-                    <span className={`text-sm font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Use Voronoi Patterns</span>
+                    <input type="checkbox" checked={useVoronoi} onChange={(e) => setUseVoronoi(e.target.checked)} className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500" />
+                    <span className={`text-sm font-semibold ${darkMode ? 'text-slate-200' : 'text-slate-700'}`}>Use Voronoi Patterns</span>
                   </label>
 
                   <label className="flex items-center space-x-2 cursor-pointer">
-                    <input type="checkbox" checked={useMandelbrot} onChange={(e) => setUseMandelbrot(e.target.checked)} className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500" />
-                    <span className={`text-sm font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Use Mandelbrot Fractals</span>
+                    <input type="checkbox" checked={useMandelbrot} onChange={(e) => setUseMandelbrot(e.target.checked)} className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500" />
+                    <span className={`text-sm font-semibold ${darkMode ? 'text-slate-200' : 'text-slate-700'}`}>Use Mandelbrot Fractals</span>
                   </label>
 
                   <label className="flex items-center space-x-2 cursor-pointer">
-                    <input type="checkbox" checked={useVibration} onChange={(e) => setUseVibration(e.target.checked)} className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500" />
-                    <span className={`text-sm font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Use Vibration Patterns 📳 (Mobile only)</span>
+                    <input type="checkbox" checked={useVibration} onChange={(e) => setUseVibration(e.target.checked)} className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500" />
+                    <span className={`text-sm font-semibold ${darkMode ? 'text-slate-200' : 'text-slate-700'}`}>Use Vibration Patterns 📳 (Mobile only)</span>
                   </label>
 
-                  <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                  <p className={`text-xs ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
                     Select one or more types. Stimuli will be randomly chosen from selected types.
                   </p>
 
                   {(useRealWords || useNonsenseWords || useRandomLetters) && (
-                    <div className={`mt-4 pt-4 border-t ${darkMode ? 'border-slate-600' : 'border-gray-200'}`}>
-                      <label className={`block text-sm font-semibold mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Word Length: {letterLength}</label>
+                    <div className={`mt-4 pt-4 border-t ${darkMode ? 'border-slate-600' : 'border-slate-200'}`}>
+                      <label className={`block text-sm font-semibold mb-2 ${darkMode ? 'text-slate-200' : 'text-slate-700'}`}>Word Length: {letterLength}</label>
                       <input type="range" min="1" max="20" value={letterLength} onChange={(e) => setLetterLength(parseInt(e.target.value))} className="w-full accent-indigo-600" />
-                      <input type="number" min="1" max="20" value={letterLength} onChange={(e) => setLetterLength(Math.max(1, Math.min(20, parseInt(e.target.value) || 1)))} className={`w-full mt-2 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors ${darkMode ? 'bg-slate-700 border-slate-600 text-gray-100' : 'bg-white border-gray-300 text-gray-900'}`} />
-                      <p className={`text-xs mt-2 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                      <input type="number" min="1" max="20" value={letterLength} onChange={(e) => setLetterLength(Math.max(1, Math.min(20, parseInt(e.target.value) || 1)))} className={`w-full mt-2 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors ${darkMode ? 'bg-slate-700 border-slate-600 text-slate-50' : 'bg-white border-slate-300 text-slate-900'}`} />
+                      <p className={`text-xs mt-2 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
                         Real words use dictionary words (1-4 letters). Nonsense words are random letters that don't form real words. Random letters are completely uncensored with no filtering.
                       </p>
                     </div>
@@ -2040,19 +2040,19 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
               </div>
 
               <div>
-                <label className={`block text-sm font-semibold mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Time Per Question (seconds): {timePerQuestion.toFixed(1)}</label>
+                <label className={`block text-sm font-semibold mb-2 ${darkMode ? 'text-slate-200' : 'text-slate-700'}`}>Time Per Question (seconds): {timePerQuestion.toFixed(1)}</label>
                 <input type="range" min="5" max="120" step="0.5" value={timePerQuestion} onChange={(e) => setTimePerQuestion(parseFloat(e.target.value))} className="w-full accent-indigo-600" />
-                <input type="number" min="5" max="120" step="0.5" value={timePerQuestion} onChange={(e) => setTimePerQuestion(Math.max(5, parseFloat(e.target.value) || 5))} className={`w-full mt-2 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors ${darkMode ? 'bg-slate-700 border-slate-600 text-gray-100' : 'bg-white border-gray-300 text-gray-900'}`} />
+                <input type="number" min="5" max="120" step="0.5" value={timePerQuestion} onChange={(e) => setTimePerQuestion(Math.max(5, parseFloat(e.target.value) || 5))} className={`w-full mt-2 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors ${darkMode ? 'bg-slate-700 border-slate-600 text-slate-50' : 'bg-white border-slate-300 text-slate-900'}`} />
               </div>
 
               <div>
-                <label className={`block text-sm font-semibold mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Network Complexity: {networkComplexity.toFixed(2)}</label>
+                <label className={`block text-sm font-semibold mb-2 ${darkMode ? 'text-slate-200' : 'text-slate-700'}`}>Network Complexity: {networkComplexity.toFixed(2)}</label>
                 <input type="range" min="0" max="1" step="0.01" value={networkComplexity} onChange={(e) => setNetworkComplexity(parseFloat(e.target.value))} className="w-full accent-indigo-600" />
-                <p className={`text-xs mt-1 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Probability of resolving ambiguous relationships</p>
+                <p className={`text-xs mt-1 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Probability of resolving ambiguous relationships</p>
               </div>
 
-              <div className={`border-t pt-4 ${darkMode ? 'border-slate-700' : 'border-gray-200'}`}>
-                <h3 className={`text-sm font-bold mb-3 ${darkMode ? 'text-indigo-400' : 'text-indigo-600'}`}>Auto-Progression</h3>
+              <div className={`border-t pt-4 ${darkMode ? 'border-slate-600' : 'border-slate-200'}`}>
+                <h3 className={`text-sm font-bold mb-3 ${darkMode ? 'text-indigo-300' : 'text-indigo-600'}`}>Auto-Progression</h3>
                 
                 <div className="space-y-3 mb-4">
                   <label className="flex items-center space-x-2 cursor-pointer">
@@ -2062,7 +2062,7 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
                       onChange={() => setAutoProgressMode('off')} 
                       className="w-4 h-4 text-indigo-600" 
                     />
-                    <span className={`text-sm font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Off</span>
+                    <span className={`text-sm font-semibold ${darkMode ? 'text-slate-200' : 'text-slate-700'}`}>Off</span>
                   </label>
                   
                   <label className="flex items-center space-x-2 cursor-pointer">
@@ -2072,7 +2072,7 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
                       onChange={() => setAutoProgressMode('universal')} 
                       className="w-4 h-4 text-indigo-600" 
                     />
-                    <span className={`text-sm font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Universal Auto-Progression</span>
+                    <span className={`text-sm font-semibold ${darkMode ? 'text-slate-200' : 'text-slate-700'}`}>Universal Auto-Progression</span>
                   </label>
 
                   <label className="flex items-center space-x-2 cursor-pointer">
@@ -2082,14 +2082,14 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
                       onChange={() => setAutoProgressMode('mode-specific')} 
                       className="w-4 h-4 text-indigo-600" 
                     />
-                    <span className={`text-sm font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Mode-Specific Auto-Progression</span>
+                    <span className={`text-sm font-semibold ${darkMode ? 'text-slate-200' : 'text-slate-700'}`}>Mode-Specific Auto-Progression</span>
                   </label>
                 </div>
 
                 {autoProgressMode === 'universal' && (
-                  <div className={`p-3 rounded-lg space-y-3 ${darkMode ? 'bg-slate-700' : 'bg-gray-100'}`}>
+                  <div className={`p-3 rounded-lg space-y-3 ${darkMode ? 'bg-slate-700' : 'bg-slate-100'}`}>
                     <div>
-                      <label className={`block text-sm font-semibold mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                      <label className={`block text-sm font-semibold mb-2 ${darkMode ? 'text-slate-200' : 'text-slate-700'}`}>
                         Target Accuracy: {universalProgress.targetAccuracy}%
                       </label>
                       <input 
@@ -2106,12 +2106,12 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
                         max="100" 
                         value={universalProgress.targetAccuracy} 
                         onChange={(e) => setUniversalProgress(prev => ({ ...prev, targetAccuracy: Math.max(1, Math.min(100, parseInt(e.target.value) || 1)) }))} 
-                        className={`w-full mt-2 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors ${darkMode ? 'bg-slate-800 border-slate-600 text-gray-100' : 'bg-white border-gray-300 text-gray-900'}`} 
+                        className={`w-full mt-2 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors ${darkMode ? 'bg-slate-800/95 backdrop-blur-sm border-slate-600 text-slate-50' : 'bg-white border-slate-300 text-slate-900'}`} 
                       />
                     </div>
 
                     <div>
-                      <label className={`block text-sm font-semibold mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                      <label className={`block text-sm font-semibold mb-2 ${darkMode ? 'text-slate-200' : 'text-slate-700'}`}>
                         Premises to Track: {universalProgress.targetPremiseCount}
                       </label>
                       <input 
@@ -2128,7 +2128,7 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
                         max="100" 
                         value={universalProgress.targetPremiseCount} 
                         onChange={(e) => setUniversalProgress(prev => ({ ...prev, targetPremiseCount: Math.max(1, Math.min(100, parseInt(e.target.value) || 1)) }))} 
-                        className={`w-full mt-2 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors ${darkMode ? 'bg-slate-800 border-slate-600 text-gray-100' : 'bg-white border-gray-300 text-gray-900'}`} 
+                        className={`w-full mt-2 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors ${darkMode ? 'bg-slate-800/95 backdrop-blur-sm border-slate-600 text-slate-50' : 'bg-white border-slate-300 text-slate-900'}`} 
                       />
                     </div>
 
@@ -2146,19 +2146,19 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
                 )}
 
                 {autoProgressMode === 'mode-specific' && (
-                  <div className={`p-3 rounded-lg space-y-4 ${darkMode ? 'bg-slate-700' : 'bg-gray-100'}`}>
+                  <div className={`p-3 rounded-lg space-y-4 ${darkMode ? 'bg-slate-700' : 'bg-slate-100'}`}>
                     {Object.keys(enabledRelationModes).filter(mode => enabledRelationModes[mode]).map(mode => (
-                      <div key={mode} className={`p-3 rounded-lg ${darkMode ? 'bg-slate-800' : 'bg-white'}`}>
+                      <div key={mode} className={`p-3 rounded-lg ${darkMode ? 'bg-slate-800/95 backdrop-blur-sm' : 'bg-white'}`}>
                         <h4 className={`font-bold text-sm mb-3 capitalize ${darkMode ? 'text-purple-400' : 'text-purple-600'}`}>{mode}</h4>
                         
                         <div className="mb-3">
-                          <label className={`block text-xs font-semibold mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                          <label className={`block text-xs font-semibold mb-1 ${darkMode ? 'text-slate-200' : 'text-slate-700'}`}>
                             Current: {modeSpecificProgress[mode].currentDifficulty} premises, {modeSpecificProgress[mode].currentTime}s
                           </label>
                         </div>
 
                         <div className="mb-3">
-                          <label className={`block text-xs font-semibold mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                          <label className={`block text-xs font-semibold mb-1 ${darkMode ? 'text-slate-200' : 'text-slate-700'}`}>
                             Target Accuracy: {modeSpecificProgress[mode].targetAccuracy}%
                           </label>
                           <input 
@@ -2181,12 +2181,12 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
                               ...prev,
                               [mode]: { ...prev[mode], targetAccuracy: Math.max(1, Math.min(100, parseInt(e.target.value) || 1)) }
                             }))} 
-                            className={`w-full mt-1 px-2 py-1 text-sm border rounded focus:ring-2 focus:ring-purple-500 ${darkMode ? 'bg-slate-700 border-slate-600 text-gray-100' : 'bg-white border-gray-300 text-gray-900'}`} 
+                            className={`w-full mt-1 px-2 py-1 text-sm border rounded focus:ring-2 focus:ring-purple-500 ${darkMode ? 'bg-slate-700 border-slate-600 text-slate-50' : 'bg-white border-slate-300 text-slate-900'}`} 
                           />
                         </div>
 
                         <div className="mb-3">
-                          <label className={`block text-xs font-semibold mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                          <label className={`block text-xs font-semibold mb-1 ${darkMode ? 'text-slate-200' : 'text-slate-700'}`}>
                             Premises to Track: {modeSpecificProgress[mode].targetPremiseCount}
                           </label>
                           <input 
@@ -2209,7 +2209,7 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
                               ...prev,
                               [mode]: { ...prev[mode], targetPremiseCount: Math.max(1, Math.min(100, parseInt(e.target.value) || 1)) }
                             }))} 
-                            className={`w-full mt-1 px-2 py-1 text-sm border rounded focus:ring-2 focus:ring-purple-500 ${darkMode ? 'bg-slate-700 border-slate-600 text-gray-100' : 'bg-white border-gray-300 text-gray-900'}`} 
+                            className={`w-full mt-1 px-2 py-1 text-sm border rounded focus:ring-2 focus:ring-purple-500 ${darkMode ? 'bg-slate-700 border-slate-600 text-slate-50' : 'bg-white border-slate-300 text-slate-900'}`} 
                           />
                         </div>
 
@@ -2227,7 +2227,7 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
                 )}
 
                 {autoProgressMode !== 'off' && (
-                  <p className={`text-xs mt-3 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                  <p className={`text-xs mt-3 ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>
                     When target is reached: Timer decreases by 5s (min: 10s). At 10s, premise count increases by 1.
                   </p>
                 )}
@@ -2235,10 +2235,10 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
 
               <div>
                 <label className="flex items-center space-x-2 cursor-pointer">
-                  <input type="checkbox" checked={spoilerPremises} onChange={(e) => setSpoilerPremises(e.target.checked)} className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500" />
-                  <span className={`text-sm font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Spoiler Premises</span>
+                  <input type="checkbox" checked={spoilerPremises} onChange={(e) => setSpoilerPremises(e.target.checked)} className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500" />
+                  <span className={`text-sm font-semibold ${darkMode ? 'text-slate-200' : 'text-slate-700'}`}>Spoiler Premises</span>
                 </label>
-                <p className={`text-xs mt-1 ml-6 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Hover to reveal premises</p>
+                <p className={`text-xs mt-1 ml-6 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Hover to reveal premises</p>
               </div>
             </div>
           </div>
