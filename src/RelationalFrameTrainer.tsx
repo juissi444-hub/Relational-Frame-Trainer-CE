@@ -32,7 +32,8 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
     equality: { targetPremiseCount: 40, targetAccuracy: 95, recentAnswers: [], currentDifficulty: 3, currentTime: 30 },
     temporal: { targetPremiseCount: 40, targetAccuracy: 95, recentAnswers: [], currentDifficulty: 3, currentTime: 30 },
     spatial: { targetPremiseCount: 40, targetAccuracy: 95, recentAnswers: [], currentDifficulty: 3, currentTime: 30 },
-    containment: { targetPremiseCount: 40, targetAccuracy: 95, recentAnswers: [], currentDifficulty: 3, currentTime: 30 }
+    containment: { targetPremiseCount: 40, targetAccuracy: 95, recentAnswers: [], currentDifficulty: 3, currentTime: 30 },
+    space3d: { targetPremiseCount: 40, targetAccuracy: 95, recentAnswers: [], currentDifficulty: 3, currentTime: 30 }
   });
   const [showResetConfirmation, setShowResetConfirmation] = useState(false);
   const [showResetComplete, setShowResetComplete] = useState(false);
@@ -814,13 +815,15 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
       equality: { targetPremiseCount: 40, targetAccuracy: 95, recentAnswers: [], currentDifficulty: 3, currentTime: 30 },
       temporal: { targetPremiseCount: 40, targetAccuracy: 95, recentAnswers: [], currentDifficulty: 3, currentTime: 30 },
       spatial: { targetPremiseCount: 40, targetAccuracy: 95, recentAnswers: [], currentDifficulty: 3, currentTime: 30 },
-      containment: { targetPremiseCount: 40, targetAccuracy: 95, recentAnswers: [], currentDifficulty: 3, currentTime: 30 }
+      containment: { targetPremiseCount: 40, targetAccuracy: 95, recentAnswers: [], currentDifficulty: 3, currentTime: 30 },
+      space3d: { targetPremiseCount: 40, targetAccuracy: 95, recentAnswers: [], currentDifficulty: 3, currentTime: 30 }
     };
     const resetEnabledRelationModes = {
       equality: true,
       temporal: false,
       spatial: false,
-      containment: false
+      containment: false,
+      space3d: false
     };
 
     // Save reset data to storage immediately
