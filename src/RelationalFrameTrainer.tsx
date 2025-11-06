@@ -1112,7 +1112,7 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
   };
 
   // Render 3D grid visualization for spatial relations
-  const renderSpatialGrid = (trial) => {
+  const renderSpatialGrid = (trial, size = 'small') => {
     if (!trial || !trial.premises) return null;
 
     const mode = getRelationMode(trial.question.relation);
@@ -1195,6 +1195,11 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
     const colors = ['bg-blue-500', 'bg-green-500', 'bg-purple-500', 'bg-orange-500', 'bg-pink-500', 'bg-cyan-500', 'bg-yellow-500', 'bg-red-500'];
     const stimuliList = Object.keys(positions);
 
+    // Cell size based on context
+    const cellSize = size === 'large' ? 'w-12 h-12 sm:w-16 sm:h-16' : 'w-8 h-8 sm:w-10 sm:h-10';
+    const textSize = size === 'large' ? 'text-sm sm:text-base' : 'text-[10px]';
+    const gapSize = size === 'large' ? 'gap-1' : 'gap-0.5';
+
     // Render a dynamically sized grid for a level
     const render2DGrid = (verticalLevel, showLabels = false) => {
       const vLevelNum = getVerticalLevel(verticalLevel);
@@ -1236,11 +1241,11 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
       const numCols = gridCols.length;
 
       return (
-        <div className="flex flex-col gap-0.5">
-          {showLabels && <div className={`text-xs text-center font-semibold mb-1 ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>
-            {verticalLevel}
+        <div className={`flex flex-col ${gapSize}`}>
+          {showLabels && <div className={`text-xs sm:text-sm text-center font-semibold mb-1 ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+            {verticalLevel === 'ABOVE' ? '↑ ABOVE Level' : verticalLevel === 'BELOW' ? '↓ BELOW Level' : '⊙ Center Level'}
           </div>}
-          <div className="grid gap-0.5" style={{ gridTemplateColumns: `repeat(${numCols}, minmax(0, 1fr))` }}>
+          <div className={`grid ${gapSize}`} style={{ gridTemplateColumns: `repeat(${numCols}, minmax(0, 1fr))` }}>
             {gridRows.map(row =>
               gridCols.map(col => {
                 const key = `${row},${col}`;
@@ -1249,13 +1254,13 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
                 return (
                   <div
                     key={`${row}-${col}`}
-                    className={`w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center text-[10px] border rounded ${
+                    className={`${cellSize} flex items-center justify-center ${textSize} border rounded ${
                       objectsInCell.length > 0 ? (darkMode ? `${colors[stimuliList.indexOf(objectsInCell[0]) % colors.length]} border-slate-300 font-bold text-white` : `${colors[stimuliList.indexOf(objectsInCell[0]) % colors.length]} border-slate-600 font-bold text-white`) :
                       (darkMode ? 'bg-slate-700 border-slate-600' : 'bg-slate-100 border-slate-300')
                     }`}
                   >
                     {objectsInCell.map((stimulus, i) => (
-                      <span key={i} className="text-[10px]">{renderStimulus(stimulus)}</span>
+                      <span key={i} className={textSize}>{renderStimulus(stimulus)}</span>
                     ))}
                   </div>
                 );
@@ -1266,9 +1271,11 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
       );
     };
 
+    const levelGap = size === 'large' ? 'gap-4' : 'gap-2';
+
     if (is3D) {
       return (
-        <div className="flex flex-col gap-2 items-center">
+        <div className={`flex flex-col ${levelGap} items-center`}>
           {render2DGrid('ABOVE', true)}
           {render2DGrid('CENTER', true)}
           {render2DGrid('BELOW', true)}
@@ -1524,9 +1531,16 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
                       </div>
                     </div>
                     <div>
-                      <h3 className={`text-sm font-semibold mb-2 ${darkMode ? 'text-slate-300' : 'text-slate-600'}`}>Visual Representation:</h3>
-                      <div className="flex justify-center">
-                        {renderSpatialGrid(item.trial)}
+                      <h3 className={`text-sm font-semibold mb-2 ${darkMode ? 'text-slate-300' : 'text-slate-600'}`}>
+                        Visual Representation:
+                        {getRelationMode(item.trial.question.relation) === 'space3d' && (
+                          <span className={`ml-2 text-xs font-normal ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                            (3D Space - Vertical levels stack top to bottom. Directions remain consistent across levels.)
+                          </span>
+                        )}
+                      </h3>
+                      <div className={`flex justify-center p-4 sm:p-6 rounded-lg ${darkMode ? 'bg-slate-700/30' : 'bg-slate-50'}`}>
+                        {renderSpatialGrid(item.trial, 'large')}
                       </div>
                     </div>
                     <div>
