@@ -1076,14 +1076,19 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
     positions[firstStimulus] = { v: 'CENTER', h: 'CENTER', row: 1, col: 1, vLevel: 0 };
 
     // Helper to get row/col offset from direction
-    // Note: In grid visualization, row 0 is at top, row 2 is at bottom
-    // NORTH/SOUTH are flipped to match visual expectation
+    // Helper to get row/col offset from direction
+    // Grid layout: row 0 = top, row 1 = middle, row 2 = bottom
+    // col 0 = left, col 1 = middle, col 2 = right
     const getOffset = (direction) => {
       const offsets = {
-        'NORTH': [1, 0], 'SOUTH': [-1, 0],
-        'EAST': [0, 1], 'WEST': [0, -1],
-        'NORTHEAST': [1, 1], 'NORTHWEST': [1, -1],
-        'SOUTHEAST': [-1, 1], 'SOUTHWEST': [-1, -1],
+        'NORTH': [-1, 0],  // Move up (decrease row)
+        'SOUTH': [1, 0],   // Move down (increase row)
+        'EAST': [0, 1],    // Move right (increase col)
+        'WEST': [0, -1],   // Move left (decrease col)
+        'NORTHEAST': [-1, 1],  // Up + Right
+        'NORTHWEST': [-1, -1], // Up + Left
+        'SOUTHEAST': [1, 1],   // Down + Right
+        'SOUTHWEST': [1, -1],  // Down + Left
         'CENTER': [0, 0]
       };
       return offsets[direction] || [0, 0];
@@ -1578,13 +1583,27 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
 
       <div className="flex-1 flex flex-col min-h-0">
         <div className={`shadow-md p-2 sm:p-3 flex flex-col gap-2 transition-colors duration-300 ${darkMode ? 'bg-slate-800/90 backdrop-blur' : 'bg-white'}`}>
-          <div className="flex justify-between items-center gap-2">
-            <div className="flex gap-1 sm:gap-2">
+          {/* Timer and Pause - Centered at top */}
+          <div className="flex justify-center items-center">
+            <div className="flex flex-col items-center gap-1">
+              <div className="text-center">
+                <div className={`text-base sm:text-xl font-bold tabular-nums ${darkMode ? 'text-indigo-400' : 'text-indigo-600'}`}>{timeLeft.toFixed(1)}s</div>
+                <div className={`text-xs hidden sm:block ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Time</div>
+              </div>
+              <button onClick={togglePause} className={`text-white p-1.5 sm:p-2 rounded-lg transition-colors ${isPaused ? 'bg-green-500 hover:bg-green-600' : (darkMode ? 'bg-yellow-600 hover:bg-yellow-700' : 'bg-yellow-500 hover:bg-yellow-600')}`} title="Pause/Resume">
+                {isPaused ? <Play className="w-4 h-4 sm:w-5 sm:h-5" /> : <Pause className="w-4 h-4 sm:w-5 sm:h-5" />}
+              </button>
+            </div>
+          </div>
+
+          {/* All other buttons */}
+          <div className="flex justify-between items-center gap-2 flex-wrap">
+            <div className="flex gap-1 sm:gap-2 flex-wrap">
               <button onClick={() => setShowHistory(!showHistory)} className={`flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-colors text-xs sm:text-sm ${darkMode ? 'bg-indigo-900/50 hover:bg-indigo-900/70 text-indigo-200' : 'bg-indigo-100 hover:bg-indigo-200 text-gray-900'}`}>
                 <History className="w-4 h-4" />
                 <span className="hidden sm:inline">History</span>
               </button>
-              
+
               <button onClick={() => setShowStats(!showStats)} className={`flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-colors text-xs sm:text-sm ${darkMode ? 'bg-purple-900/50 hover:bg-purple-900/70 text-purple-200' : 'bg-purple-100 hover:bg-purple-200 text-gray-900'}`}>
                 <TrendingUp className="w-4 h-4" />
                 <span className="hidden sm:inline">Stats</span>
@@ -1609,18 +1628,7 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
               )}
             </div>
 
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="flex-1"></div>
-              <div className="flex flex-col items-center justify-center gap-1">
-                <div className="text-center">
-                  <div className={`text-base sm:text-xl font-bold tabular-nums ${darkMode ? 'text-indigo-400' : 'text-indigo-600'}`}>{timeLeft.toFixed(1)}s</div>
-                  <div className={`text-xs hidden sm:block ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Time</div>
-                </div>
-                <button onClick={togglePause} className={`text-white p-1.5 sm:p-2 rounded-lg transition-colors ${isPaused ? 'bg-green-500 hover:bg-green-600' : (darkMode ? 'bg-yellow-600 hover:bg-yellow-700' : 'bg-yellow-500 hover:bg-yellow-600')}`} title="Pause/Resume">
-                  {isPaused ? <Play className="w-4 h-4 sm:w-5 sm:h-5" /> : <Pause className="w-4 h-4 sm:w-5 sm:h-5" />}
-                </button>
-              </div>
-              <div className="flex-1 flex items-center justify-end gap-2 sm:gap-3">
+            <div className="flex gap-1 sm:gap-2 flex-wrap">
               <button
                 onClick={() => {
                   console.log('Settings button clicked, current state:', showSettings);
@@ -1645,8 +1653,7 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
               </button>
               </div>
             </div>
-          </div>
-          
+
           <div className="flex gap-2 sm:gap-4 justify-center sm:justify-start">
             <div className="text-center">
               <div className={`text-base sm:text-xl font-bold ${darkMode ? 'text-green-400' : 'text-green-600'}`}>{score.correct}</div>
