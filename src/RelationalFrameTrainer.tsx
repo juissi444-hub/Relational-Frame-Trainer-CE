@@ -1200,7 +1200,29 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
     const textSize = size === 'large' ? 'text-sm sm:text-base' : 'text-[10px]';
     const gapSize = size === 'large' ? 'gap-1' : 'gap-0.5';
 
-    // Render a dynamically sized grid for a level
+    // Calculate global bounds across ALL positions (all vertical levels)
+    const allPositions = Object.values(positions);
+    if (allPositions.length === 0) return null;
+
+    const allRows = allPositions.map(p => p.row);
+    const allCols = allPositions.map(p => p.col);
+    const globalMinRow = Math.min(...allRows);
+    const globalMaxRow = Math.max(...allRows);
+    const globalMinCol = Math.min(...allCols);
+    const globalMaxCol = Math.max(...allCols);
+
+    // Build grid arrays to cover the global range
+    const gridRows = [];
+    for (let r = globalMinRow; r <= globalMaxRow; r++) {
+      gridRows.push(r);
+    }
+    const gridCols = [];
+    for (let c = globalMinCol; c <= globalMaxCol; c++) {
+      gridCols.push(c);
+    }
+    const numCols = gridCols.length;
+
+    // Render a grid for a specific vertical level using global bounds
     const render2DGrid = (verticalLevel, showLabels = false) => {
       const vLevelNum = getVerticalLevel(verticalLevel);
 
@@ -1213,32 +1235,6 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
           objectsHere[key].push(stimulus);
         }
       }
-
-      // Find min/max to determine grid bounds
-      const objectsAtLevel = Object.values(positions).filter(p => p.vLevel === vLevelNum);
-
-      // If no objects at this level, don't render anything
-      if (objectsAtLevel.length === 0) return null;
-
-      const rows = objectsAtLevel.map(p => p.row);
-      const cols = objectsAtLevel.map(p => p.col);
-
-      const minRow = Math.min(...rows);
-      const maxRow = Math.max(...rows);
-      const minCol = Math.min(...cols);
-      const maxCol = Math.max(...cols);
-
-      // Build grid arrays to cover the actual range needed
-      const gridRows = [];
-      for (let r = minRow; r <= maxRow; r++) {
-        gridRows.push(r);
-      }
-      const gridCols = [];
-      for (let c = minCol; c <= maxCol; c++) {
-        gridCols.push(c);
-      }
-
-      const numCols = gridCols.length;
 
       return (
         <div className={`flex flex-col ${gapSize}`}>
