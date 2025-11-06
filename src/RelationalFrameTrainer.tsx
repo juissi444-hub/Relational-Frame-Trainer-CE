@@ -16,6 +16,7 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
   const [darkMode, setDarkMode] = useState(false);
   const [useRealWords, setUseRealWords] = useState(true);
   const [useNonsenseWords, setUseNonsenseWords] = useState(false);
+  const [useRandomLetters, setUseRandomLetters] = useState(false);
   const [useEmojis, setUseEmojis] = useState(false);
   const [useVoronoi, setUseVoronoi] = useState(false);
   const [useMandelbrot, setUseMandelbrot] = useState(false);
@@ -194,6 +195,7 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
     const availableTypes = [];
     if (useRealWords) availableTypes.push('realwords');
     if (useNonsenseWords) availableTypes.push('nonsense');
+    if (useRandomLetters) availableTypes.push('randomletters');
     if (useEmojis) availableTypes.push('emojis');
     if (useVoronoi) availableTypes.push('voronoi');
     if (useMandelbrot) availableTypes.push('mandelbrot');
@@ -219,6 +221,14 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
         }
         attempts++;
       } while (isRealWord(result) && attempts < 100); // Ensure it's not a real word
+      return result;
+    } else if (selectedType === 'randomletters') {
+      // Completely random letters with no filter
+      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+      let result = '';
+      for (let i = 0; i < letterLength; i++) {
+        result += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
       return result;
     } else if (selectedType === 'emojis') {
       return emojiList[Math.floor(Math.random() * emojiList.length)];
@@ -594,7 +604,7 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
     }
 
     return { premises, question: { stimulus1: stimuli[startIdx], relation: questionRelation, stimulus2: stimuli[endIdx] }, correctAnswer, derivedRelation: derivedRelation || 'AMBIGUOUS', allPaths: findAllPaths(premises, stimuli[startIdx], stimuli[endIdx]), allStimuli: stimuli };
-  }, [difficulty, networkComplexity, useRealWords, useNonsenseWords, useEmojis, useVoronoi, useMandelbrot, useVibration, letterLength, enabledRelationModes]);
+  }, [difficulty, networkComplexity, useRealWords, useNonsenseWords, useRandomLetters, useEmojis, useVoronoi, useMandelbrot, useVibration, letterLength, enabledRelationModes]);
 
   const startNewTrial = useCallback(() => {
     try {
@@ -613,7 +623,7 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
       const saveData = {
         score, history, statsHistory,
         currentTrial, timeLeft, feedback, isPaused,
-        settings: { difficulty, timePerQuestion, networkComplexity, spoilerPremises, darkMode, useRealWords, useNonsenseWords, useEmojis, useVoronoi, useMandelbrot, useVibration, letterLength, autoProgressMode, universalProgress, modeSpecificProgress, enabledRelationModes },
+        settings: { difficulty, timePerQuestion, networkComplexity, spoilerPremises, darkMode, useRealWords, useNonsenseWords, useRandomLetters, useEmojis, useVoronoi, useMandelbrot, useVibration, letterLength, autoProgressMode, universalProgress, modeSpecificProgress, enabledRelationModes },
       };
 
       if (user) {
@@ -652,7 +662,7 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
     } catch (error) {
       console.error('Save failed:', error);
     }
-  }, [user, score, history, statsHistory, currentTrial, timeLeft, feedback, isPaused, difficulty, timePerQuestion, networkComplexity, spoilerPremises, darkMode, useRealWords, useNonsenseWords, useEmojis, useVoronoi, useMandelbrot, useVibration, letterLength, autoProgressMode, universalProgress, modeSpecificProgress, enabledRelationModes]);
+  }, [user, score, history, statsHistory, currentTrial, timeLeft, feedback, isPaused, difficulty, timePerQuestion, networkComplexity, spoilerPremises, darkMode, useRealWords, useNonsenseWords, useRandomLetters, useEmojis, useVoronoi, useMandelbrot, useVibration, letterLength, autoProgressMode, universalProgress, modeSpecificProgress, enabledRelationModes]);
 
   const loadFromStorage = useCallback(async () => {
     try {
@@ -694,6 +704,7 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
             if (data.settings.useLetters !== undefined) setUseRealWords(data.settings.useLetters);
             if (data.settings.useRealWords !== undefined) setUseRealWords(data.settings.useRealWords);
             if (data.settings.useNonsenseWords !== undefined) setUseNonsenseWords(data.settings.useNonsenseWords);
+            if (data.settings.useRandomLetters !== undefined) setUseRandomLetters(data.settings.useRandomLetters);
             if (data.settings.useEmojis !== undefined) setUseEmojis(data.settings.useEmojis);
             if (data.settings.useVoronoi !== undefined) setUseVoronoi(data.settings.useVoronoi);
             if (data.settings.useMandelbrot !== undefined) setUseMandelbrot(data.settings.useMandelbrot);
@@ -732,6 +743,7 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
             if (data.settings.useLetters !== undefined) setUseRealWords(data.settings.useLetters);
             if (data.settings.useRealWords !== undefined) setUseRealWords(data.settings.useRealWords);
             if (data.settings.useNonsenseWords !== undefined) setUseNonsenseWords(data.settings.useNonsenseWords);
+            if (data.settings.useRandomLetters !== undefined) setUseRandomLetters(data.settings.useRandomLetters);
             if (data.settings.useEmojis !== undefined) setUseEmojis(data.settings.useEmojis);
             if (data.settings.useVoronoi !== undefined) setUseVoronoi(data.settings.useVoronoi);
             if (data.settings.useMandelbrot !== undefined) setUseMandelbrot(data.settings.useMandelbrot);
@@ -764,7 +776,7 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
     }
   }, [isInitialized, currentTrial, timeLeft, feedback, isPaused, score, history, statsHistory,
       difficulty, timePerQuestion, networkComplexity, spoilerPremises, darkMode,
-      useRealWords, useNonsenseWords, useEmojis, useVoronoi, useMandelbrot, useVibration, letterLength,
+      useRealWords, useNonsenseWords, useRandomLetters, useEmojis, useVoronoi, useMandelbrot, useVibration, letterLength,
       autoProgressMode, universalProgress, modeSpecificProgress, enabledRelationModes]);
 
   const resetGame = () => {
@@ -1977,6 +1989,11 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
                   </label>
 
                   <label className="flex items-center space-x-2 cursor-pointer">
+                    <input type="checkbox" checked={useRandomLetters} onChange={(e) => setUseRandomLetters(e.target.checked)} className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500" />
+                    <span className={`text-sm font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Random Letters</span>
+                  </label>
+
+                  <label className="flex items-center space-x-2 cursor-pointer">
                     <input type="checkbox" checked={useEmojis} onChange={(e) => setUseEmojis(e.target.checked)} className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500" />
                     <span className={`text-sm font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Emojis 🎨</span>
                   </label>
@@ -2000,13 +2017,13 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
                     Select one or more types. Stimuli will be randomly chosen from selected types.
                   </p>
 
-                  {(useRealWords || useNonsenseWords) && (
+                  {(useRealWords || useNonsenseWords || useRandomLetters) && (
                     <div className={`mt-4 pt-4 border-t ${darkMode ? 'border-slate-600' : 'border-gray-200'}`}>
                       <label className={`block text-sm font-semibold mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Word Length: {letterLength}</label>
-                      <input type="range" min="1" max="4" value={letterLength} onChange={(e) => setLetterLength(parseInt(e.target.value))} className="w-full accent-indigo-600" />
-                      <input type="number" min="1" max="4" value={letterLength} onChange={(e) => setLetterLength(Math.max(1, Math.min(4, parseInt(e.target.value) || 1)))} className={`w-full mt-2 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors ${darkMode ? 'bg-slate-700 border-slate-600 text-gray-100' : 'bg-white border-gray-300 text-gray-900'}`} />
+                      <input type="range" min="1" max="20" value={letterLength} onChange={(e) => setLetterLength(parseInt(e.target.value))} className="w-full accent-indigo-600" />
+                      <input type="number" min="1" max="20" value={letterLength} onChange={(e) => setLetterLength(Math.max(1, Math.min(20, parseInt(e.target.value) || 1)))} className={`w-full mt-2 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors ${darkMode ? 'bg-slate-700 border-slate-600 text-gray-100' : 'bg-white border-gray-300 text-gray-900'}`} />
                       <p className={`text-xs mt-2 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                        Real words use dictionary words. Nonsense words are random letters that don't form real words.
+                        Real words use dictionary words (1-4 letters). Nonsense words are random letters that don't form real words. Random letters are completely uncensored with no filtering.
                       </p>
                     </div>
                   )}
