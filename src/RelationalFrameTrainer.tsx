@@ -825,13 +825,14 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
     // Note: timeLeft and saveToStorage are NOT in dependencies to avoid infinite loops
     // - timeLeft changes every 100ms (would save 10x/second)
     // - saveToStorage depends on timeLeft (would recreate callback constantly)
+    // BUT user IS in dependencies so logging in triggers a save with the new user
     // timeLeft will still be saved when other meaningful changes trigger this effect
     if (isInitialized) {
       console.log('Auto-saving state to storage...');
       saveToStorage();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isInitialized, currentTrial, feedback, isPaused, score, history, statsHistory,
+  }, [isInitialized, user, currentTrial, feedback, isPaused, score, history, statsHistory,
       difficulty, timePerQuestion, networkComplexity, spoilerPremises, darkMode,
       useRealWords, useNonsenseWords, useRandomLetters, useEmojis, useVoronoi, useMandelbrot, useVibration, letterLength,
       autoProgressMode, universalProgress, modeSpecificProgress, enabledRelationModes]);
