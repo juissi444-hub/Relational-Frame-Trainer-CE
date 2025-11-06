@@ -24,6 +24,10 @@ export default function AuthModal({ onClose, onAuthSuccess }: AuthModalProps) {
       const redirectUrl = window.location.origin;
       console.log('Redirect URL:', redirectUrl);
 
+      // NOTE: Google OAuth requires configuration in Supabase Dashboard:
+      // 1. Enable Google provider in Authentication > Providers
+      // 2. Add OAuth credentials (Client ID & Secret) from Google Cloud Console
+      // 3. Add redirect URL to authorized redirect URIs in Google Cloud Console
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
@@ -37,7 +41,7 @@ export default function AuthModal({ onClose, onAuthSuccess }: AuthModalProps) {
 
       if (error) {
         console.error('Google OAuth error:', error);
-        setError('Failed to sign in with Google: ' + error.message);
+        setError('Google sign-in is not configured. Please contact the administrator or use username/password login.');
         setLoading(false);
         return;
       }
@@ -62,6 +66,10 @@ export default function AuthModal({ onClose, onAuthSuccess }: AuthModalProps) {
       const redirectUrl = window.location.origin;
       console.log('Redirect URL:', redirectUrl);
 
+      // NOTE: Discord OAuth requires configuration in Supabase Dashboard:
+      // 1. Enable Discord provider in Authentication > Providers
+      // 2. Add OAuth credentials (Client ID & Secret) from Discord Developer Portal
+      // 3. Add redirect URL to authorized redirects in Discord Developer Portal
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'discord',
         options: {
@@ -71,7 +79,7 @@ export default function AuthModal({ onClose, onAuthSuccess }: AuthModalProps) {
 
       if (error) {
         console.error('Discord OAuth error:', error);
-        setError('Failed to sign in with Discord: ' + error.message);
+        setError('Discord sign-in is not configured. Please contact the administrator or use username/password login.');
         setLoading(false);
         return;
       }
