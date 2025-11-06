@@ -696,10 +696,12 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
 
   const loadFromStorage = useCallback(async () => {
     try {
-      console.log('loadFromStorage called, user:', user ? user.id : 'null');
+      console.log('📖 loadFromStorage called, user:', user ? `${user.id} (${user.username})` : 'null');
       let hasTrialData = false;
 
       if (user) {
+        console.log('✅ User is logged in, will load from Supabase');
+
         // Check if there's localStorage data from anonymous session
         const localData = localStorage.getItem('rft_local_progress');
         if (localData) {
@@ -738,6 +740,7 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
         }
 
         // Load from Supabase if logged in
+        console.log('🔍 Querying Supabase for user:', user.id);
         const { data, error } = await supabase
           .from('user_progress')
           .select('*')
@@ -745,12 +748,16 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
           .single();
 
         if (error) {
-          console.log('No saved data found in Supabase');
+          console.log('❌ No saved data found in Supabase:', error.message);
           return hasTrialData;
         }
 
         if (data) {
-          console.log('Loading data from Supabase');
+          console.log('✅ Loading data from Supabase:', {
+            score: data.score,
+            history_length: data.history?.length || 0,
+            has_trial: !!data.current_trial
+          });
           if (data.score) setScore(data.score);
           if (data.history) setHistory(data.history);
           if (data.stats_history) setStatsHistory(data.stats_history);
@@ -1143,21 +1150,25 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Handle login: save current state to Supabase
+  // Handle login: load saved data from Supabase and save current session
   useEffect(() => {
     console.log('👤 User-change effect triggered. user:', user ? user.id : 'null', '| isInitialized:', isInitialized);
     const handleUserLogin = async () => {
       if (user && isInitialized) {
-        console.log('🚀 User logged in, saving current state to Supabase:', user.id);
+        console.log('🚀 User logged in, loading from Supabase first:', user.id);
 
-        // Save current in-memory state to Supabase
+        // FIRST: Load any existing saved data from Supabase
+        // This ensures we don't lose previously saved progress
+        await loadFromStorage();
+
+        // THEN: Save current in-memory state to Supabase
         // This preserves the active session when logging in
-        // Use ref to get latest saveToStorage with current user
+        console.log('💾 Now saving current session to Supabase');
         await saveToStorageRef.current();
 
-        console.log('✅ Current session saved to Supabase for user:', user.id);
+        console.log('✅ Load and save complete for user:', user.id);
       } else {
-        console.log('⏭️ Skipping save - user:', user ? 'exists' : 'null', ', isInitialized:', isInitialized);
+        console.log('⏭️ Skipping - user:', user ? 'exists' : 'null', ', isInitialized:', isInitialized);
       }
     };
     handleUserLogin();
