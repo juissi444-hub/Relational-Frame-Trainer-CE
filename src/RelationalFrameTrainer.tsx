@@ -1228,9 +1228,7 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
     const numCols = gridCols.length;
 
     // Render a grid for a specific vertical level using global bounds
-    const render2DGrid = (verticalLevel, showLabels = false) => {
-      const vLevelNum = getVerticalLevel(verticalLevel);
-
+    const render2DGrid = (vLevelNum) => {
       // Find objects at this vertical level
       const objectsHere = {};
       for (const [stimulus, pos] of Object.entries(positions)) {
@@ -1243,9 +1241,6 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
 
       return (
         <div className={`flex flex-col ${gapSize}`}>
-          {showLabels && <div className={`text-xs sm:text-sm text-center font-semibold mb-1 ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>
-            {verticalLevel === 'ABOVE' ? '↑ ABOVE Level' : verticalLevel === 'BELOW' ? '↓ BELOW Level' : '⊙ Center Level'}
-          </div>}
           <div className={`grid ${gapSize}`} style={{ gridTemplateColumns: `repeat(${numCols}, minmax(0, 1fr))` }}>
             {gridRows.map(row =>
               gridCols.map(col => {
@@ -1275,15 +1270,20 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
     const levelGap = size === 'large' ? 'gap-4' : 'gap-2';
 
     if (is3D) {
+      // Get all unique vertical levels and sort them (highest to lowest)
+      const verticalLevels = [...new Set(Object.values(positions).map(p => p.vLevel))].sort((a, b) => b - a);
+
       return (
         <div className={`flex flex-col ${levelGap} items-center`}>
-          {render2DGrid('ABOVE', true)}
-          {render2DGrid('CENTER', true)}
-          {render2DGrid('BELOW', true)}
+          {verticalLevels.map(vLevel => (
+            <div key={vLevel}>
+              {render2DGrid(vLevel)}
+            </div>
+          ))}
         </div>
       );
     } else {
-      return render2DGrid('CENTER', false);
+      return render2DGrid(0);
     }
   };
 
