@@ -14,7 +14,8 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
   const [networkComplexity, setNetworkComplexity] = useState(0.5);
   const [spoilerPremises, setSpoilerPremises] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
-  const [useLetters, setUseLetters] = useState(true);
+  const [useRealWords, setUseRealWords] = useState(true);
+  const [useNonsenseWords, setUseNonsenseWords] = useState(false);
   const [useEmojis, setUseEmojis] = useState(false);
   const [useVoronoi, setUseVoronoi] = useState(false);
   const [useMandelbrot, setUseMandelbrot] = useState(false);
@@ -89,7 +90,15 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
   };
 
   const emojiList = ['😀', '😃', '😄', '😁', '😆', '😅', '🤣', '😂', '🙂', '🙃', '😉', '😊', '😇', '🥰', '😍', '🤩', '😘', '😗', '😚', '😙', '🥲', '😋', '😛', '😜', '🤪', '😝', '🤑', '🤗', '🤭', '🤫', '🤔', '🤐', '🤨', '😐', '😑', '😶', '😏', '😒', '🙄', '😬', '🤥', '😌', '😔', '😪', '🤤', '😴', '😷', '🤒', '🤕', '🤢', '🤮', '🤧', '🥵', '🥶', '🥴', '😵', '🤯', '🤠', '🥳', '🥸', '😎', '🤓', '🧐', '😕', '😟', '🙁', '☹️', '😮', '😯', '😲', '😳', '🥺', '😦', '😧', '😨', '😰', '😥', '😢', '😭', '😱', '😖', '😣', '😞', '😓', '😩', '😫', '🥱', '😤', '😡', '😠', '🤬', '😈', '👿', '💀', '☠️', '💩', '🤡', '👹', '👺', '👻', '👽', '👾', '🤖', '😺', '😸', '😹', '😻', '😼', '😽', '🙀', '😿', '😾', '🙈', '🙉', '🙊', '💋', '💌', '💘', '💝', '💖', '💗', '💓', '💞', '💕', '💟', '❣️', '💔', '❤️', '🧡', '💛', '💚', '💙', '💜', '🤎', '🖤', '🤍', '💯', '💢', '💥', '💫', '💦', '💨', '🕳️', '💣', '💬', '👁️', '🗨️', '🗯️', '💭', '💤', '👋', '🤚', '🖐️', '✋', '🖖', '👌', '🤌', '🤏', '✌️', '🤞', '🤟', '🤘', '🤙', '👈', '👉', '👆', '🖕', '👇', '☝️', '👍', '👎', '✊', '👊', '🤛', '🤜', '👏', '🙌', '👐', '🤲', '🤝', '🙏', '✍️', '💅', '🤳', '💪', '🦾', '🦿', '🦵', '🦶', '👂', '🦻', '👃', '🧠', '🫀', '🫁', '🦷', '🦴', '👀', '👁️', '👅', '👄', '👶', '🧒', '👦', '👧', '🧑', '👱', '👨', '🧔', '👩', '🧓', '👴', '👵', '🙍', '🙎', '🙅', '🙆', '💁', '🙋', '🧏', '🙇', '🤦', '🤷', '👮', '🕵️', '💂', '🥷', '👷', '🤴', '👸', '👳', '👲', '🧕', '🤵', '👰', '🤰', '🤱', '👼', '🎅', '🤶', '🦸', '🦹', '🧙', '🧚', '🧛', '🧜', '🧝', '🧞', '🧟', '💆', '💇', '🚶', '🧍', '🧎', '🏃', '💃', '🕺', '🕴️', '👯', '🧖', '🧗', '🤺', '🏇', '⛷️', '🏂', '🏌️', '🏄', '🚣', '🏊', '⛹️', '🏋️', '🚴', '🚵', '🤸', '🤼', '🤽', '🤾', '🤹', '🧘', '🛀', '🛌', '👫', '👬', '👭', '💏', '💑', '👪', '🗣️', '👤', '👥', '🫂', '👣', '🐵', '🐒', '🦍', '🦧', '🐶', '🐕', '🦮', '🐩', '🐺', '🦊', '🦝', '🐱', '🐈', '🦁', '🐯', '🐅', '🐆', '🐴', '🐎', '🦄', '🦓', '🦌', '🦬', '🐮', '🐂', '🐃', '🐄', '🐷', '🐖', '🐗', '🐽', '🐏', '🐑', '🐐', '🐪', '🐫', '🦙', '🦒', '🐘', '🦣', '🦏', '🦛', '🐭', '🐁', '🐀', '🐹', '🐰', '🐇', '🐿️', '🦫', '🦔', '🦇', '🐻', '🐨', '🐼', '🦥', '🦦', '🦨', '🦘', '🦡', '🐾', '🦃', '🐔', '🐓', '🐣', '🐤', '🐥', '🐦', '🐧', '🕊️', '🦅', '🦆', '🦢', '🦉', '🦤', '🪶', '🦩', '🦚', '🦜', '🐸', '🐊', '🐢', '🦎', '🐍', '🐲', '🐉', '🦕', '🦖', '🐳', '🐋', '🐬', '🦭', '🐟', '🐠', '🐡', '🦈', '🐙', '🐚', '🐌', '🦋', '🐛', '🐜', '🐝', '🪲', '🐞', '🦗', '🪳', '🕷️', '🕸️', '🦂', '🦟', '🪰', '🪱', '🦠', '💐', '🌸', '💮', '🏵️', '🌹', '🥀', '🌺', '🌻', '🌼', '🌷', '🌱', '🪴', '🌲', '🌳', '🌴', '🌵', '🌾', '🌿', '☘️', '🍀', '🍁', '🍂', '🍃', '🍇', '🍈', '🍉', '🍊', '🍋', '🍌', '🍍', '🥭', '🍎', '🍏', '🍐', '🍑', '🍒', '🍓', '🫐', '🥝', '🍅', '🫒', '🥥', '🥑', '🍆', '🥔', '🥕', '🌽', '🌶️', '🫑', '🥒', '🥬', '🥦', '🧄', '🧅', '🍄', '🥜', '🌰', '🍞', '🥐', '🥖', '🫓', '🥨', '🥯', '🥞', '🧇', '🧀', '🍖', '🍗', '🥩', '🥓', '🍔', '🍟', '🍕', '🌭', '🥪', '🌮', '🌯', '🫔', '🥙', '🧆', '🥚', '🍳', '🥘', '🍲', '🫕', '🥣', '🥗', '🍿', '🧈', '🧂', '🥫', '🍱', '🍘', '🍙', '🍚', '🍛', '🍜', '🍝', '🍠', '🍢', '🍣', '🍤', '🍥', '🥮', '🍡', '🥟', '🥠', '🥡', '🦀', '🦞', '🦐', '🦑', '🦪', '🍦', '🍧', '🍨', '🍩', '🍪', '🎂', '🍰', '🧁', '🥧', '🍫', '🍬', '🍭', '🍮', '🍯', '🍼', '🥛', '☕', '🫖', '🍵', '🍶', '🍾', '🍷', '🍸', '🍹', '🍺', '🍻', '🥂', '🥃', '🥤', '🧋', '🧃', '🧉', '🧊', '🥢', '🍽️', '🍴', '🥄', '🔪', '🏺', '🌍', '🌎', '🌏', '🌐', '🗺️', '🗾', '🧭', '🏔️', '⛰️', '🌋', '🗻', '🏕️', '🏖️', '🏜️', '🏝️', '🏞️', '🏟️', '🏛️', '🏗️', '🧱', '🪨', '🪵', '🛖', '🏘️', '🏚️', '🏠', '🏡', '🏢', '🏣', '🏤', '🏥', '🏦', '🏨', '🏩', '🏪', '🏫', '🏬', '🏭', '🏯', '🏰', '💒', '🗼', '🗽', '⛪', '🕌', '🛕', '🕍', '⛩️', '🕋', '⛲', '⛺', '🌁', '🌃', '🏙️', '🌄', '🌅', '🌆', '🌇', '🌉', '♨️', '🎠', '🎡', '🎢', '💈', '🎪', '🚂', '🚃', '🚄', '🚅', '🚆', '🚇', '🚈', '🚉', '🚊', '🚝', '🚞', '🚋', '🚌', '🚍', '🚎', '🚐', '🚑', '🚒', '🚓', '🚔', '🚕', '🚖', '🚗', '🚘', '🚙', '🛻', '🚚', '🚛', '🚜', '🏎️', '🏍️', '🛵', '🦽', '🦼', '🛺', '🚲', '🛴', '🛹', '🛼', '🚏', '🛣️', '🛤️', '🛢️', '⛽', '🚨', '🚥', '🚦', '🛑', '🚧', '⚓', '⛵', '🛶', '🚤', '🛳️', '⛴️', '🛥️', '🚢', '✈️', '🛩️', '🛫', '🛬', '🪂', '💺', '🚁', '🚟', '🚠', '🚡', '🛰️', '🚀', '🛸', '🛎️', '🧳', '⌛', '⏳', '⌚', '⏰', '⏱️', '⏲️', '🕰️', '🕛', '🕧', '🕐', '🕜', '🕑', '🕝', '🕒', '🕞', '🕓', '🕟', '🕔', '🕠', '🕕', '🕡', '🕖', '🕢', '🕗', '🕣', '🕘', '🕤', '🕙', '🕥', '🕚', '🕦', '🌑', '🌒', '🌓', '🌔', '🌕', '🌖', '🌗', '🌘', '🌙', '🌚', '🌛', '🌜', '🌡️', '☀️', '🌝', '🌞', '🪐', '⭐', '🌟', '🌠', '🌌', '☁️', '⛅', '⛈️', '🌤️', '🌥️', '🌦️', '🌧️', '🌨️', '🌩️', '🌪️', '🌫️', '🌬️', '🌀', '🌈', '🌂', '☂️', '☔', '⛱️', '⚡', '❄️', '☃️', '⛄', '☄️', '🔥', '💧', '🌊', '🎃', '🎄', '🎆', '🎇', '🧨', '✨', '🎈', '🎉', '🎊', '🎋', '🎍', '🎎', '🎏', '🎐', '🎑', '🧧', '🎀', '🎁', '🎗️', '🎟️', '🎫', '🎖️', '🏆', '🏅', '🥇', '🥈', '🥉', '⚽', '⚾', '🥎', '🏀', '🏐', '🏈', '🏉', '🎾', '🥏', '🎳', '🏏', '🏑', '🏒', '🥍', '🏓', '🏸', '🥊', '🥋', '🥅', '⛳', '⛸️', '🎣', '🤿', '🎽', '🎿', '🛷', '🥌', '🎯', '🪀', '🪁', '🎱', '🔮', '🪄', '🧿', '🎮', '🕹️', '🎰', '🎲', '🧩', '🧸', '🪅', '🪆', '♠️', '♥️', '♦️', '♣️', '♟️', '🃏', '🀄', '🎴', '🎭', '🖼️', '🎨', '🧵', '🪡', '🧶', '🪢', '👓', '🕶️', '🥽', '🥼', '🦺', '👔', '👕', '👖', '🧣', '🧤', '🧥', '🧦', '👗', '👘', '🥻', '🩱', '🩲', '🩳', '👙', '👚', '👛', '👜', '👝', '🛍️', '🎒', '🩴', '👞', '👟', '🥾', '🥿', '👠', '👡', '🩰', '👢', '👑', '👒', '🎩', '🎓', '🧢', '🪖', '⛑️', '📿', '💄', '💍', '💎', '🔇', '🔈', '🔉', '🔊', '📢', '📣', '📯', '🔔', '🔕', '🎼', '🎵', '🎶', '🎙️', '🎚️', '🎛️', '🎤', '🎧', '📻', '🎷', '🪗', '🎸', '🎹', '🎺', '🎻', '🪕', '🥁', '🪘', '📱', '📲', '☎️', '📞', '📟', '📠', '🔋', '🔌', '💻', '🖥️', '🖨️', '⌨️', '🖱️', '🖲️', '💽', '💾', '💿', '📀', '🧮', '🎥', '🎞️', '📽️', '🎬', '📺', '📷', '📸', '📹', '📼', '🔍', '🔎', '🕯️', '💡', '🔦', '🏮', '🪔', '📔', '📕', '📖', '📗', '📘', '📙', '📚', '📓', '📒', '📃', '📜', '📄', '📰', '🗞️', '📑', '🔖', '🏷️', '💰', '🪙', '💴', '💵', '💶', '💷', '💸', '💳', '🧾', '💹', '✉️', '📧', '📨', '📩', '📤', '📥', '📦', '📫', '📪', '📬', '📭', '📮', '🗳️', '✏️', '✒️', '🖋️', '🖊️', '🖌️', '🖍️', '📝', '💼', '📁', '📂', '🗂️', '📅', '📆', '🗒️', '🗓️', '📇', '📈', '📉', '📊', '📋', '📌', '📍', '📎', '🖇️', '📏', '📐', '✂️', '🗃️', '🗄️', '🗑️', '🔒', '🔓', '🔏', '🔐', '🔑', '🗝️', '🔨', '🪓', '⛏️', '⚒️', '🛠️', '🗡️', '⚔️', '🔫', '🪃', '🏹', '🛡️', '🪚', '🔧', '🪛', '🔩', '⚙️', '🗜️', '⚖️', '🦯', '🔗', '⛓️', '🪝', '🧰', '🧲', '🪜', '⚗️', '🧪', '🧫', '🧬', '🔬', '🔭', '📡', '💉', '🩸', '💊', '🩹', '🩺', '🚪', '🛗', '🪞', '🪟', '🛏️', '🛋️', '🪑', '🚽', '🪠', '🚿', '🛁', '🪤', '🪒', '🧴', '🧷', '🧹', '🧺', '🧻', '🪣', '🧼', '🪥', '🧽', '🧯', '🛒', '🚬', '⚰️', '🪦', '⚱️', '🗿', '🪧', '🏧', '🚮', '🚰', '♿', '🚹', '🚺', '🚻', '🚼', '🚾', '🛂', '🛃', '🛄', '🛅', '⚠️', '🚸', '⛔', '🚫', '🚳', '🚭', '🚯', '🚱', '🚷', '📵', '🔞', '☢️', '☣️', '⬆️', '↗️', '➡️', '↘️', '⬇️', '↙️', '⬅️', '↖️', '↕️', '↔️', '↩️', '↪️', '⤴️', '⤵️', '🔃', '🔄', '🔙', '🔚', '🔛', '🔜', '🔝', '🛐', '⚛️', '🕉️', '✡️', '☸️', '☯️', '✝️', '☦️', '☪️', '☮️', '🕎', '🔯', '♈', '♉', '♊', '♋', '♌', '♍', '♎', '♏', '♐', '♑', '♒', '♓', '⛎', '🔀', '🔁', '🔂', '▶️', '⏩', '⏭️', '⏯️', '◀️', '⏪', '⏮️', '🔼', '⏫', '🔽', '⏬', '⏸️', '⏹️', '⏺️', '⏏️', '🎦', '🔅', '🔆', '📶', '📳', '📴', '♀️', '♂️', '⚧️', '✖️', '➕', '➖', '➗', '♾️', '‼️', '⁉️', '❓', '❔', '❕', '❗', '〰️', '💱', '💲', '⚕️', '♻️', '⚜️', '🔱', '📛', '🔰', '⭕', '✅', '☑️', '✔️', '❌', '❎', '➰', '➿', '〽️', '✳️', '✴️', '❇️', '©️', '®️', '™️', '#️⃣', '*️⃣', '0️⃣', '1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟', '🔠', '🔡', '🔢', '🔣', '🔤', '🅰️', '🆎', '🅱️', '🆑', '🆒', '🆓', 'ℹ️', '🆔', 'Ⓜ️', '🆕', '🆖', '🅾️', '🆗', '🅿️', '🆘', '🆙', '🆚', '🈁', '🈂️', '🈷️', '🈶', '🈯', '🉐', '🈹', '🈚', '🈲', '🉑', '🈸', '🈴', '🈳', '㊗️', '㊙️', '🈺', '🈵', '🔴', '🟠', '🟡', '🟢', '🔵', '🟣', '🟤', '⚫', '⚪', '🟥', '🟧', '🟨', '🟩', '🟦', '🟪', '🟫', '⬛', '⬜', '◼️', '◻️', '◾', '◽', '▪️', '▫️', '🔶', '🔷', '🔸', '🔹', '🔺', '🔻', '💠', '🔘', '🔳', '🔲', '🏁', '🚩', '🎌', '🏴', '🏳️', '🏳️‍🌈', '🏳️‍⚧️', '🏴‍☠️'];
-  
+
+  // Word lists for Real Words mode - organized by length
+  const realWordLists = {
+    1: ['A', 'I'],
+    2: ['AT', 'BE', 'DO', 'GO', 'HE', 'IF', 'IN', 'IS', 'IT', 'ME', 'MY', 'NO', 'OF', 'ON', 'OR', 'SO', 'TO', 'UP', 'US', 'WE'],
+    3: ['ACE', 'ACT', 'ADD', 'AGE', 'AGO', 'AID', 'AIM', 'AIR', 'ALL', 'AND', 'ANT', 'ANY', 'APE', 'ARC', 'ARE', 'ARK', 'ARM', 'ART', 'ASH', 'ASK', 'ATE', 'BAD', 'BAG', 'BAR', 'BAT', 'BAY', 'BED', 'BEE', 'BET', 'BIG', 'BIN', 'BIT', 'BOW', 'BOX', 'BOY', 'BUD', 'BUG', 'BUS', 'BUT', 'BUY', 'CAB', 'CAP', 'CAR', 'CAT', 'COW', 'CRY', 'CUP', 'CUT', 'DAD', 'DAY', 'DEN', 'DEW', 'DID', 'DIE', 'DIG', 'DOC', 'DOG', 'DOT', 'DRY', 'DUE', 'DUG', 'EAR', 'EAT', 'EGG', 'ELF', 'ELK', 'ELM', 'EMU', 'END', 'ERA', 'EVE', 'EYE', 'FAD', 'FAN', 'FAR', 'FAT', 'FAX', 'FED', 'FEE', 'FEW', 'FIG', 'FIN', 'FIR', 'FIT', 'FIX', 'FLY', 'FOE', 'FOG', 'FOR', 'FOX', 'FRY', 'FUN', 'FUR', 'GAP', 'GAS', 'GAY', 'GEL', 'GEM', 'GET', 'GNU', 'GOD', 'GOT', 'GUM', 'GUN', 'GUT', 'GUY', 'GYM', 'HAD', 'HAM', 'HAS', 'HAT', 'HAY', 'HEN', 'HER', 'HEW', 'HEX', 'HID', 'HIM', 'HIP', 'HIS', 'HIT', 'HOB', 'HOE', 'HOG', 'HOP', 'HOT', 'HOW', 'HUB', 'HUE', 'HUG', 'HUM', 'HUT', 'ICE', 'ICY', 'ILL', 'IMP', 'INK', 'INN', 'ION', 'IRE', 'IRK', 'ITS', 'IVY', 'JAB', 'JAG', 'JAM', 'JAR', 'JAW', 'JAY', 'JET', 'JIG', 'JOB', 'JOG', 'JOT', 'JOY', 'JUG', 'KEG', 'KEN', 'KEY', 'KID', 'KIN', 'KIT', 'LAB', 'LAC', 'LAD', 'LAG', 'LAP', 'LAW', 'LAX', 'LAY', 'LEA', 'LED', 'LEG', 'LET', 'LID', 'LIE', 'LIP', 'LIT', 'LOG', 'LOT', 'LOW', 'LUG', 'MAD', 'MAN', 'MAP', 'MAR', 'MAT', 'MAY', 'MEN', 'MET', 'MIX', 'MOB', 'MOM', 'MOP', 'MOW', 'MUD', 'MUG', 'NAB', 'NAG', 'NAP', 'NAY', 'NET', 'NEW', 'NIL', 'NIT', 'NOD', 'NOR', 'NOT', 'NOW', 'NUN', 'NUT', 'OAK', 'OAR', 'OAT', 'ODD', 'ODE', 'OFF', 'OFT', 'OIL', 'OLD', 'ONE', 'OPT', 'ORB', 'ORE', 'OUR', 'OUT', 'OWE', 'OWL', 'OWN', 'PAD', 'PAL', 'PAN', 'PAP', 'PAR', 'PAT', 'PAW', 'PAY', 'PEA', 'PEG', 'PEN', 'PEP', 'PER', 'PET', 'PEW', 'PIE', 'PIG', 'PIN', 'PIT', 'PLY', 'POD', 'POP', 'POT', 'POW', 'PRY', 'PUB', 'PUG', 'PUN', 'PUP', 'PUT', 'RAG', 'RAM', 'RAN', 'RAP', 'RAT', 'RAW', 'RAY', 'RED', 'RIB', 'RID', 'RIG', 'RIM', 'RIP', 'ROB', 'ROD', 'ROE', 'ROT', 'ROW', 'RUB', 'RUG', 'RUM', 'RUN', 'RUT', 'RYE', 'SAC', 'SAD', 'SAG', 'SAP', 'SAT', 'SAW', 'SAX', 'SAY', 'SEA', 'SET', 'SEW', 'SHE', 'SHY', 'SIN', 'SIP', 'SIR', 'SIS', 'SIT', 'SIX', 'SKI', 'SKY', 'SLY', 'SOB', 'SOD', 'SON', 'SOP', 'SOT', 'SOW', 'SOX', 'SOY', 'SPA', 'SPY', 'STY', 'SUB', 'SUM', 'SUN', 'SUP', 'TAB', 'TAD', 'TAG', 'TAN', 'TAP', 'TAR', 'TAT', 'TAX', 'TEA', 'TEN', 'THE', 'THY', 'TIC', 'TIE', 'TIN', 'TIP', 'TOE', 'TON', 'TOO', 'TOP', 'TOT', 'TOW', 'TOY', 'TRY', 'TUB', 'TUG', 'TUT', 'TWO', 'UGH', 'UMP', 'URN', 'USE', 'VAN', 'VAT', 'VET', 'VEX', 'VIA', 'VIE', 'VOW', 'WAD', 'WAG', 'WAR', 'WAS', 'WAX', 'WAY', 'WEB', 'WED', 'WEE', 'WET', 'WHO', 'WHY', 'WIG', 'WIN', 'WIT', 'WOE', 'WOK', 'WON', 'WOO', 'WOW', 'YAK', 'YAM', 'YAP', 'YAW', 'YEA', 'YES', 'YET', 'YEW', 'YIN', 'YON', 'YOU', 'YOW', 'ZAP', 'ZEN', 'ZIP', 'ZIT', 'ZOO'],
+    4: ['ABLE', 'ACHE', 'ACRE', 'AGED', 'ALSO', 'ARCH', 'AREA', 'ARMY', 'ATOM', 'BABY', 'BACK', 'BAKE', 'BALL', 'BAND', 'BANK', 'BARN', 'BASE', 'BATH', 'BEAD', 'BEAM', 'BEAN', 'BEAR', 'BEAT', 'BEEN', 'BEER', 'BELL', 'BELT', 'BEND', 'BENT', 'BEST', 'BIKE', 'BILE', 'BILL', 'BIND', 'BIRD', 'BITE', 'BLOW', 'BLUE', 'BLUR', 'BOAR', 'BOAT', 'BODY', 'BOIL', 'BOLD', 'BOLT', 'BOMB', 'BOND', 'BONE', 'BOOK', 'BOOM', 'BOOT', 'BORE', 'BORN', 'BOSS', 'BOTH', 'BOWL', 'BRED', 'BREW', 'BUMP', 'BURN', 'BURY', 'BUSH', 'BUSY', 'BYTE', 'CAGE', 'CAKE', 'CALF', 'CALL', 'CALM', 'CAME', 'CAMP', 'CANE', 'CAPE', 'CARD', 'CARE', 'CART', 'CASE', 'CASH', 'CAST', 'CAVE', 'CELL', 'CHAT', 'CHEF', 'CHIP', 'CHOP', 'CITY', 'CLAD', 'CLAM', 'CLAN', 'CLAP', 'CLAW', 'CLAY', 'CLIP', 'CLUB', 'COAL', 'COAT', 'CODE', 'COIL', 'COIN', 'COLD', 'COLT', 'COMB', 'COME', 'CONE', 'COOK', 'COOL', 'COPE', 'COPY', 'CORD', 'CORE', 'CORK', 'CORN', 'COST', 'COUP', 'COVE', 'CRAB', 'CREW', 'CROP', 'CROW', 'CUBE', 'CURE', 'CURL', 'CUTE', 'DAMP', 'DARE', 'DARK', 'DART', 'DASH', 'DATA', 'DATE', 'DAWN', 'DAYS', 'DEAD', 'DEAF', 'DEAL', 'DEAN', 'DEAR', 'DEBT', 'DECK', 'DEED', 'DEEM', 'DEEP', 'DEER', 'DENY', 'DESK', 'DIAL', 'DICE', 'DIED', 'DIET', 'DIME', 'DINE', 'DIRT', 'DISC', 'DISH', 'DISK', 'DIVE', 'DOCK', 'DOES', 'DOLL', 'DOME', 'DONE', 'DOOM', 'DOOR', 'DOSE', 'DOVE', 'DOWN', 'DOZE', 'DRAG', 'DRAW', 'DREW', 'DRIP', 'DROP', 'DRUG', 'DRUM', 'DUCK', 'DULL', 'DUMB', 'DUMP', 'DUNE', 'DUNG', 'DUNK', 'DUSK', 'DUST', 'DUTY', 'EACH', 'EARL', 'EARN', 'EASE', 'EAST', 'EASY', 'EATS', 'ECHO', 'EDGE', 'EDIT', 'ELSE', 'EMIT', 'EPIC', 'EVEN', 'EVER', 'EVIL', 'EXAM', 'EXIT', 'FACE', 'FACT', 'FADE', 'FAIL', 'FAIR', 'FAKE', 'FALL', 'FAME', 'FANG', 'FARM', 'FAST', 'FATE', 'FAWN', 'FEAR', 'FEAT', 'FEED', 'FEEL', 'FEET', 'FELL', 'FELT', 'FERN', 'FILE', 'FILL', 'FILM', 'FIND', 'FINE', 'FIRE', 'FIRM', 'FISH', 'FIST', 'FIVE', 'FLAG', 'FLAP', 'FLAT', 'FLAW', 'FLEA', 'FLED', 'FLEE', 'FLEW', 'FLIP', 'FLOP', 'FLOW', 'FOAM', 'FOIL', 'FOLK', 'FOND', 'FONT', 'FOOD', 'FOOL', 'FOOT', 'FORD', 'FORK', 'FORM', 'FORT', 'FOUL', 'FOUR', 'FOWL', 'FRAY', 'FREE', 'FROG', 'FROM', 'FUEL', 'FULL', 'FUME', 'FUND', 'FUSE', 'FUSS', 'GAIN', 'GALE', 'GAME', 'GANG', 'GATE', 'GAVE', 'GAZE', 'GEAR', 'GENE', 'GERM', 'GIFT', 'GILL', 'GIRL', 'GIVE', 'GLAD', 'GLOW', 'GLUE', 'GNAT', 'GOAL', 'GOAT', 'GOES', 'GOLD', 'GOLF', 'GONE', 'GOOD', 'GORE', 'GORY', 'GOWN', 'GRAB', 'GRAM', 'GRAY', 'GREW', 'GRID', 'GRIM', 'GRIN', 'GRIP', 'GROW', 'GULF', 'GULL', 'GURU', 'GUST', 'GUYS', 'HACK', 'HAIL', 'HAIR', 'HALF', 'HALL', 'HALT', 'HAND', 'HANG', 'HARD', 'HARE', 'HARM', 'HARP', 'HASH', 'HATE', 'HAUL', 'HAVE', 'HAWK', 'HAZE', 'HEAD', 'HEAL', 'HEAP', 'HEAR', 'HEAT', 'HEED', 'HEEL', 'HEIR', 'HELD', 'HELL', 'HELM', 'HELP', 'HEMP', 'HERB', 'HERD', 'HERE', 'HERO', 'HERS', 'HIDE', 'HIGH', 'HIKE', 'HILL', 'HILT', 'HINT', 'HIRE', 'HISS', 'HIVE', 'HOLD', 'HOLE', 'HOME', 'HONE', 'HOOD', 'HOOF', 'HOOK', 'HOOP', 'HOOT', 'HOPE', 'HORN', 'HOSE', 'HOST', 'HOUR', 'HUGE', 'HULL', 'HUMP', 'HUNG', 'HUNK', 'HUNT', 'HURL', 'HURT', 'HUSH', 'HYMN', 'IBEX', 'ICON', 'IDEA', 'IDLE', 'IDOL', 'INCH', 'INTO', 'IRIS', 'IRON', 'ISLE', 'ITCH', 'ITEM', 'JACK', 'JADE', 'JAIL', 'JEAN', 'JEEP', 'JERK', 'JEST', 'JINX', 'JOBS', 'JOCK', 'JOIN', 'JOKE', 'JOLT', 'JOWL', 'JUDGE', 'JULY', 'JUMP', 'JUNE', 'JUNK', 'JURY', 'JUST', 'JUTE', 'KALE', 'KEEN', 'KEEP', 'KEPT', 'KICK', 'KILL', 'KILT', 'KIND', 'KING', 'KISS', 'KITE', 'KNEE', 'KNEW', 'KNIT', 'KNOB', 'KNOT', 'KNOW', 'LACE', 'LACK', 'LACY', 'LADY', 'LAID', 'LAIR', 'LAKE', 'LAMB', 'LAME', 'LAMP', 'LAND', 'LANE', 'LARK', 'LASH', 'LASS', 'LAST', 'LATE', 'LAUD', 'LAVA', 'LAWN', 'LAWS', 'LEAD', 'LEAF', 'LEAK', 'LEAN', 'LEAP', 'LEFT', 'LEND', 'LENS', 'LENT', 'LESS', 'LEVY', 'LIAR', 'LICE', 'LICK', 'LIED', 'LIEN', 'LIES', 'LIFE', 'LIFT', 'LIKE', 'LILY', 'LIMB', 'LIME', 'LIMP', 'LINE', 'LINK', 'LINT', 'LION', 'LIPS', 'LIST', 'LIVE', 'LOAD', 'LOAF', 'LOAM', 'LOAN', 'LOBE', 'LOCK', 'LOFT', 'LOGO', 'LONE', 'LONG', 'LOOK', 'LOOM', 'LOOP', 'LOOT', 'LORD', 'LORE', 'LORN', 'LOSE', 'LOSS', 'LOST', 'LOUD', 'LOUT', 'LOVE', 'LUCK', 'LULL', 'LUMP', 'LUNG', 'LURE', 'LURK', 'LUSH', 'LUST', 'LUTE', 'LYNX', 'LYRE', 'MACE', 'MADE', 'MAGI', 'MAID', 'MAIL', 'MAIM', 'MAIN', 'MAKE', 'MALE', 'MALL', 'MALT', 'MANE', 'MANY', 'MAPS', 'MARE', 'MARK', 'MARS', 'MASH', 'MASK', 'MASS', 'MAST', 'MATE', 'MATH', 'MAUL', 'MAZE', 'MEAD', 'MEAL', 'MEAN', 'MEAT', 'MEEK', 'MEET', 'MELD', 'MELT', 'MEND', 'MENU', 'MEOW', 'MERE', 'MESH', 'MESS', 'MICE', 'MIDI', 'MILD', 'MILE', 'MILK', 'MILL', 'MIME', 'MIND', 'MINE', 'MINT', 'MIRE', 'MISS', 'MIST', 'MITE', 'MITT', 'MOAN', 'MOAT', 'MOCK', 'MODE', 'MOLD', 'MOLE', 'MOLT', 'MONK', 'MOOD', 'MOON', 'MOOR', 'MOOT', 'MORE', 'MORN', 'MOSS', 'MOST', 'MOTH', 'MOVE', 'MUCH', 'MUCK', 'MULE', 'MULL', 'MURK', 'MUSE', 'MUSH', 'MUSK', 'MUST', 'MUTE', 'MYTH', 'NAIL', 'NAME', 'NAPE', 'NAVY', 'NEAR', 'NEAT', 'NECK', 'NEED', 'NEON', 'NEST', 'NEWS', 'NEWT', 'NEXT', 'NICE', 'NICK', 'NINE', 'NODE', 'NONE', 'NOON', 'NORM', 'NOSE', 'NOTE', 'NOUN', 'NOVA', 'NULL', 'NUMB', 'OATH', 'OBEY', 'ODDS', 'ODOR', 'OGRE', 'OKAY', 'OKRA', 'OMEN', 'OMIT', 'ONCE', 'ONLY', 'ONTO', 'ONUS', 'OOZE', 'OPAL', 'OPEN', 'OPUS', 'ORAL', 'ORCA', 'OVEN', 'OVER', 'OWED', 'OWES', 'OWNS', 'OXEN', 'PACE', 'PACK', 'PACT', 'PAGE', 'PAID', 'PAIL', 'PAIN', 'PAIR', 'PALE', 'PALM', 'PANE', 'PANG', 'PANT', 'PAPA', 'PARK', 'PART', 'PASS', 'PAST', 'PATH', 'PAVE', 'PAWN', 'PEAK', 'PEAL', 'PEAR', 'PEAT', 'PECK', 'PEEK', 'PEEL', 'PEER', 'PELT', 'PERK', 'PEST', 'PHEW', 'PICK', 'PIER', 'PIKE', 'PILE', 'PILL', 'PINE', 'PING', 'PINK', 'PINT', 'PIPE', 'PITY', 'PLAN', 'PLAY', 'PLEA', 'PLED', 'PLOD', 'PLOT', 'PLOW', 'PLOY', 'PLUG', 'PLUM', 'PLUS', 'POCK', 'POEM', 'POET', 'POKE', 'POLE', 'POLL', 'POLO', 'POMP', 'POND', 'PONY', 'POOL', 'POOR', 'POPE', 'PORE', 'PORK', 'PORT', 'POSE', 'POST', 'POUR', 'POUT', 'PRAY', 'PREY', 'PRIM', 'PROD', 'PROM', 'PROP', 'PROW', 'PRUNE', 'PUCK', 'PUFF', 'PULL', 'PULP', 'PUMA', 'PUMP', 'PUNK', 'PUNY', 'PUPA', 'PURE', 'PURR', 'PUSH', 'QUID', 'QUIZ', 'RACE', 'RACK', 'RAFT', 'RAGE', 'RAID', 'RAIL', 'RAIN', 'RAKE', 'RAMP', 'RANG', 'RANK', 'RANT', 'RARE', 'RASH', 'RASP', 'RATE', 'RAVE', 'RAYS', 'RAZE', 'READ', 'REAL', 'REAM', 'REAP', 'REAR', 'REED', 'REEF', 'REEK', 'REEL', 'REIN', 'RELY', 'REND', 'RENT', 'REST', 'RHYME', 'RICE', 'RICH', 'RIDE', 'RIFE', 'RIFT', 'RILE', 'RILL', 'RIME', 'RIND', 'RING', 'RINK', 'RIOT', 'RIPE', 'RISE', 'RISK', 'RITE', 'ROAD', 'ROAM', 'ROAN', 'ROAR', 'ROBE', 'ROCK', 'RODE', 'ROLE', 'ROLL', 'ROMP', 'ROOF', 'ROOK', 'ROOM', 'ROOT', 'ROPE', 'ROSE', 'ROSY', 'ROTE', 'ROUT', 'ROVE', 'ROWS', 'RUBE', 'RUBY', 'RUDE', 'RUFF', 'RUIN', 'RULE', 'RUMP', 'RUNG', 'RUNS', 'RUNT', 'RUSE', 'RUSH', 'RUST', 'RUTS', 'SACK', 'SAFE', 'SAGA', 'SAGE', 'SAID', 'SAIL', 'SAKE', 'SALE', 'SALT', 'SAME', 'SAND', 'SANE', 'SANG', 'SANK', 'SASH', 'SASS', 'SAVE', 'SCAM', 'SCAN', 'SCAR', 'SCAT', 'SEAL', 'SEAM', 'SEAR', 'SEAS', 'SEAT', 'SECT', 'SEED', 'SEEK', 'SEEM', 'SEEN', 'SEEP', 'SEER', 'SELF', 'SELL', 'SEMI', 'SEND', 'SENT', 'SEPT', 'SERF', 'SETS', 'SEWN', 'SHAD', 'SHAG', 'SHAM', 'SHARD', 'SHAW', 'SHED', 'SHIN', 'SHIP', 'SHOD', 'SHOE', 'SHOP', 'SHOT', 'SHOW', 'SHUN', 'SHUT', 'SICK', 'SIDE', 'SIFT', 'SIGH', 'SIGN', 'SILK', 'SILL', 'SILO', 'SILT', 'SING', 'SINK', 'SIRE', 'SITE', 'SIZE', 'SKEW', 'SKID', 'SKIM', 'SKIN', 'SKIP', 'SKIT', 'SLAB', 'SLAG', 'SLAM', 'SLAP', 'SLAT', 'SLAW', 'SLAY', 'SLED', 'SLEW', 'SLID', 'SLIM', 'SLIP', 'SLIT', 'SLOB', 'SLOP', 'SLOT', 'SLOW', 'SLUG', 'SLUM', 'SLUR', 'SMOG', 'SNAP', 'SNARE', 'SNIP', 'SNOB', 'SNORE', 'SNOW', 'SNUB', 'SNUG', 'SOAK', 'SOAP', 'SOAR', 'SOCK', 'SODA', 'SOFA', 'SOFT', 'SOIL', 'SOLD', 'SOLE', 'SOLO', 'SOME', 'SONG', 'SONS', 'SOON', 'SOOT', 'SORE', 'SORT', 'SOUL', 'SOUP', 'SOUR', 'SOWN', 'SPAN', 'SPAR', 'SPAT', 'SPEC', 'SPED', 'SPIN', 'SPIT', 'SPOT', 'SPUD', 'SPUR', 'STAB', 'STAG', 'STAR', 'STAY', 'STEM', 'STEP', 'STEW', 'STIR', 'STOP', 'STOW', 'STUB', 'STUD', 'STUN', 'SUCH', 'SUDS', 'SUED', 'SUES', 'SUIT', 'SULK', 'SUMO', 'SUMP', 'SUMS', 'SUNG', 'SUNK', 'SUNS', 'SUPE', 'SURF', 'SWAB', 'SWAG', 'SWAM', 'SWAN', 'SWAP', 'SWAT', 'SWAY', 'SWEAR', 'SWIM', 'SWUM', 'TACK', 'TACT', 'TAIL', 'TAKE', 'TALE', 'TALK', 'TALL', 'TAME', 'TANG', 'TANK', 'TAPE', 'TAPS', 'TARE', 'TARN', 'TART', 'TASK', 'TAUT', 'TAXI', 'TEAK', 'TEAL', 'TEAM', 'TEAR', 'TEAS', 'TEAT', 'TEEN', 'TELL', 'TEMP', 'TEND', 'TENS', 'TENT', 'TERM', 'TERN', 'TEST', 'TEXT', 'THAN', 'THAT', 'THAW', 'THEE', 'THEM', 'THEN', 'THEW', 'THEY', 'THIN', 'THIS', 'THOU', 'THUD', 'THUG', 'THUS', 'TICK', 'TIDE', 'TIDY', 'TIED', 'TIER', 'TIES', 'TIFF', 'TILE', 'TILL', 'TILT', 'TIME', 'TINE', 'TING', 'TINT', 'TINY', 'TIPS', 'TIRE', 'TOAD', 'TOES', 'TOFU', 'TOGA', 'TOIL', 'TOLD', 'TOLL', 'TOMB', 'TOME', 'TONE', 'TONG', 'TONS', 'TOOK', 'TOOL', 'TOOT', 'TOPS', 'TORE', 'TORN', 'TOSS', 'TOTE', 'TOUR', 'TOUT', 'TOWN', 'TOYS', 'TRAM', 'TRAP', 'TRAY', 'TREE', 'TREK', 'TRIM', 'TRIO', 'TRIP', 'TROD', 'TROT', 'TROY', 'TRUE', 'TSAR', 'TUBA', 'TUBE', 'TUCK', 'TUFT', 'TUNA', 'TUNE', 'TURF', 'TURN', 'TUSK', 'TUTU', 'TWIG', 'TWIN', 'TWIT', 'TYKE', 'TYPE', 'UGLY', 'UNDO', 'UNIT', 'UNTO', 'UPON', 'USED', 'USER', 'USES', 'VAIN', 'VALE', 'VAMP', 'VANE', 'VARY', 'VASE', 'VAST', 'VATS', 'VEAL', 'VEER', 'VEIL', 'VEIN', 'VEND', 'VENT', 'VERB', 'VERY', 'VEST', 'VETO', 'VIAL', 'VICE', 'VIEW', 'VILE', 'VINE', 'VISA', 'VISE', 'VOID', 'VOLT', 'VOTE', 'VOWS', 'WADE', 'WAFT', 'WAGE', 'WAIL', 'WAIT', 'WAKE', 'WALK', 'WALL', 'WAND', 'WANE', 'WANT', 'WARD', 'WARE', 'WARM', 'WARN', 'WARP', 'WARS', 'WART', 'WARY', 'WASH', 'WASP', 'WAVE', 'WAVY', 'WAXY', 'WAYS', 'WEAK', 'WEAL', 'WEAN', 'WEAR', 'WEED', 'WEEK', 'WEEP', 'WEFT', 'WEIR', 'WELD', 'WELL', 'WELT', 'WENT', 'WEPT', 'WERE', 'WEST', 'WHAM', 'WHAT', 'WHEN', 'WHET', 'WHEW', 'WHIG', 'WHIM', 'WHINE', 'WHIP', 'WHIR', 'WHIT', 'WICK', 'WIDE', 'WIFE', 'WILD', 'WILE', 'WILL', 'WILT', 'WILY', 'WIMP', 'WIND', 'WINE', 'WING', 'WINK', 'WINS', 'WIPE', 'WIRE', 'WIRY', 'WISE', 'WISH', 'WISP', 'WITH', 'WITS', 'WOKE', 'WOLF', 'WOMB', 'WONT', 'WOOD', 'WOOF', 'WOOL', 'WORD', 'WORE', 'WORK', 'WORM', 'WORN', 'WORT', 'WOVE', 'WOVEN', 'WRAP', 'WREN', 'WRIT', 'YANK', 'YARD', 'YARN', 'YAWL', 'YAWN', 'YEAH', 'YEAR', 'YEAS', 'YELL', 'YELP', 'YENS', 'YETI', 'YEWS', 'YOKE', 'YOLK', 'YOUR', 'YOWL', 'YULE', 'ZEAL', 'ZERO', 'ZEST', 'ZINC', 'ZING', 'ZONE', 'ZOOM', 'ZOOS']
+  };
+
   const generateMandelbrotSVG = (seed) => {
     const random = (s) => { const x = Math.sin(s++) * 10000; return x - Math.floor(x); };
     
@@ -171,19 +180,47 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
     return svgContent;
   };
   
+  // Helper to check if a string is a real word
+  const isRealWord = (str) => {
+    const upperStr = str.toUpperCase();
+    const len = upperStr.length;
+    if (realWordLists[len]) {
+      return realWordLists[len].includes(upperStr);
+    }
+    return false;
+  };
+
   const generateStimulus = () => {
     const availableTypes = [];
-    if (useLetters) availableTypes.push('letters');
+    if (useRealWords) availableTypes.push('realwords');
+    if (useNonsenseWords) availableTypes.push('nonsense');
     if (useEmojis) availableTypes.push('emojis');
     if (useVoronoi) availableTypes.push('voronoi');
     if (useMandelbrot) availableTypes.push('mandelbrot');
     if (useVibration) availableTypes.push('vibration');
 
-    if (availableTypes.length === 0) availableTypes.push('letters');
+    if (availableTypes.length === 0) availableTypes.push('realwords');
 
     const selectedType = availableTypes[Math.floor(Math.random() * availableTypes.length)];
 
-    if (selectedType === 'emojis') {
+    if (selectedType === 'realwords') {
+      // Get word list for current letter length, or use length 3 if not available
+      const wordList = realWordLists[letterLength] || realWordLists[3];
+      return wordList[Math.floor(Math.random() * wordList.length)];
+    } else if (selectedType === 'nonsense') {
+      // Generate random letters that don't form a real word
+      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+      let result = '';
+      let attempts = 0;
+      do {
+        result = '';
+        for (let i = 0; i < letterLength; i++) {
+          result += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        attempts++;
+      } while (isRealWord(result) && attempts < 100); // Ensure it's not a real word
+      return result;
+    } else if (selectedType === 'emojis') {
       return emojiList[Math.floor(Math.random() * emojiList.length)];
     } else if (selectedType === 'voronoi') {
       return `voronoi_${Math.floor(Math.random() * 1000000)}`;
@@ -191,11 +228,6 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
       return `mandelbrot_${Math.floor(Math.random() * 1000000)}`;
     } else if (selectedType === 'vibration') {
       return `vibration_${Math.floor(Math.random() * vibrationPatterns.length)}`;
-    } else {
-      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-      let result = '';
-      for (let i = 0; i < letterLength; i++) result += chars.charAt(Math.floor(Math.random() * chars.length));
-      return result;
     }
   };
 
@@ -562,7 +594,7 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
     }
 
     return { premises, question: { stimulus1: stimuli[startIdx], relation: questionRelation, stimulus2: stimuli[endIdx] }, correctAnswer, derivedRelation: derivedRelation || 'AMBIGUOUS', allPaths: findAllPaths(premises, stimuli[startIdx], stimuli[endIdx]), allStimuli: stimuli };
-  }, [difficulty, networkComplexity, useLetters, useEmojis, useVoronoi, useMandelbrot, useVibration, letterLength, enabledRelationModes]);
+  }, [difficulty, networkComplexity, useRealWords, useNonsenseWords, useEmojis, useVoronoi, useMandelbrot, useVibration, letterLength, enabledRelationModes]);
 
   const startNewTrial = useCallback(() => {
     try {
@@ -581,7 +613,7 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
       const saveData = {
         score, history, statsHistory,
         currentTrial, timeLeft, feedback, isPaused,
-        settings: { difficulty, timePerQuestion, networkComplexity, spoilerPremises, darkMode, useLetters, useEmojis, useVoronoi, useMandelbrot, useVibration, letterLength, autoProgressMode, universalProgress, modeSpecificProgress, enabledRelationModes },
+        settings: { difficulty, timePerQuestion, networkComplexity, spoilerPremises, darkMode, useRealWords, useNonsenseWords, useEmojis, useVoronoi, useMandelbrot, useVibration, letterLength, autoProgressMode, universalProgress, modeSpecificProgress, enabledRelationModes },
       };
 
       if (user) {
@@ -620,7 +652,7 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
     } catch (error) {
       console.error('Save failed:', error);
     }
-  }, [user, score, history, statsHistory, currentTrial, timeLeft, feedback, isPaused, difficulty, timePerQuestion, networkComplexity, spoilerPremises, darkMode, useLetters, useEmojis, useVoronoi, useMandelbrot, useVibration, letterLength, autoProgressMode, universalProgress, modeSpecificProgress, enabledRelationModes]);
+  }, [user, score, history, statsHistory, currentTrial, timeLeft, feedback, isPaused, difficulty, timePerQuestion, networkComplexity, spoilerPremises, darkMode, useRealWords, useNonsenseWords, useEmojis, useVoronoi, useMandelbrot, useVibration, letterLength, autoProgressMode, universalProgress, modeSpecificProgress, enabledRelationModes]);
 
   const loadFromStorage = useCallback(async () => {
     try {
@@ -658,7 +690,10 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
             if (data.settings.networkComplexity !== undefined) setNetworkComplexity(data.settings.networkComplexity);
             if (data.settings.spoilerPremises !== undefined) setSpoilerPremises(data.settings.spoilerPremises);
             if (data.settings.darkMode !== undefined) setDarkMode(data.settings.darkMode);
-            if (data.settings.useLetters !== undefined) setUseLetters(data.settings.useLetters);
+            // Backward compatibility: convert old useLetters to useRealWords
+            if (data.settings.useLetters !== undefined) setUseRealWords(data.settings.useLetters);
+            if (data.settings.useRealWords !== undefined) setUseRealWords(data.settings.useRealWords);
+            if (data.settings.useNonsenseWords !== undefined) setUseNonsenseWords(data.settings.useNonsenseWords);
             if (data.settings.useEmojis !== undefined) setUseEmojis(data.settings.useEmojis);
             if (data.settings.useVoronoi !== undefined) setUseVoronoi(data.settings.useVoronoi);
             if (data.settings.useMandelbrot !== undefined) setUseMandelbrot(data.settings.useMandelbrot);
@@ -693,7 +728,10 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
             if (data.settings.networkComplexity !== undefined) setNetworkComplexity(data.settings.networkComplexity);
             if (data.settings.spoilerPremises !== undefined) setSpoilerPremises(data.settings.spoilerPremises);
             if (data.settings.darkMode !== undefined) setDarkMode(data.settings.darkMode);
-            if (data.settings.useLetters !== undefined) setUseLetters(data.settings.useLetters);
+            // Backward compatibility: convert old useLetters to useRealWords
+            if (data.settings.useLetters !== undefined) setUseRealWords(data.settings.useLetters);
+            if (data.settings.useRealWords !== undefined) setUseRealWords(data.settings.useRealWords);
+            if (data.settings.useNonsenseWords !== undefined) setUseNonsenseWords(data.settings.useNonsenseWords);
             if (data.settings.useEmojis !== undefined) setUseEmojis(data.settings.useEmojis);
             if (data.settings.useVoronoi !== undefined) setUseVoronoi(data.settings.useVoronoi);
             if (data.settings.useMandelbrot !== undefined) setUseMandelbrot(data.settings.useMandelbrot);
@@ -726,7 +764,7 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
     }
   }, [isInitialized, currentTrial, timeLeft, feedback, isPaused, score, history, statsHistory,
       difficulty, timePerQuestion, networkComplexity, spoilerPremises, darkMode,
-      useLetters, useEmojis, useVoronoi, useMandelbrot, useVibration, letterLength,
+      useRealWords, useNonsenseWords, useEmojis, useVoronoi, useMandelbrot, useVibration, letterLength,
       autoProgressMode, universalProgress, modeSpecificProgress, enabledRelationModes]);
 
   const resetGame = () => {
@@ -1076,19 +1114,19 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
     positions[firstStimulus] = { v: 'CENTER', h: 'CENTER', row: 1, col: 1, vLevel: 0 };
 
     // Helper to get row/col offset from direction
-    // Helper to get row/col offset from direction
+    // "X is NORTH of Y" means Y is NORTH of X, so X is SOUTH (below) of Y
     // Grid layout: row 0 = top, row 1 = middle, row 2 = bottom
     // col 0 = left, col 1 = middle, col 2 = right
     const getOffset = (direction) => {
       const offsets = {
-        'NORTH': [-1, 0],  // Move up (decrease row)
-        'SOUTH': [1, 0],   // Move down (increase row)
-        'EAST': [0, 1],    // Move right (increase col)
-        'WEST': [0, -1],   // Move left (decrease col)
-        'NORTHEAST': [-1, 1],  // Up + Right
-        'NORTHWEST': [-1, -1], // Up + Left
-        'SOUTHEAST': [1, 1],   // Down + Right
-        'SOUTHWEST': [1, -1],  // Down + Left
+        'NORTH': [1, 0],   // Y is NORTH, so X moves down (increase row)
+        'SOUTH': [-1, 0],  // Y is SOUTH, so X moves up (decrease row)
+        'EAST': [0, -1],   // Y is EAST, so X moves left (decrease col)
+        'WEST': [0, 1],    // Y is WEST, so X moves right (increase col)
+        'NORTHEAST': [1, -1],   // Y is NE, so X moves down + left
+        'NORTHWEST': [1, 1],    // Y is NW, so X moves down + right
+        'SOUTHEAST': [-1, -1],  // Y is SE, so X moves up + left
+        'SOUTHWEST': [-1, 1],   // Y is SW, so X moves up + right
         'CENTER': [0, 0]
       };
       return offsets[direction] || [0, 0];
@@ -1929,13 +1967,18 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
                 <h3 className={`text-sm font-bold mb-3 ${darkMode ? 'text-indigo-400' : 'text-indigo-600'}`}>Stimulus Display</h3>
                 <div className="space-y-3">
                   <label className="flex items-center space-x-2 cursor-pointer">
-                    <input type="checkbox" checked={useLetters} onChange={(e) => setUseLetters(e.target.checked)} className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500" />
-                    <span className={`text-sm font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Use Letters (ABC)</span>
+                    <input type="checkbox" checked={useRealWords} onChange={(e) => setUseRealWords(e.target.checked)} className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500" />
+                    <span className={`text-sm font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Real Words</span>
                   </label>
-                  
+
+                  <label className="flex items-center space-x-2 cursor-pointer">
+                    <input type="checkbox" checked={useNonsenseWords} onChange={(e) => setUseNonsenseWords(e.target.checked)} className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500" />
+                    <span className={`text-sm font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Nonsense Words</span>
+                  </label>
+
                   <label className="flex items-center space-x-2 cursor-pointer">
                     <input type="checkbox" checked={useEmojis} onChange={(e) => setUseEmojis(e.target.checked)} className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500" />
-                    <span className={`text-sm font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Use Emojis 🎨</span>
+                    <span className={`text-sm font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Emojis 🎨</span>
                   </label>
 
                   <label className="flex items-center space-x-2 cursor-pointer">
@@ -1957,11 +2000,14 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
                     Select one or more types. Stimuli will be randomly chosen from selected types.
                   </p>
 
-                  {useLetters && (
+                  {(useRealWords || useNonsenseWords) && (
                     <div className={`mt-4 pt-4 border-t ${darkMode ? 'border-slate-600' : 'border-gray-200'}`}>
-                      <label className={`block text-sm font-semibold mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Letter Length: {letterLength}</label>
-                      <input type="range" min="1" max="20" value={letterLength} onChange={(e) => setLetterLength(parseInt(e.target.value))} className="w-full accent-indigo-600" />
-                      <input type="number" min="1" max="20" value={letterLength} onChange={(e) => setLetterLength(Math.max(1, Math.min(20, parseInt(e.target.value) || 1)))} className={`w-full mt-2 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors ${darkMode ? 'bg-slate-700 border-slate-600 text-gray-100' : 'bg-white border-gray-300 text-gray-900'}`} />
+                      <label className={`block text-sm font-semibold mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Word Length: {letterLength}</label>
+                      <input type="range" min="1" max="4" value={letterLength} onChange={(e) => setLetterLength(parseInt(e.target.value))} className="w-full accent-indigo-600" />
+                      <input type="number" min="1" max="4" value={letterLength} onChange={(e) => setLetterLength(Math.max(1, Math.min(4, parseInt(e.target.value) || 1)))} className={`w-full mt-2 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors ${darkMode ? 'bg-slate-700 border-slate-600 text-gray-100' : 'bg-white border-gray-300 text-gray-900'}`} />
+                      <p className={`text-xs mt-2 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                        Real words use dictionary words. Nonsense words are random letters that don't form real words.
+                      </p>
                     </div>
                   )}
                 </div>
