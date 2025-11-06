@@ -647,19 +647,16 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
           updated_at: new Date().toISOString()
         };
 
-        const { error: updateError } = await supabase
+        // Use upsert to insert or update
+        const { error } = await supabase
           .from('user_progress')
-          .update(progressData)
-          .eq('user_id', user.id);
+          .upsert(progressData, {
+            onConflict: 'user_id',
+            ignoreDuplicates: false
+          });
 
-        if (updateError) {
-          const { error: insertError } = await supabase
-            .from('user_progress')
-            .insert([progressData]);
-
-          if (insertError) {
-            console.error('Save failed:', insertError);
-          }
+        if (error) {
+          console.error('Save to Supabase failed:', error);
         }
       } else {
         // Save to localStorage if not logged in
