@@ -1295,6 +1295,12 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
     const colors = ['bg-blue-500', 'bg-green-500', 'bg-purple-500', 'bg-orange-500', 'bg-pink-500', 'bg-cyan-500', 'bg-yellow-500', 'bg-red-500'];
     const stimuliList = Object.keys(positions);
 
+    // Create a mapping from stimulus to number (1-indexed)
+    const stimulusToNumber = {};
+    stimuliList.forEach((stimulus, index) => {
+      stimulusToNumber[stimulus] = index + 1;
+    });
+
     // Cell size based on context
     const cellSize = size === 'large' ? 'w-12 h-12 sm:w-16 sm:h-16' : 'w-8 h-8 sm:w-10 sm:h-10';
     const textSize = size === 'large' ? 'text-sm sm:text-base' : 'text-[10px]';
@@ -1351,7 +1357,9 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
                     }`}
                   >
                     {objectsInCell.map((stimulus, i) => (
-                      <span key={i} className={textSize}>{renderStimulus(stimulus)}</span>
+                      <span key={i} className={`${textSize} font-bold`}>
+                        {size === 'large' ? stimulusToNumber[stimulus] : renderStimulus(stimulus)}
+                      </span>
                     ))}
                   </div>
                 );
@@ -1364,21 +1372,52 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
 
     const levelGap = size === 'large' ? 'gap-4' : 'gap-2';
 
+    // Render object legend (only for large size in explanation modal)
+    const renderLegend = () => {
+      if (size !== 'large') return null;
+
+      return (
+        <div className={`mb-4 p-3 rounded-lg ${darkMode ? 'bg-slate-700/50' : 'bg-slate-100'}`}>
+          <h4 className={`text-sm font-semibold mb-2 ${darkMode ? 'text-slate-300' : 'text-slate-600'}`}>Objects:</h4>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+            {stimuliList.map((stimulus, index) => (
+              <div key={stimulus} className="flex items-center gap-2">
+                <div className={`w-8 h-8 flex items-center justify-center rounded border-2 font-bold text-white ${colors[index % colors.length]} ${darkMode ? 'border-slate-300' : 'border-slate-600'}`}>
+                  {index + 1}
+                </div>
+                <span className={`text-sm ${darkMode ? 'text-slate-200' : 'text-slate-700'}`}>
+                  {renderStimulus(stimulus)}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    };
+
     if (is3D) {
       // Get all unique vertical levels and sort them (highest to lowest)
       const verticalLevels = [...new Set(Object.values(positions).map(p => p.vLevel))].sort((a, b) => b - a);
 
       return (
-        <div className={`flex flex-col ${levelGap} items-center`}>
-          {verticalLevels.map(vLevel => (
-            <div key={vLevel}>
-              {render2DGrid(vLevel)}
-            </div>
-          ))}
+        <div className="w-full">
+          {renderLegend()}
+          <div className={`flex flex-col ${levelGap} items-center`}>
+            {verticalLevels.map(vLevel => (
+              <div key={vLevel}>
+                {render2DGrid(vLevel)}
+              </div>
+            ))}
+          </div>
         </div>
       );
     } else {
-      return render2DGrid(0);
+      return (
+        <div className="w-full">
+          {renderLegend()}
+          {render2DGrid(0)}
+        </div>
+      );
     }
   };
 
