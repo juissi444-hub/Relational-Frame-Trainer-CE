@@ -1142,9 +1142,8 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
 
         // Save current in-memory state to Supabase
         // This preserves the active session when logging in
-        // Note: We don't load from Supabase here because we want to keep the current state
-        // The loadFromStorage on app init already loaded any existing data
-        await saveToStorage();
+        // Use ref to get latest saveToStorage with current user
+        await saveToStorageRef.current();
 
         console.log('✅ Current session saved to Supabase for user:', user.id);
       }
