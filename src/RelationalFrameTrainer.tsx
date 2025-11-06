@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Settings, History, Play, Pause, RotateCcw, X, Check, Clock, TrendingUp, Info, LogIn, LogOut, User, Heart, Users, Mail } from 'lucide-react';
 import { supabase } from './supabaseClient';
 
@@ -679,6 +679,12 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
     }
   }, [user, score, history, statsHistory, currentTrial, timeLeft, feedback, isPaused, difficulty, timePerQuestion, networkComplexity, spoilerPremises, darkMode, useRealWords, useNonsenseWords, useRandomLetters, useEmojis, useVoronoi, useMandelbrot, useVibration, letterLength, autoProgressMode, universalProgress, modeSpecificProgress, enabledRelationModes]);
 
+  // Keep a ref to the latest saveToStorage to avoid stale closures
+  const saveToStorageRef = useRef(saveToStorage);
+  useEffect(() => {
+    saveToStorageRef.current = saveToStorage;
+  }, [saveToStorage]);
+
   const loadFromStorage = useCallback(async () => {
     try {
       console.log('loadFromStorage called, user:', user ? user.id : 'null');
@@ -822,17 +828,15 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
   // Auto-save to storage whenever important state changes
   useEffect(() => {
     // Only save after initial load is complete
-    // Note: timeLeft and saveToStorage are NOT in dependencies to avoid infinite loops
-    // - timeLeft changes every 100ms (would save 10x/second)
-    // - saveToStorage depends on timeLeft (would recreate callback constantly)
-    // BUT user IS in dependencies so logging in triggers a save with the new user
-    // timeLeft will still be saved when other meaningful changes trigger this effect
+    // Note: timeLeft is NOT in dependencies to avoid saving 10x/second as timer ticks
+    // We use saveToStorageRef to always call the latest version (with current user)
+    // User changes are also handled separately in user-change effect
     if (isInitialized) {
       console.log('Auto-saving state to storage...');
-      saveToStorage();
+      saveToStorageRef.current();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isInitialized, user, currentTrial, feedback, isPaused, score, history, statsHistory,
+  }, [isInitialized, currentTrial, feedback, isPaused, score, history, statsHistory,
       difficulty, timePerQuestion, networkComplexity, spoilerPremises, darkMode,
       useRealWords, useNonsenseWords, useRandomLetters, useEmojis, useVoronoi, useMandelbrot, useVibration, letterLength,
       autoProgressMode, universalProgress, modeSpecificProgress, enabledRelationModes]);
@@ -1130,12 +1134,22 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Reload data when user logs in or out
+  // Handle login: save current state to Supabase
   useEffect(() => {
-    if (user && isInitialized) {
-      console.log('User changed, reloading from storage:', user.id);
-      loadFromStorage();
-    }
+    const handleUserLogin = async () => {
+      if (user && isInitialized) {
+        console.log('User logged in, saving current state to Supabase:', user.id);
+
+        // Save current in-memory state to Supabase
+        // This preserves the active session when logging in
+        // Note: We don't load from Supabase here because we want to keep the current state
+        // The loadFromStorage on app init already loaded any existing data
+        await saveToStorage();
+
+        console.log('✅ Current session saved to Supabase for user:', user.id);
+      }
+    };
+    handleUserLogin();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
   
