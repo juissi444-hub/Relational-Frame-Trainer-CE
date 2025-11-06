@@ -660,7 +660,14 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
           user_id: progressData.user_id,
           score: progressData.score,
           history_length: progressData.history.length,
-          has_current_trial: !!progressData.current_trial
+          has_current_trial: !!progressData.current_trial,
+          settings: {
+            difficulty: progressData.settings.difficulty,
+            timePerQuestion: progressData.settings.timePerQuestion,
+            darkMode: progressData.settings.darkMode,
+            autoProgressMode: progressData.settings.autoProgressMode,
+            enabledModes: progressData.settings.enabledRelationModes
+          }
         });
 
         // Use upsert to insert or update
@@ -756,7 +763,14 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
           console.log('✅ Loading data from Supabase:', {
             score: data.score,
             history_length: data.history?.length || 0,
-            has_trial: !!data.current_trial
+            has_trial: !!data.current_trial,
+            settings: data.settings ? {
+              difficulty: data.settings.difficulty,
+              timePerQuestion: data.settings.timePerQuestion,
+              darkMode: data.settings.darkMode,
+              autoProgressMode: data.settings.autoProgressMode,
+              enabledModes: data.settings.enabledRelationModes
+            } : 'no settings'
           });
           if (data.score) setScore(data.score);
           if (data.history) setHistory(data.history);
