@@ -1164,23 +1164,21 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Handle login: load saved data from Supabase and save current session
+  // Handle login: load saved data from Supabase
   useEffect(() => {
     console.log('👤 User-change effect triggered. user:', user ? user.id : 'null', '| isInitialized:', isInitialized);
     const handleUserLogin = async () => {
       if (user && isInitialized) {
-        console.log('🚀 User logged in, loading from Supabase first:', user.id);
+        console.log('🚀 User logged in, loading from Supabase:', user.id);
 
-        // FIRST: Load any existing saved data from Supabase
-        // This ensures we don't lose previously saved progress
+        // Load saved data from Supabase
+        // This will trigger state updates (setDifficulty, setDarkMode, etc.)
         await loadFromStorage();
 
-        // THEN: Save current in-memory state to Supabase
-        // This preserves the active session when logging in
-        console.log('💾 Now saving current session to Supabase');
-        await saveToStorageRef.current();
-
-        console.log('✅ Load and save complete for user:', user.id);
+        // DO NOT save here! State updates are asynchronous and not applied yet.
+        // The auto-save effect will trigger after state updates and save properly.
+        console.log('✅ Data loaded from Supabase for user:', user.id);
+        console.log('⏳ Waiting for state to update, then auto-save will trigger');
       } else {
         console.log('⏭️ Skipping - user:', user ? 'exists' : 'null', ', isInitialized:', isInitialized);
       }
