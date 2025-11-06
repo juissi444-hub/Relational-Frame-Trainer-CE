@@ -1,3 +1,102 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Performance optimizations for smoother experience across all devices */
+
+/* Enable hardware acceleration for smoother animations */
+* {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Optimize scrolling performance */
+html {
+  scroll-behavior: smooth;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  overscroll-behavior: none;
+  touch-action: pan-y;
+}
+
+/* Hardware-accelerated transforms for buttons and interactive elements */
+button, [role="button"], a {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+/* Optimize animations with will-change for frequently animated elements */
+.transition-all,
+.transition-transform,
+.transition-opacity {
+  will-change: transform, opacity;
+}
+
+/* Remove will-change after animation completes to save memory */
+.transition-all:not(:hover):not(:focus),
+.transition-transform:not(:hover):not(:focus),
+.transition-opacity:not(:hover):not(:focus) {
+  will-change: auto;
+}
+
+/* Smooth scale transitions for interactive elements */
+.active\:scale-95:active,
+.hover\:scale-105:hover {
+  transform: translateZ(0) scale(var(--tw-scale-x, 1), var(--tw-scale-y, 1));
+}
+
+/* Optimize timer bar animation */
+[style*="width"] {
+  will-change: width;
+}
+
+/* GPU acceleration for modals and overlays */
+.fixed, .absolute {
+  transform: translateZ(0);
+}
+
+/* Reduce layout thrashing */
+img, svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+/* Optimize for 60fps animations */
+@media (prefers-reduced-motion: no-preference) {
+  * {
+    animation-duration: 0.3s;
+    animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  }
+}
+
+/* Respect user's motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Optimize text rendering */
+p, h1, h2, h3, h4, h5, h6, span, div {
+  text-rendering: optimizeLegibility;
+}
+
+/* Prevent iOS zoom on input focus */
+input, select, textarea {
+  font-size: 16px;
+}
+
+/* Smooth momentum scrolling on iOS */
+.overflow-y-auto,
+.overflow-x-auto,
+.overflow-auto {
+  -webkit-overflow-scrolling: touch;
+}

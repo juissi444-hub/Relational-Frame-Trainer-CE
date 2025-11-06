@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Settings, History, Play, Pause, RotateCcw, X, Check, Clock, TrendingUp, Info, LogIn, LogOut, User, Heart, Users, Mail } from 'lucide-react';
 import { supabase } from './supabaseClient';
 
@@ -1530,6 +1530,39 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
     }
   };
 
+  // Memoize expensive stats calculations for smoother performance
+  const filteredStats = useMemo(() => {
+    return statsHistory.filter(s => s.mode && statsFilter[s.mode]);
+  }, [statsHistory, statsFilter]);
+
+  const statsCalculations = useMemo(() => {
+    if (filteredStats.length === 0) {
+      return null;
+    }
+
+    const correctCount = filteredStats.filter(s => s.isCorrect).length;
+    const totalTime = filteredStats.reduce((sum, s) => sum + s.timeUsed, 0);
+    const totalPremises = filteredStats.reduce((sum, s) => sum + s.premiseCount, 0);
+    const avgTimePerPremise = filteredStats.reduce((sum, s) => sum + (s.timeUsed / s.premiseCount), 0) / filteredStats.length;
+
+    const last20 = filteredStats.slice(-20);
+    const maxTime = last20.length > 0 ? Math.max(...last20.map(s => s.timeUsed)) : 1;
+    const maxPremises = last20.length > 0 ? Math.max(...last20.map(s => s.premiseCount)) : 1;
+    const maxTimePerPremise = last20.length > 0 ? Math.max(...last20.map(s => s.timeUsed / s.premiseCount)) : 1;
+
+    return {
+      total: filteredStats.length,
+      accuracy: (correctCount / filteredStats.length) * 100,
+      avgTime: totalTime / filteredStats.length,
+      avgPremises: totalPremises / filteredStats.length,
+      avgTimePerPremise,
+      last20,
+      maxTime,
+      maxPremises,
+      maxTimePerPremise
+    };
+  }, [filteredStats]);
+
   return (
     <div className={`min-h-screen flex flex-col transition-colors duration-300 ${darkMode ? 'bg-gradient-to-br from-gray-900 via-slate-900 to-gray-900' : 'bg-gradient-to-br from-slate-50 to-slate-100'}`}>
 
@@ -1921,12 +1954,9 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
                   </div>
 
                   {(() => {
-                    const filteredStats = statsHistory.filter(s => s.mode && statsFilter[s.mode]);
-                    if (filteredStats.length === 0) {
+                    if (!statsCalculations) {
                       return <p className={`text-xs ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>No data for selected filters</p>;
                     }
-
-                    const avgTimePerPremise = filteredStats.reduce((sum, s) => sum + (s.timeUsed / s.premiseCount), 0) / filteredStats.length;
 
                     return (
                       <>
@@ -1935,30 +1965,30 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
                           <div className="space-y-1.5 sm:space-y-2">
                             <div className="flex justify-between">
                               <span className={`text-xs sm:text-sm ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>Total Questions:</span>
-                              <span className={`text-xs sm:text-sm font-bold ${darkMode ? 'text-slate-100' : 'text-slate-800'}`}>{filteredStats.length}</span>
+                              <span className={`text-xs sm:text-sm font-bold ${darkMode ? 'text-slate-100' : 'text-slate-800'}`}>{statsCalculations.total}</span>
                             </div>
                             <div className="flex justify-between">
                               <span className={`text-xs sm:text-sm ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>Accuracy:</span>
                               <span className={`text-xs sm:text-sm font-bold ${darkMode ? 'text-green-400' : 'text-green-600'}`}>
-                                {((filteredStats.filter(s => s.isCorrect).length / filteredStats.length) * 100).toFixed(1)}%
+                                {statsCalculations.accuracy.toFixed(1)}%
                               </span>
                             </div>
                             <div className="flex justify-between">
                               <span className={`text-xs sm:text-sm ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>Avg Time:</span>
                               <span className={`text-xs sm:text-sm font-bold ${darkMode ? 'text-indigo-300' : 'text-indigo-600'}`}>
-                                {(filteredStats.reduce((sum, s) => sum + s.timeUsed, 0) / filteredStats.length).toFixed(1)}s
+                                {statsCalculations.avgTime.toFixed(1)}s
                               </span>
                             </div>
                             <div className="flex justify-between">
                               <span className={`text-xs sm:text-sm ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>Avg Premises:</span>
                               <span className={`text-xs sm:text-sm font-bold ${darkMode ? 'text-purple-400' : 'text-purple-600'}`}>
-                                {(filteredStats.reduce((sum, s) => sum + s.premiseCount, 0) / filteredStats.length).toFixed(1)}
+                                {statsCalculations.avgPremises.toFixed(1)}
                               </span>
                             </div>
                             <div className="flex justify-between">
                               <span className={`text-xs sm:text-sm ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>Avg Time/Premise:</span>
                               <span className={`text-xs sm:text-sm font-bold ${darkMode ? 'text-cyan-400' : 'text-cyan-600'}`}>
-                                {avgTimePerPremise.toFixed(2)}s
+                                {statsCalculations.avgTimePerPremise.toFixed(2)}s
                               </span>
                             </div>
                           </div>
@@ -1968,9 +1998,8 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
                           <h3 className={`text-xs sm:text-sm font-semibold mb-2 sm:mb-3 ${darkMode ? 'text-slate-200' : 'text-slate-700'}`}>Time per Question (Last 20)</h3>
                           <div className={`p-2 sm:p-3 rounded-lg ${darkMode ? 'bg-slate-700' : 'bg-slate-50'}`}>
                             <div className="flex items-end h-24 sm:h-32 gap-0.5 sm:gap-1">
-                              {filteredStats.slice(-20).map((stat, idx) => {
-                                const maxTime = Math.max(...filteredStats.slice(-20).map(s => s.timeUsed));
-                                const height = (stat.timeUsed / maxTime) * 100;
+                              {statsCalculations.last20.map((stat, idx) => {
+                                const height = (stat.timeUsed / statsCalculations.maxTime) * 100;
                                 return (
                                   <div key={idx} className="flex-1 flex flex-col items-center">
                                     <div className={`w-full rounded-t transition-all ${stat.isCorrect ? (darkMode ? 'bg-green-500' : 'bg-green-400') : (darkMode ? 'bg-red-500' : 'bg-red-400')}`} style={{ height: `${height}%` }} title={`${stat.timeUsed.toFixed(1)}s`} />
@@ -1986,9 +2015,8 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
                           <h3 className={`text-xs sm:text-sm font-semibold mb-2 sm:mb-3 ${darkMode ? 'text-slate-200' : 'text-slate-700'}`}>Premise Count (Last 20)</h3>
                           <div className={`p-2 sm:p-3 rounded-lg ${darkMode ? 'bg-slate-700' : 'bg-slate-50'}`}>
                             <div className="flex items-end h-24 sm:h-32 gap-0.5 sm:gap-1">
-                              {filteredStats.slice(-20).map((stat, idx) => {
-                                const maxPremises = Math.max(...filteredStats.slice(-20).map(s => s.premiseCount));
-                                const height = (stat.premiseCount / maxPremises) * 100;
+                              {statsCalculations.last20.map((stat, idx) => {
+                                const height = (stat.premiseCount / statsCalculations.maxPremises) * 100;
                                 return (
                                   <div key={idx} className="flex-1 flex flex-col items-center">
                                     <div className={`w-full rounded-t transition-all ${stat.isCorrect ? (darkMode ? 'bg-purple-500' : 'bg-purple-400') : (darkMode ? 'bg-orange-500' : 'bg-orange-400')}`} style={{ height: `${height}%` }} title={`${stat.premiseCount} premises`} />
@@ -2004,10 +2032,9 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
                           <h3 className={`text-xs sm:text-sm font-semibold mb-2 sm:mb-3 ${darkMode ? 'text-slate-200' : 'text-slate-700'}`}>Time per Premise (Last 20)</h3>
                           <div className={`p-2 sm:p-3 rounded-lg ${darkMode ? 'bg-slate-700' : 'bg-slate-50'}`}>
                             <div className="flex items-end h-24 sm:h-32 gap-0.5 sm:gap-1">
-                              {filteredStats.slice(-20).map((stat, idx) => {
+                              {statsCalculations.last20.map((stat, idx) => {
                                 const timePerPremise = stat.timeUsed / stat.premiseCount;
-                                const maxTimePerPremise = Math.max(...filteredStats.slice(-20).map(s => s.timeUsed / s.premiseCount));
-                                const height = (timePerPremise / maxTimePerPremise) * 100;
+                                const height = (timePerPremise / statsCalculations.maxTimePerPremise) * 100;
                                 return (
                                   <div key={idx} className="flex-1 flex flex-col items-center">
                                     <div className={`w-full rounded-t transition-all ${stat.isCorrect ? (darkMode ? 'bg-cyan-500' : 'bg-cyan-400') : (darkMode ? 'bg-yellow-500' : 'bg-yellow-400')}`} style={{ height: `${height}%` }} title={`${timePerPremise.toFixed(2)}s/premise`} />
