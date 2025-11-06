@@ -1718,75 +1718,73 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
 
       <div className="flex-1 flex flex-col min-h-0">
         <div className={`shadow-md p-2 sm:p-3 transition-colors duration-300 ${darkMode ? 'bg-slate-800/95 backdrop-blur-sm/90 backdrop-blur' : 'bg-white'}`}>
-          {/* All buttons at top in single row */}
-          <div className="flex flex-wrap justify-between items-center gap-2 mb-2">
-            {/* Left side: Timer and Play button */}
-            <div className="flex items-center gap-3">
-              <div className="text-center">
-                <div className={`text-2xl sm:text-4xl font-bold tabular-nums ${darkMode ? 'text-indigo-300' : 'text-indigo-600'}`}>{timeLeft.toFixed(1)}s</div>
-                <div className={`text-xs sm:text-sm ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>Time</div>
-              </div>
-              <button onClick={togglePause} className={`text-white p-3 sm:p-4 rounded-xl transition-colors shadow-lg ${isPaused ? 'bg-green-500 hover:bg-green-600' : (darkMode ? 'bg-yellow-600 hover:bg-yellow-700' : 'bg-yellow-500 hover:bg-yellow-600')}`} title="Pause/Resume">
-                {isPaused ? <Play className="w-6 h-6 sm:w-8 sm:h-8" /> : <Pause className="w-6 h-6 sm:w-8 sm:h-8" />}
+          {/* All other buttons at top */}
+          <div className="flex flex-wrap justify-center items-center gap-2 mb-3">
+            <button onClick={() => setShowHistory(!showHistory)} className={`flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-colors text-xs sm:text-sm ${darkMode ? 'bg-indigo-900/50 hover:bg-indigo-900/70 text-indigo-200' : 'bg-indigo-100 hover:bg-indigo-200 text-slate-900'}`}>
+              <History className="w-4 h-4" />
+              <span className="hidden sm:inline">History</span>
+            </button>
+
+            <button onClick={() => setShowStats(!showStats)} className={`flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-colors text-xs sm:text-sm ${darkMode ? 'bg-purple-900/50 hover:bg-purple-900/70 text-purple-200' : 'bg-purple-100 hover:bg-purple-200 text-slate-900'}`}>
+              <TrendingUp className="w-4 h-4" />
+              <span className="hidden sm:inline">Stats</span>
+            </button>
+
+            <button onClick={() => setShowTutorial(true)} className={`flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-colors text-xs sm:text-sm ${darkMode ? 'bg-cyan-900/50 hover:bg-cyan-900/70 text-cyan-200' : 'bg-cyan-100 hover:bg-cyan-200 text-slate-900'}`}>
+              <Info className="w-4 h-4" />
+              <span className="hidden sm:inline">Help</span>
+            </button>
+
+            {user ? (
+              <button onClick={onLogout} className={`flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-colors text-xs sm:text-sm ${darkMode ? 'bg-red-900/50 hover:bg-red-900/70 text-red-200' : 'bg-red-100 hover:bg-red-200 text-slate-900'}`} title={`Logged in as ${user.username}`}>
+                <User className="w-4 h-4" />
+                <span className="hidden sm:inline">{user.username}</span>
+                <LogOut className="w-3 h-3 ml-0.5" />
               </button>
+            ) : (
+              <button onClick={onShowLogin} className={`flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-colors text-xs sm:text-sm ${darkMode ? 'bg-green-900/50 hover:bg-green-900/70 text-green-200' : 'bg-green-100 hover:bg-green-200 text-slate-900'}`}>
+                <LogIn className="w-4 h-4" />
+                <span className="hidden sm:inline">Login</span>
+              </button>
+            )}
+
+            <button
+              onClick={() => {
+                console.log('Settings button clicked, current state:', showSettings);
+                setShowSettings(!showSettings);
+              }}
+              className={`flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-colors text-xs sm:text-sm ${darkMode ? 'bg-indigo-900/50 hover:bg-indigo-900/70 text-indigo-200' : 'bg-indigo-100 hover:bg-indigo-200 text-slate-900'}`}
+            >
+              <Settings className="w-4 h-4" />
+              <span className="hidden sm:inline">Settings</span>
+            </button>
+            <button onClick={() => setShowAboutModal(true)} className={`flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-colors text-xs sm:text-sm ${darkMode ? 'bg-indigo-900/50 hover:bg-indigo-900/70 text-indigo-200' : 'bg-indigo-100 hover:bg-indigo-200 text-slate-900'}`}>
+              <Users className="w-4 h-4" />
+              <span className="hidden sm:inline">About Us</span>
+            </button>
+            <button onClick={() => setShowContactModal(true)} className={`flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-colors text-xs sm:text-sm ${darkMode ? 'bg-blue-900/50 hover:bg-blue-900/70 text-blue-200' : 'bg-blue-100 hover:bg-blue-200 text-slate-900'}`}>
+              <Mail className="w-4 h-4" />
+              <span className="hidden sm:inline">Contact</span>
+            </button>
+            <button onClick={() => setShowSupportModal(true)} className={`flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-colors text-xs sm:text-sm ${darkMode ? 'bg-pink-900/50 hover:bg-pink-900/70 text-pink-200' : 'bg-pink-100 hover:bg-pink-200 text-slate-900'}`}>
+              <Heart className="w-4 h-4" />
+              <span className="hidden sm:inline">Support Us</span>
+            </button>
+          </div>
+
+          {/* Timer centered */}
+          <div className="flex justify-center items-center mb-2">
+            <div className="text-center">
+              <div className={`text-2xl sm:text-4xl font-bold tabular-nums ${darkMode ? 'text-indigo-300' : 'text-indigo-600'}`}>{timeLeft.toFixed(1)}s</div>
+              <div className={`text-xs sm:text-sm ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>Time</div>
             </div>
+          </div>
 
-            {/* Center: Main action buttons */}
-            <div className="flex gap-1 sm:gap-2 flex-wrap">
-              <button onClick={() => setShowHistory(!showHistory)} className={`flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-colors text-xs sm:text-sm ${darkMode ? 'bg-indigo-900/50 hover:bg-indigo-900/70 text-indigo-200' : 'bg-indigo-100 hover:bg-indigo-200 text-slate-900'}`}>
-                <History className="w-4 h-4" />
-                <span className="hidden sm:inline">History</span>
-              </button>
-
-              <button onClick={() => setShowStats(!showStats)} className={`flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-colors text-xs sm:text-sm ${darkMode ? 'bg-purple-900/50 hover:bg-purple-900/70 text-purple-200' : 'bg-purple-100 hover:bg-purple-200 text-slate-900'}`}>
-                <TrendingUp className="w-4 h-4" />
-                <span className="hidden sm:inline">Stats</span>
-              </button>
-
-              <button onClick={() => setShowTutorial(true)} className={`flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-colors text-xs sm:text-sm ${darkMode ? 'bg-cyan-900/50 hover:bg-cyan-900/70 text-cyan-200' : 'bg-cyan-100 hover:bg-cyan-200 text-slate-900'}`}>
-                <Info className="w-4 h-4" />
-                <span className="hidden sm:inline">Help</span>
-              </button>
-
-              {user ? (
-                <button onClick={onLogout} className={`flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-colors text-xs sm:text-sm ${darkMode ? 'bg-red-900/50 hover:bg-red-900/70 text-red-200' : 'bg-red-100 hover:bg-red-200 text-slate-900'}`} title={`Logged in as ${user.username}`}>
-                  <User className="w-4 h-4" />
-                  <span className="hidden sm:inline">{user.username}</span>
-                  <LogOut className="w-3 h-3 ml-0.5" />
-                </button>
-              ) : (
-                <button onClick={onShowLogin} className={`flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-colors text-xs sm:text-sm ${darkMode ? 'bg-green-900/50 hover:bg-green-900/70 text-green-200' : 'bg-green-100 hover:bg-green-200 text-slate-900'}`}>
-                  <LogIn className="w-4 h-4" />
-                  <span className="hidden sm:inline">Login</span>
-                </button>
-              )}
-            </div>
-
-            {/* Right side: Settings and other buttons */}
-            <div className="flex gap-1 sm:gap-2 flex-wrap">
-              <button
-                onClick={() => {
-                  console.log('Settings button clicked, current state:', showSettings);
-                  setShowSettings(!showSettings);
-                }}
-                className={`flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-colors text-xs sm:text-sm ${darkMode ? 'bg-indigo-900/50 hover:bg-indigo-900/70 text-indigo-200' : 'bg-indigo-100 hover:bg-indigo-200 text-slate-900'}`}
-              >
-                <Settings className="w-4 h-4" />
-                <span className="hidden sm:inline">Settings</span>
-              </button>
-              <button onClick={() => setShowAboutModal(true)} className={`flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-colors text-xs sm:text-sm ${darkMode ? 'bg-indigo-900/50 hover:bg-indigo-900/70 text-indigo-200' : 'bg-indigo-100 hover:bg-indigo-200 text-slate-900'}`}>
-                <Users className="w-4 h-4" />
-                <span className="hidden sm:inline">About Us</span>
-              </button>
-              <button onClick={() => setShowContactModal(true)} className={`flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-colors text-xs sm:text-sm ${darkMode ? 'bg-blue-900/50 hover:bg-blue-900/70 text-blue-200' : 'bg-blue-100 hover:bg-blue-200 text-slate-900'}`}>
-                <Mail className="w-4 h-4" />
-                <span className="hidden sm:inline">Contact</span>
-              </button>
-              <button onClick={() => setShowSupportModal(true)} className={`flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-colors text-xs sm:text-sm ${darkMode ? 'bg-pink-900/50 hover:bg-pink-900/70 text-pink-200' : 'bg-pink-100 hover:bg-pink-200 text-slate-900'}`}>
-                <Heart className="w-4 h-4" />
-                <span className="hidden sm:inline">Support Us</span>
-              </button>
-            </div>
+          {/* Play/Pause button centered below timer */}
+          <div className="flex justify-center items-center mb-2">
+            <button onClick={togglePause} className={`text-white p-3 sm:p-4 rounded-xl transition-colors shadow-lg ${isPaused ? 'bg-green-500 hover:bg-green-600' : (darkMode ? 'bg-yellow-600 hover:bg-yellow-700' : 'bg-yellow-500 hover:bg-yellow-600')}`} title="Pause/Resume">
+              {isPaused ? <Play className="w-6 h-6 sm:w-8 sm:h-8" /> : <Pause className="w-6 h-6 sm:w-8 sm:h-8" />}
+            </button>
           </div>
 
           <div className="flex gap-2 sm:gap-4 justify-center sm:justify-start">
