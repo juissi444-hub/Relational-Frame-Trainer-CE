@@ -641,6 +641,7 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
 
       if (user) {
         // Save to Supabase if logged in
+        console.log('💾 Saving to Supabase for user:', user.id);
         const progressData = {
           user_id: user.id,
           score: score,
@@ -663,14 +664,18 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
           });
 
         if (error) {
-          console.error('Save to Supabase failed:', error);
+          console.error('❌ Save to Supabase failed:', error);
+        } else {
+          console.log('✅ Successfully saved to Supabase');
         }
       } else {
         // Save to localStorage if not logged in
+        console.log('💾 Saving to localStorage (anonymous user)');
         localStorage.setItem('rft_local_progress', JSON.stringify(saveData));
+        console.log('✅ Successfully saved to localStorage');
       }
     } catch (error) {
-      console.error('Save failed:', error);
+      console.error('❌ Save failed:', error);
     }
   }, [user, score, history, statsHistory, currentTrial, timeLeft, feedback, isPaused, difficulty, timePerQuestion, networkComplexity, spoilerPremises, darkMode, useRealWords, useNonsenseWords, useRandomLetters, useEmojis, useVoronoi, useMandelbrot, useVibration, letterLength, autoProgressMode, universalProgress, modeSpecificProgress, enabledRelationModes]);
 
@@ -1102,14 +1107,17 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
         } else {
           console.log('Trial loaded from storage, resuming...');
         }
-        // Mark as initialized to enable auto-save
-        setIsInitialized(true);
-        console.log('Game initialized successfully');
+        // Mark as initialized to enable auto-save AFTER a short delay
+        // This gives time for user auth to complete if user is logged in
+        setTimeout(() => {
+          setIsInitialized(true);
+          console.log('Game initialized successfully, auto-save enabled');
+        }, 500);
       } catch (error) {
         console.error('Error initializing game:', error);
         // Still start a trial even if loading fails
         startNewTrial();
-        setIsInitialized(true);
+        setTimeout(() => setIsInitialized(true), 500);
       }
     };
     initializeGame();
@@ -1118,7 +1126,8 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
 
   // Reload data when user logs in or out
   useEffect(() => {
-    if (user) {
+    if (user && isInitialized) {
+      console.log('User changed, reloading from storage:', user.id);
       loadFromStorage();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1760,7 +1769,10 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
         <div className="sm:hidden fixed inset-0 z-40 bg-black/50 backdrop-blur-sm" onClick={() => { setShowHistory(false); setShowStats(false); }} />
       )}
 
-      <div className={`${darkMode ? 'bg-slate-800/95 backdrop-blur-sm' : 'bg-white'} shadow-xl transition-all duration-300 overflow-hidden ${showHistory ? 'fixed sm:relative inset-y-0 left-0 w-[90vw] sm:w-96 z-50' : 'w-0'}`}>
+      <div
+        className={`${darkMode ? 'bg-slate-800/95 backdrop-blur-sm' : 'bg-white'} shadow-xl transition-all duration-300 overflow-hidden ${showHistory ? 'fixed sm:relative inset-y-0 left-0 w-[90vw] sm:w-96 z-50' : 'w-0'}`}
+        onMouseLeave={() => setShowHistory(false)}
+      >
         {showHistory && (
           <div className="h-full flex flex-col p-3 sm:p-4">
             <div className="flex items-center justify-between mb-3 sm:mb-4">
@@ -2185,7 +2197,10 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
         <div className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm" onClick={() => setShowSettings(false)} />
       )}
 
-      <div className={`${darkMode ? 'bg-slate-800/95 backdrop-blur-sm' : 'bg-white'} shadow-xl transition-all duration-300 overflow-hidden ${showSettings ? 'fixed inset-y-0 right-0 w-[90vw] sm:w-96 z-50' : 'w-0'}`}>
+      <div
+        className={`${darkMode ? 'bg-slate-800/95 backdrop-blur-sm' : 'bg-white'} shadow-xl transition-all duration-300 overflow-hidden ${showSettings ? 'fixed inset-y-0 right-0 w-[90vw] sm:w-96 z-50' : 'w-0'}`}
+        onMouseLeave={() => setShowSettings(false)}
+      >
         {showSettings && (
           <div className="h-full flex flex-col p-3 sm:p-4">
             <div className="flex items-center justify-between mb-3 sm:mb-4">
