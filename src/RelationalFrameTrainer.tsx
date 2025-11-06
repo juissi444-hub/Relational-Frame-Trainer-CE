@@ -784,42 +784,137 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
       useRealWords, useNonsenseWords, useRandomLetters, useEmojis, useVoronoi, useMandelbrot, useVibration, letterLength,
       autoProgressMode, universalProgress, modeSpecificProgress, enabledRelationModes]);
 
-  const resetGame = () => {
+  const resetGame = async () => {
     setShowResetConfirmation(false);
-    setScore({ correct: 0, incorrect: 0, missed: 0 });
-    setHistory([]);
-    setStatsHistory([]);
-    setDifficulty(3);
-    setTimePerQuestion(30);
-    setNetworkComplexity(0.5);
-    setSpoilerPremises(false);
-    setDarkMode(false);
-    setUseLetters(true);
-    setUseEmojis(false);
-    setUseVoronoi(false);
-    setUseMandelbrot(false);
-    setUseVibration(false);
-    setLetterLength(3);
-    setAutoProgressMode('universal');
-    setUniversalProgress({
+
+    // Define reset values
+    const resetScore = { correct: 0, incorrect: 0, missed: 0 };
+    const resetHistory = [];
+    const resetStatsHistory = [];
+    const resetDifficulty = 3;
+    const resetTimePerQuestion = 30;
+    const resetNetworkComplexity = 0.5;
+    const resetSpoilerPremises = false;
+    const resetDarkMode = false;
+    const resetUseRealWords = true;
+    const resetUseNonsenseWords = false;
+    const resetUseRandomLetters = false;
+    const resetUseEmojis = false;
+    const resetUseVoronoi = false;
+    const resetUseMandelbrot = false;
+    const resetUseVibration = false;
+    const resetLetterLength = 3;
+    const resetAutoProgressMode = 'universal';
+    const resetUniversalProgress = {
       targetPremiseCount: 40,
       targetAccuracy: 95,
       recentAnswers: []
-    });
-    setModeSpecificProgress({
+    };
+    const resetModeSpecificProgress = {
       equality: { targetPremiseCount: 40, targetAccuracy: 95, recentAnswers: [], currentDifficulty: 3, currentTime: 30 },
       temporal: { targetPremiseCount: 40, targetAccuracy: 95, recentAnswers: [], currentDifficulty: 3, currentTime: 30 },
       spatial: { targetPremiseCount: 40, targetAccuracy: 95, recentAnswers: [], currentDifficulty: 3, currentTime: 30 },
       containment: { targetPremiseCount: 40, targetAccuracy: 95, recentAnswers: [], currentDifficulty: 3, currentTime: 30 }
-    });
-    setEnabledRelationModes({
+    };
+    const resetEnabledRelationModes = {
       equality: true,
       temporal: false,
       spatial: false,
       containment: false
-    });
+    };
+
+    // Save reset data to storage immediately
+    try {
+      const resetData = {
+        score: resetScore,
+        history: resetHistory,
+        statsHistory: resetStatsHistory,
+        currentTrial: null,
+        timeLeft: resetTimePerQuestion,
+        feedback: null,
+        isPaused: false,
+        settings: {
+          difficulty: resetDifficulty,
+          timePerQuestion: resetTimePerQuestion,
+          networkComplexity: resetNetworkComplexity,
+          spoilerPremises: resetSpoilerPremises,
+          darkMode: resetDarkMode,
+          useRealWords: resetUseRealWords,
+          useNonsenseWords: resetUseNonsenseWords,
+          useRandomLetters: resetUseRandomLetters,
+          useEmojis: resetUseEmojis,
+          useVoronoi: resetUseVoronoi,
+          useMandelbrot: resetUseMandelbrot,
+          useVibration: resetUseVibration,
+          letterLength: resetLetterLength,
+          autoProgressMode: resetAutoProgressMode,
+          universalProgress: resetUniversalProgress,
+          modeSpecificProgress: resetModeSpecificProgress,
+          enabledRelationModes: resetEnabledRelationModes
+        }
+      };
+
+      if (user) {
+        // Reset in Supabase for logged-in users
+        const progressData = {
+          user_id: user.id,
+          score: resetScore,
+          history: resetHistory,
+          stats_history: resetStatsHistory,
+          current_trial: null,
+          time_left: resetTimePerQuestion,
+          feedback: null,
+          is_paused: false,
+          settings: resetData.settings,
+          updated_at: new Date().toISOString()
+        };
+
+        const { error: updateError } = await supabase
+          .from('user_progress')
+          .update(progressData)
+          .eq('user_id', user.id);
+
+        if (updateError) {
+          // If update fails, try insert
+          const { error: insertError } = await supabase
+            .from('user_progress')
+            .insert([progressData]);
+
+          if (insertError) {
+            console.error('Reset save failed:', insertError);
+          }
+        }
+      } else {
+        // Reset in localStorage for anonymous users
+        localStorage.setItem('rft_local_progress', JSON.stringify(resetData));
+      }
+    } catch (error) {
+      console.error('Reset failed:', error);
+    }
+
+    // Now update state
+    setScore(resetScore);
+    setHistory(resetHistory);
+    setStatsHistory(resetStatsHistory);
+    setDifficulty(resetDifficulty);
+    setTimePerQuestion(resetTimePerQuestion);
+    setNetworkComplexity(resetNetworkComplexity);
+    setSpoilerPremises(resetSpoilerPremises);
+    setDarkMode(resetDarkMode);
+    setUseRealWords(resetUseRealWords);
+    setUseNonsenseWords(resetUseNonsenseWords);
+    setUseRandomLetters(resetUseRandomLetters);
+    setUseEmojis(resetUseEmojis);
+    setUseVoronoi(resetUseVoronoi);
+    setUseMandelbrot(resetUseMandelbrot);
+    setUseVibration(resetUseVibration);
+    setLetterLength(resetLetterLength);
+    setAutoProgressMode(resetAutoProgressMode);
+    setUniversalProgress(resetUniversalProgress);
+    setModeSpecificProgress(resetModeSpecificProgress);
+    setEnabledRelationModes(resetEnabledRelationModes);
+
     startNewTrial();
-    saveToStorage();
     setShowResetComplete(true);
     setTimeout(() => setShowResetComplete(false), 2000);
   };
