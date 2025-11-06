@@ -822,14 +822,16 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
   // Auto-save to storage whenever important state changes
   useEffect(() => {
     // Only save after initial load is complete
+    // Note: timeLeft is NOT in dependencies to avoid saving 10x/second as timer ticks
+    // timeLeft will still be saved when other changes trigger this effect
     if (isInitialized) {
       console.log('Auto-saving state to storage...');
       saveToStorage();
     }
-  }, [isInitialized, currentTrial, timeLeft, feedback, isPaused, score, history, statsHistory,
+  }, [isInitialized, currentTrial, feedback, isPaused, score, history, statsHistory,
       difficulty, timePerQuestion, networkComplexity, spoilerPremises, darkMode,
       useRealWords, useNonsenseWords, useRandomLetters, useEmojis, useVoronoi, useMandelbrot, useVibration, letterLength,
-      autoProgressMode, universalProgress, modeSpecificProgress, enabledRelationModes]);
+      autoProgressMode, universalProgress, modeSpecificProgress, enabledRelationModes, saveToStorage]);
 
   const resetGame = async () => {
     setShowResetConfirmation(false);
