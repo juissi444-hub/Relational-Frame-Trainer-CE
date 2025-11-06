@@ -1120,15 +1120,13 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
     // Calculate positions for all objects based on all premises
     const positions = {}; // stimulus -> { v: vertical, h: horizontal, row: number, col: number }
 
-    // Start with the first premise's SECOND stimulus (reference point) at center
-    // "X is ABOVE Y" means Y is the reference, X is positioned relative to Y
+    // Start with the first premise's SECOND stimulus at origin (0,0)
+    // No fixed reference point - build dynamically from premises
     const firstStimulus = trial.premises[0].stimulus2;
-    positions[firstStimulus] = { v: 'CENTER', h: 'CENTER', row: 1, col: 1, vLevel: 0 };
+    positions[firstStimulus] = { v: 'CENTER', h: 'CENTER', row: 0, col: 0, vLevel: 0 };
 
     // Helper to get row/col offset from direction
     // "X is NORTH of Y" means Y is NORTH of X, so X is SOUTH (below) of Y
-    // Grid layout: row 0 = top, row 1 = middle, row 2 = bottom
-    // col 0 = left, col 1 = middle, col 2 = right
     const getOffset = (direction) => {
       const offsets = {
         'NORTH': [1, 0],   // Y is NORTH, so X moves down (increase row)
@@ -1196,7 +1194,7 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
     const colors = ['bg-blue-500', 'bg-green-500', 'bg-purple-500', 'bg-orange-500', 'bg-pink-500', 'bg-cyan-500', 'bg-yellow-500', 'bg-red-500'];
     const stimuliList = Object.keys(positions);
 
-    // Render a single 3x3 grid for a level
+    // Render a dynamically sized grid for a level
     const render2DGrid = (verticalLevel, showLabels = false) => {
       const vLevelNum = getVerticalLevel(verticalLevel);
 
@@ -1212,25 +1210,36 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
 
       // Find min/max to determine grid bounds
       const objectsAtLevel = Object.values(positions).filter(p => p.vLevel === vLevelNum);
+
+      // If no objects at this level, don't render anything
+      if (objectsAtLevel.length === 0) return null;
+
       const rows = objectsAtLevel.map(p => p.row);
       const cols = objectsAtLevel.map(p => p.col);
 
-      // Default to centered 3x3 grid if no objects at this level
-      const minRow = rows.length > 0 ? Math.min(...rows) : 0;
-      const maxRow = rows.length > 0 ? Math.max(...rows) : 2;
-      const minCol = cols.length > 0 ? Math.min(...cols) : 0;
-      const maxCol = cols.length > 0 ? Math.max(...cols) : 2;
+      const minRow = Math.min(...rows);
+      const maxRow = Math.max(...rows);
+      const minCol = Math.min(...cols);
+      const maxCol = Math.max(...cols);
 
-      // Ensure we always show at least a 3x3 grid
-      const gridRows = [minRow, minRow + 1, minRow + 2];
-      const gridCols = [minCol, minCol + 1, minCol + 2];
+      // Build grid arrays to cover the actual range needed
+      const gridRows = [];
+      for (let r = minRow; r <= maxRow; r++) {
+        gridRows.push(r);
+      }
+      const gridCols = [];
+      for (let c = minCol; c <= maxCol; c++) {
+        gridCols.push(c);
+      }
+
+      const numCols = gridCols.length;
 
       return (
         <div className="flex flex-col gap-0.5">
           {showLabels && <div className={`text-xs text-center font-semibold mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
             {verticalLevel}
           </div>}
-          <div className="grid grid-cols-3 gap-0.5">
+          <div className="grid gap-0.5" style={{ gridTemplateColumns: `repeat(${numCols}, minmax(0, 1fr))` }}>
             {gridRows.map(row =>
               gridCols.map(col => {
                 const key = `${row},${col}`;
