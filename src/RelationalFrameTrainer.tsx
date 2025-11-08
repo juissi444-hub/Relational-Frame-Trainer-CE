@@ -356,7 +356,8 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
       else vResult = 'AT';
 
       // Compose horizontal components
-      // In Space 3D, opposite horizontal directions cancel out to AT
+      // Opposite horizontal directions cancel out to AT
+      // Different non-opposite directions are ambiguous
       const opposites = {
         'NORTH': 'SOUTH', 'SOUTH': 'NORTH',
         'EAST': 'WEST', 'WEST': 'EAST',
@@ -369,7 +370,7 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
       else if (p2.h === 'AT') hResult = p1.h;
       else if (p1.h === p2.h) hResult = p1.h; // Same direction compounds
       else if (opposites[p1.h] === p2.h) hResult = 'AT'; // Opposite directions cancel
-      else hResult = p2.h; // Different non-opposite directions: use second relation
+      else return 'AMBIGUOUS'; // Different non-opposite directions are ambiguous
 
       return compose3D(vResult, hResult);
     } else {
@@ -578,12 +579,12 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
           });
           if (incompatible.length > 0) {
             questionRelation = incompatible[Math.floor(Math.random() * incompatible.length)];
+
             // Determine correct answer based on derivedRelation and questionRelation
             // Key logical rules for equality relations:
-            // 1. OPPOSITE implies DIFFERENT (opposites are different)
-            // 2. DIFFERENT and SAME are mutually exclusive
-            // 3. DIFFERENT doesn't tell us if something is OPPOSITE
-            // 4. DIFFERENT is non-transitive
+            // 1. OPPOSITE implies DIFFERENT (if X is opposite to Y, then X is different from Y)
+            // 2. DIFFERENT and SAME are mutually exclusive (can't be both)
+            // 3. DIFFERENT doesn't tell us if something is OPPOSITE (just that it's not SAME)
 
             if (derivedRelation === 'OPPOSITE' && questionRelation === 'DIFFERENT') {
               correctAnswer = true; // OPPOSITE implies DIFFERENT
@@ -593,8 +594,6 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
               correctAnswer = false; // SAME means NOT DIFFERENT (mutually exclusive)
             } else if (derivedRelation === 'DIFFERENT' && questionRelation === 'OPPOSITE') {
               correctAnswer = 'ambiguous'; // DIFFERENT doesn't tell us if it's OPPOSITE or just different
-            } else if (derivedRelation === 'DIFFERENT' && questionRelation === 'DIFFERENT') {
-              correctAnswer = 'ambiguous'; // DIFFERENT is non-transitive: X≠Y, Y≠Z doesn't tell us about X and Z
             } else {
               correctAnswer = false; // All other cases (e.g., SAME vs OPPOSITE, OPPOSITE vs SAME)
             }
