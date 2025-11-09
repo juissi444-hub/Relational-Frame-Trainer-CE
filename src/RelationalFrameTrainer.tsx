@@ -61,6 +61,7 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
   const [hoveredPremise, setHoveredPremise] = useState(null);
   const [showExplanationModal, setShowExplanationModal] = useState(null);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<string>('');
   const [enabledRelationModes, setEnabledRelationModes] = useState({
     equality: true,
     temporal: false,
@@ -632,7 +633,16 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
 
   const saveToStorage = useCallback(async () => {
     try {
+      setSaveStatus('💾 Saving...');
       console.log('🔍 saveToStorage called, user:', user ? `${user.id} (${user.username})` : 'null');
+      console.log('📊 Current state:', {
+        score,
+        historyLength: history.length,
+        difficulty,
+        darkMode,
+        timePerQuestion
+      });
+
       const saveData = {
         score, history, statsHistory,
         currentTrial, timeLeft, feedback, isPaused,
@@ -641,6 +651,7 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
 
       if (user) {
         // Save to Supabase if logged in
+        setSaveStatus(`💾 Saving to Supabase (${user.username})...`);
         console.log('💾 Saving to Supabase for user:', user.id, '| Score:', score);
         const progressData = {
           user_id: user.id,
@@ -669,27 +680,41 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
           }
         });
 
+        console.log('🚀 Calling Supabase upsert...');
         // Use upsert to insert or update
-        const { error } = await supabase
+        const { data: upsertData, error } = await supabase
           .from('user_progress')
           .upsert(progressData, {
             onConflict: 'user_id',
             ignoreDuplicates: false
-          });
+          })
+          .select();
 
         if (error) {
           console.error('❌ Save to Supabase failed:', error);
+          console.error('Error details:', JSON.stringify(error, null, 2));
+          setSaveStatus(`❌ Save failed: ${error.message}`);
+          setTimeout(() => setSaveStatus(''), 5000);
         } else {
           console.log('✅ Successfully saved to Supabase');
+          console.log('📥 Upsert response:', upsertData);
+          setSaveStatus(`✅ Saved to ${user.username}'s account`);
+          setTimeout(() => setSaveStatus(''), 3000);
         }
       } else {
         // Save to localStorage if not logged in
         console.log('💾 Saving to localStorage (anonymous user)');
+        setSaveStatus('💾 Saving locally...');
         localStorage.setItem('rft_local_progress', JSON.stringify(saveData));
         console.log('✅ Successfully saved to localStorage');
+        setSaveStatus('✅ Saved locally');
+        setTimeout(() => setSaveStatus(''), 2000);
       }
     } catch (error) {
       console.error('❌ Save failed:', error);
+      console.error('Error stack:', error.stack);
+      setSaveStatus(`❌ Error: ${error.message}`);
+      setTimeout(() => setSaveStatus(''), 5000);
     }
   }, [user, score, history, statsHistory, currentTrial, timeLeft, feedback, isPaused, difficulty, timePerQuestion, networkComplexity, spoilerPremises, darkMode, useRealWords, useNonsenseWords, useRandomLetters, useEmojis, useVoronoi, useMandelbrot, useVibration, letterLength, autoProgressMode, universalProgress, modeSpecificProgress, enabledRelationModes]);
 
@@ -703,10 +728,12 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
   const loadFromStorage = useCallback(async () => {
     try {
       console.log('📖 loadFromStorage called, user:', user ? `${user.id} (${user.username})` : 'null');
+      console.log('📖 Full user object:', user);
       let hasTrialData = false;
 
       if (user) {
         console.log('✅ User is logged in, will load from Supabase');
+        console.log('🔑 User ID:', user.id);
 
         // Check if there's localStorage data from anonymous session
         const localData = localStorage.getItem('rft_local_progress');
@@ -1574,6 +1601,15 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
         className="hidden sm:block fixed top-0 right-0 w-16 h-screen z-30"
         onMouseEnter={() => setShowSettings(true)}
       />
+
+      {/* Save Status Indicator */}
+      {saveStatus && (
+        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 px-4 py-2 rounded-lg shadow-lg backdrop-blur-sm transition-all animate-in fade-in slide-in-from-top-5">
+          <div className={`text-sm font-semibold ${darkMode ? 'bg-slate-800/90 text-slate-100' : 'bg-white/90 text-slate-900'}`}>
+            {saveStatus}
+          </div>
+        </div>
+      )}
 
       {showTutorial && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-2 sm:p-4">
