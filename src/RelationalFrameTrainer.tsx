@@ -1459,13 +1459,16 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
                 return (
                   <div
                     key={`${row}-${col}`}
-                    className={`${cellSize} flex items-center justify-center ${textSize} border rounded ${
-                      objectsInCell.length > 0 ? (darkMode ? `${colors[stimuliList.indexOf(objectsInCell[0]) % colors.length]} border-slate-300 font-bold text-white` : `${colors[stimuliList.indexOf(objectsInCell[0]) % colors.length]} border-slate-600 font-bold text-white`) :
+                    className={`${cellSize} flex flex-wrap items-center justify-center ${textSize} border rounded ${
+                      objectsInCell.length > 0 ? (darkMode ? 'bg-slate-600 border-slate-400' : 'bg-slate-200 border-slate-400') :
                       (darkMode ? 'bg-slate-700 border-slate-600' : 'bg-slate-100 border-slate-300')
                     }`}
                   >
                     {objectsInCell.map((stimulus, i) => (
-                      <span key={i} className={`${textSize} font-bold`}>
+                      <span
+                        key={i}
+                        className={`${textSize} font-bold px-1 py-0.5 m-0.5 rounded ${colors[stimuliList.indexOf(stimulus) % colors.length]} text-white`}
+                      >
                         {size === 'large' ? stimulusToNumber[stimulus] : renderStimulus(stimulus)}
                       </span>
                     ))}
@@ -1507,25 +1510,12 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
       // Get all unique vertical levels and sort them (highest to lowest)
       const verticalLevels = [...new Set(Object.values(positions).map(p => p.vLevel))].sort((a, b) => b - a);
 
-      const getLevelLabel = (vLevel) => {
-        if (vLevel > 0) return `ABOVE (Level +${vLevel})`;
-        if (vLevel < 0) return `BELOW (Level ${vLevel})`;
-        return 'CENTER (Level 0)';
-      };
-
       return (
         <div className="w-full">
           {renderLegend()}
           <div className={`flex flex-col ${levelGap} items-center`}>
             {verticalLevels.map(vLevel => (
-              <div key={vLevel} className="flex flex-col items-center gap-1">
-                <div className={`text-xs font-semibold px-3 py-1 rounded ${
-                  vLevel > 0 ? (darkMode ? 'bg-blue-600/30 text-blue-300 border border-blue-500/50' : 'bg-blue-100 text-blue-800 border border-blue-300') :
-                  vLevel < 0 ? (darkMode ? 'bg-purple-600/30 text-purple-300 border border-purple-500/50' : 'bg-purple-100 text-purple-800 border border-purple-300') :
-                  (darkMode ? 'bg-green-600/30 text-green-300 border border-green-500/50' : 'bg-green-100 text-green-800 border border-green-300')
-                }`}>
-                  {getLevelLabel(vLevel)}
-                </div>
+              <div key={vLevel}>
                 {render2DGrid(vLevel)}
               </div>
             ))}
