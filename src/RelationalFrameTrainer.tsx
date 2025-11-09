@@ -256,7 +256,7 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
     if (['CONTAINS', 'WITHIN'].includes(relation)) return 'containment';
     if (relation === 'ABOVE' || relation === 'BELOW' || relation.startsWith('ABOVE_') || relation.startsWith('BELOW_') ||
         (relation === 'AT' && enabledRelationModes.space3d) ||
-        (enabledRelationModes.space3d && !enabledRelationModes.spatial && ['NORTH', 'SOUTH', 'EAST', 'WEST', 'NORTHEAST', 'NORTHWEST', 'SOUTHEAST', 'SOUTHWEST'].includes(relation))) {
+        (enabledRelationModes.space3d && ['NORTH', 'SOUTH', 'EAST', 'WEST', 'NORTHEAST', 'NORTHWEST', 'SOUTHEAST', 'SOUTHWEST'].includes(relation))) {
       return 'space3d';
     }
     return 'spatial';
@@ -1507,12 +1507,25 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
       // Get all unique vertical levels and sort them (highest to lowest)
       const verticalLevels = [...new Set(Object.values(positions).map(p => p.vLevel))].sort((a, b) => b - a);
 
+      const getLevelLabel = (vLevel) => {
+        if (vLevel > 0) return `ABOVE (Level +${vLevel})`;
+        if (vLevel < 0) return `BELOW (Level ${vLevel})`;
+        return 'CENTER (Level 0)';
+      };
+
       return (
         <div className="w-full">
           {renderLegend()}
           <div className={`flex flex-col ${levelGap} items-center`}>
             {verticalLevels.map(vLevel => (
-              <div key={vLevel}>
+              <div key={vLevel} className="flex flex-col items-center gap-1">
+                <div className={`text-xs font-semibold px-3 py-1 rounded ${
+                  vLevel > 0 ? (darkMode ? 'bg-blue-600/30 text-blue-300 border border-blue-500/50' : 'bg-blue-100 text-blue-800 border border-blue-300') :
+                  vLevel < 0 ? (darkMode ? 'bg-purple-600/30 text-purple-300 border border-purple-500/50' : 'bg-purple-100 text-purple-800 border border-purple-300') :
+                  (darkMode ? 'bg-green-600/30 text-green-300 border border-green-500/50' : 'bg-green-100 text-green-800 border border-green-300')
+                }`}>
+                  {getLevelLabel(vLevel)}
+                </div>
                 {render2DGrid(vLevel)}
               </div>
             ))}
