@@ -277,10 +277,14 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
       // OPPOSITE compositions
       if (rel1 === 'OPPOSITE' && rel2 === 'OPPOSITE') return 'SAME';
 
-      // OPPOSITE + DIFFERENT is ambiguous
-      // If A is OPPOSITE to B, and B is DIFFERENT to C, we can't determine A and C
-      // (DIFFERENT just means "not same", doesn't specify if it's OPPOSITE or just different)
-      if (rel1 === 'OPPOSITE' && rel2 === 'DIFFERENT') return 'AMBIGUOUS';
+      // OPPOSITE + DIFFERENT = DIFFERENT
+      // If A is OPPOSITE to B, and B is DIFFERENT from C, then A must be DIFFERENT from C
+      // (If A and C were the same, then C would be OPPOSITE to B, not just DIFFERENT)
+      if (rel1 === 'OPPOSITE' && rel2 === 'DIFFERENT') return 'DIFFERENT';
+
+      // DIFFERENT + OPPOSITE is ambiguous
+      // If A is DIFFERENT from B, and B is OPPOSITE to C, we can't determine A and C
+      // (A could be SAME as C, OPPOSITE to C, or DIFFERENT from C)
       if (rel1 === 'DIFFERENT' && rel2 === 'OPPOSITE') return 'AMBIGUOUS';
 
       // DIFFERENT cannot be composed with itself - it's non-transitive
@@ -615,7 +619,84 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
       }
     }
 
-    return { premises, question: { stimulus1: stimuli[startIdx], relation: questionRelation, stimulus2: stimuli[endIdx] }, correctAnswer, derivedRelation: derivedRelation || 'AMBIGUOUS', allPaths: findAllPaths(premises, stimuli[startIdx], stimuli[endIdx]), allStimuli: stimuli };
+    // Ensure the question doesn't directly match any premise - must require derivation
+    let questionStimulus1 = stimuli[startIdx];
+    let questionStimulus2 = stimuli[endIdx];
+
+    // Check if question directly matches a premise
+    const directMatch = premises.some(pr =>
+      (pr.stimulus1 === questionStimulus1 && pr.stimulus2 === questionStimulus2 && pr.relation === questionRelation) ||
+      (pr.stimulus1 === questionStimulus2 && pr.stimulus2 === questionStimulus1 && getReverseRelation(pr.relation) === questionRelation)
+    );
+
+    // If there's a direct match, try to find a different pair that requires derivation
+    if (directMatch && stimuli.length > 2) {
+      // Try to find a pair that requires derivation (not directly in premises)
+      const availablePairs = [];
+      for (let i = 0; i < stimuli.length; i++) {
+        for (let j = 0; j < stimuli.length; j++) {
+          if (i !== j) {
+            const derived = deriveRelationFromGraph(premises, stimuli[i], stimuli[j]);
+            const hasDirectPremise = premises.some(pr =>
+              (pr.stimulus1 === stimuli[i] && pr.stimulus2 === stimuli[j]) ||
+              (pr.stimulus1 === stimuli[j] && pr.stimulus2 === stimuli[i])
+            );
+            // Only include pairs that require derivation (not direct premises)
+            if (!hasDirectPremise && derived !== null) {
+              availablePairs.push({ i, j, derived });
+            }
+          }
+        }
+      }
+
+      // If we found pairs requiring derivation, pick one
+      if (availablePairs.length > 0) {
+        const chosen = availablePairs[Math.floor(Math.random() * availablePairs.length)];
+        questionStimulus1 = stimuli[chosen.i];
+        questionStimulus2 = stimuli[chosen.j];
+
+        // Recalculate the question based on this new pair
+        const newDerivedRelation = chosen.derived;
+        if (newDerivedRelation === 'AMBIGUOUS' || newDerivedRelation === null) {
+          questionRelation = activeRelations[Math.floor(Math.random() * activeRelations.length)];
+          correctAnswer = 'ambiguous';
+        } else {
+          const askCompatible = Math.random() < 0.5;
+          if (askCompatible) {
+            questionRelation = newDerivedRelation;
+            correctAnswer = true;
+          } else {
+            // Generate incompatible question
+            const incompatible = activeRelations.filter(r => r !== newDerivedRelation);
+            if (incompatible.length > 0) {
+              questionRelation = incompatible[Math.floor(Math.random() * incompatible.length)];
+
+              // Handle equality mode special cases
+              if (getRelationMode(newDerivedRelation) === 'equality') {
+                if (newDerivedRelation === 'OPPOSITE' && questionRelation === 'DIFFERENT') {
+                  correctAnswer = true;
+                } else if (newDerivedRelation === 'DIFFERENT' && questionRelation === 'SAME') {
+                  correctAnswer = false;
+                } else if (newDerivedRelation === 'SAME' && questionRelation === 'DIFFERENT') {
+                  correctAnswer = false;
+                } else if (newDerivedRelation === 'DIFFERENT' && questionRelation === 'OPPOSITE') {
+                  correctAnswer = 'ambiguous';
+                } else {
+                  correctAnswer = false;
+                }
+              } else {
+                correctAnswer = false;
+              }
+            } else {
+              questionRelation = newDerivedRelation;
+              correctAnswer = true;
+            }
+          }
+        }
+      }
+    }
+
+    return { premises, question: { stimulus1: questionStimulus1, relation: questionRelation, stimulus2: questionStimulus2 }, correctAnswer, derivedRelation: derivedRelation || 'AMBIGUOUS', allPaths: findAllPaths(premises, stimuli[startIdx], stimuli[endIdx]), allStimuli: stimuli };
   }, [difficulty, networkComplexity, useRealWords, useNonsenseWords, useRandomLetters, useEmojis, useVoronoi, useMandelbrot, useVibration, letterLength, enabledRelationModes]);
 
   const startNewTrial = useCallback(() => {
