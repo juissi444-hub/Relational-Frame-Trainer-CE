@@ -2483,8 +2483,25 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
               </div>
 
               <div>
-                <label className={`block text-sm font-semibold mb-2 ${darkMode ? 'text-slate-200' : 'text-slate-700'}`}>Premise Count</label>
-                <input type="number" min="2" max="20" value={difficulty} onChange={(e) => setDifficulty(Math.max(2, parseInt(e.target.value) || 2))} className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors ${darkMode ? 'bg-slate-700 border-slate-600 text-slate-50' : 'bg-white border-slate-300 text-slate-900'}`} />
+                <label className={`block text-sm font-semibold mb-2 ${darkMode ? 'text-slate-200' : 'text-slate-700'}`}>
+                  Premise Count: {difficulty}
+                </label>
+                <input
+                  type="range"
+                  min="1"
+                  max="100"
+                  value={difficulty}
+                  onChange={(e) => setDifficulty(parseInt(e.target.value))}
+                  className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600 mb-2"
+                />
+                <input
+                  type="number"
+                  min="1"
+                  max="100"
+                  value={difficulty}
+                  onChange={(e) => setDifficulty(Math.max(1, Math.min(100, parseInt(e.target.value) || 1)))}
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors ${darkMode ? 'bg-slate-700 border-slate-600 text-slate-50' : 'bg-white border-slate-300 text-slate-900'}`}
+                />
               </div>
 
               <div className={`border-t pt-4 ${darkMode ? 'border-slate-600' : 'border-slate-200'}`}>
