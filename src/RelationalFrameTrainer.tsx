@@ -1902,7 +1902,11 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
                         )}
                       </h3>
                       <div className={`flex justify-center p-4 sm:p-6 rounded-lg ${darkMode ? 'bg-slate-700/30' : 'bg-slate-50'}`}>
-                        {renderSpatialGrid(item.trial, 'large')}
+                        {renderSpatialGrid(item.trial, 'large') || (
+                          <div className={`text-sm ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                            Grid visualization not available
+                          </div>
+                        )}
                       </div>
                     </div>
                     <div>
