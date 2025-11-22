@@ -1571,15 +1571,29 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
       // Get all unique vertical levels and sort them (highest to lowest)
       const verticalLevels = [...new Set(Object.values(positions).map(p => p.vLevel))].sort((a, b) => b - a);
 
+      const getLevelLabel = (vLevel) => {
+        if (vLevel > 0) return 'ABOVE';
+        if (vLevel < 0) return 'BELOW';
+        return 'CENTER';
+      };
+
       return (
         <div className="w-full">
           {renderLegend()}
           <div className={`flex flex-col ${levelGap} items-center`}>
-            {verticalLevels.map(vLevel => (
-              <div key={vLevel}>
-                {render2DGrid(vLevel)}
-              </div>
-            ))}
+            {verticalLevels.map(vLevel => {
+              const grid = render2DGrid(vLevel);
+              if (!grid) return null; // Skip empty levels
+
+              return (
+                <div key={vLevel} className="w-full">
+                  <div className={`text-center mb-2 font-semibold ${size === 'large' ? 'text-sm' : 'text-xs'} ${darkMode ? 'text-slate-300' : 'text-slate-600'}`}>
+                    {getLevelLabel(vLevel)} Level
+                  </div>
+                  {grid}
+                </div>
+              );
+            })}
           </div>
         </div>
       );
