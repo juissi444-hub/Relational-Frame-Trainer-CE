@@ -1571,15 +1571,29 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
       // Get all unique vertical levels and sort them (highest to lowest)
       const verticalLevels = [...new Set(Object.values(positions).map(p => p.vLevel))].sort((a, b) => b - a);
 
+      const getLevelLabel = (vLevel) => {
+        if (vLevel > 0) return 'ABOVE';
+        if (vLevel < 0) return 'BELOW';
+        return 'CENTER';
+      };
+
       return (
         <div className="w-full">
           {renderLegend()}
           <div className={`flex flex-col ${levelGap} items-center`}>
-            {verticalLevels.map(vLevel => (
-              <div key={vLevel}>
-                {render2DGrid(vLevel)}
-              </div>
-            ))}
+            {verticalLevels.map(vLevel => {
+              const grid = render2DGrid(vLevel);
+              if (!grid) return null; // Skip empty levels
+
+              return (
+                <div key={vLevel} className="w-full">
+                  <div className={`text-center mb-2 font-semibold ${size === 'large' ? 'text-sm' : 'text-xs'} ${darkMode ? 'text-slate-300' : 'text-slate-600'}`}>
+                    {getLevelLabel(vLevel)} Level
+                  </div>
+                  {grid}
+                </div>
+              );
+            })}
           </div>
         </div>
       );
@@ -1888,7 +1902,11 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
                         )}
                       </h3>
                       <div className={`flex justify-center p-4 sm:p-6 rounded-lg ${darkMode ? 'bg-slate-700/30' : 'bg-slate-50'}`}>
-                        {renderSpatialGrid(item.trial, 'large')}
+                        {renderSpatialGrid(item.trial, 'large') || (
+                          <div className={`text-sm ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                            Grid visualization not available
+                          </div>
+                        )}
                       </div>
                     </div>
                     <div>
