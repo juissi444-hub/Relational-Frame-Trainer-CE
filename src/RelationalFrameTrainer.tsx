@@ -377,22 +377,46 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
 
       return compose3D(vResult, hResult);
     } else {
-      // Spatial relations
-      const opposites = {
-        'NORTH': 'SOUTH', 'SOUTH': 'NORTH',
-        'EAST': 'WEST', 'WEST': 'EAST',
-        'NORTHEAST': 'SOUTHWEST', 'SOUTHWEST': 'NORTHEAST',
-        'NORTHWEST': 'SOUTHEAST', 'SOUTHEAST': 'NORTHWEST'
+      // Spatial relations - compose by adding direction vectors
+      const getDirectionOffset = (dir) => {
+        const offsets = {
+          'NORTH': [-1, 0],
+          'SOUTH': [1, 0],
+          'EAST': [0, 1],
+          'WEST': [0, -1],
+          'NORTHEAST': [-1, 1],
+          'NORTHWEST': [-1, -1],
+          'SOUTHEAST': [1, 1],
+          'SOUTHWEST': [1, -1]
+        };
+        return offsets[dir] || [0, 0];
       };
-      
-      // Same direction is transitive
-      if (rel1 === rel2) return rel1;
-      
-      // Opposite directions cancel out (A north of B, B south of C is ambiguous)
-      if (opposites[rel1] === rel2) return 'AMBIGUOUS';
-      
-      // Different non-opposite directions are ambiguous
-      return 'AMBIGUOUS';
+
+      const offsetToDirection = (rowOffset, colOffset) => {
+        // Normalize to -1, 0, or 1
+        const r = rowOffset === 0 ? 0 : (rowOffset > 0 ? 1 : -1);
+        const c = colOffset === 0 ? 0 : (colOffset > 0 ? 1 : -1);
+
+        if (r === 0 && c === 0) return 'AMBIGUOUS'; // Vectors cancel out
+        if (r === -1 && c === 0) return 'NORTH';
+        if (r === 1 && c === 0) return 'SOUTH';
+        if (r === 0 && c === 1) return 'EAST';
+        if (r === 0 && c === -1) return 'WEST';
+        if (r === -1 && c === 1) return 'NORTHEAST';
+        if (r === -1 && c === -1) return 'NORTHWEST';
+        if (r === 1 && c === 1) return 'SOUTHEAST';
+        if (r === 1 && c === -1) return 'SOUTHWEST';
+        return 'AMBIGUOUS';
+      };
+
+      const [r1, c1] = getDirectionOffset(rel1);
+      const [r2, c2] = getDirectionOffset(rel2);
+
+      // Add the direction vectors
+      const totalRow = r1 + r2;
+      const totalCol = c1 + c2;
+
+      return offsetToDirection(totalRow, totalCol);
     }
   };
 
