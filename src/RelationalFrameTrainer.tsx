@@ -277,12 +277,13 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
       // OPPOSITE compositions
       if (rel1 === 'OPPOSITE' && rel2 === 'OPPOSITE') return 'SAME';
 
-      // OPPOSITE + DIFFERENT: If A is OPPOSITE to B, and B is DIFFERENT from C,
-      // then A is also DIFFERENT from C (transitive property of the DIFFERENT category)
-      if (rel1 === 'OPPOSITE' && rel2 === 'DIFFERENT') return 'DIFFERENT';
+      // OPPOSITE + DIFFERENT is ambiguous
+      // DIFFERENT is indefinite (just means "not same"), so we can't determine the final relationship
+      // If A is OPPOSITE to B, and B is DIFFERENT from C, we can't tell if A and C are SAME, OPPOSITE, or DIFFERENT
+      if (rel1 === 'OPPOSITE' && rel2 === 'DIFFERENT') return 'AMBIGUOUS';
 
-      // DIFFERENT + OPPOSITE is ambiguous: If A is DIFFERENT from B, and B is OPPOSITE to C,
-      // we can't determine the relationship between A and C
+      // DIFFERENT + OPPOSITE is also ambiguous
+      // If A is DIFFERENT from B, and B is OPPOSITE to C, we can't determine A and C
       if (rel1 === 'DIFFERENT' && rel2 === 'OPPOSITE') return 'AMBIGUOUS';
 
       // DIFFERENT cannot be composed with itself - it's non-transitive
