@@ -277,10 +277,12 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
       // OPPOSITE compositions
       if (rel1 === 'OPPOSITE' && rel2 === 'OPPOSITE') return 'SAME';
 
-      // OPPOSITE + DIFFERENT is ambiguous
-      // If A is OPPOSITE to B, and B is DIFFERENT to C, we can't determine A and C
-      // (DIFFERENT just means "not same", doesn't specify if it's OPPOSITE or just different)
-      if (rel1 === 'OPPOSITE' && rel2 === 'DIFFERENT') return 'AMBIGUOUS';
+      // OPPOSITE + DIFFERENT: If A is OPPOSITE to B, and B is DIFFERENT from C,
+      // then A is also DIFFERENT from C (transitive property of the DIFFERENT category)
+      if (rel1 === 'OPPOSITE' && rel2 === 'DIFFERENT') return 'DIFFERENT';
+
+      // DIFFERENT + OPPOSITE is ambiguous: If A is DIFFERENT from B, and B is OPPOSITE to C,
+      // we can't determine the relationship between A and C
       if (rel1 === 'DIFFERENT' && rel2 === 'OPPOSITE') return 'AMBIGUOUS';
 
       // DIFFERENT cannot be composed with itself - it's non-transitive
@@ -542,10 +544,38 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
       if (chosenPair) premises.push({ stimulus1: chosenPair.s1, relation: activeRelations[Math.floor(Math.random() * activeRelations.length)], stimulus2: chosenPair.s2 });
     }
     
-    const startIdx = Math.floor(Math.random() * stimuli.length);
-    let endIdx = Math.floor(Math.random() * stimuli.length);
-    if (startIdx === endIdx) endIdx = (endIdx + 1) % stimuli.length;
-    const derivedRelation = deriveRelationFromGraph(premises, stimuli[startIdx], stimuli[endIdx]);
+    // Select question pair ensuring it requires derivation (not directly from a premise)
+    let startIdx, endIdx, derivedRelation;
+    let attempts = 0;
+    const maxAttempts = 100;
+
+    do {
+      startIdx = Math.floor(Math.random() * stimuli.length);
+      endIdx = Math.floor(Math.random() * stimuli.length);
+      if (startIdx === endIdx) endIdx = (endIdx + 1) % stimuli.length;
+
+      // Check if this pair is directly stated in any premise (in either direction)
+      const isDirect = premises.some(pr =>
+        (pr.stimulus1 === stimuli[startIdx] && pr.stimulus2 === stimuli[endIdx]) ||
+        (pr.stimulus1 === stimuli[endIdx] && pr.stimulus2 === stimuli[startIdx])
+      );
+
+      if (!isDirect) {
+        derivedRelation = deriveRelationFromGraph(premises, stimuli[startIdx], stimuli[endIdx]);
+        break;
+      }
+
+      attempts++;
+    } while (attempts < maxAttempts);
+
+    // Fallback: if we couldn't find a non-direct pair after many attempts, use any pair
+    if (attempts >= maxAttempts) {
+      startIdx = Math.floor(Math.random() * stimuli.length);
+      endIdx = Math.floor(Math.random() * stimuli.length);
+      if (startIdx === endIdx) endIdx = (endIdx + 1) % stimuli.length;
+      derivedRelation = deriveRelationFromGraph(premises, stimuli[startIdx], stimuli[endIdx]);
+    }
+
     let questionRelation, correctAnswer;
     
     if (derivedRelation === 'AMBIGUOUS' || derivedRelation === null) {
@@ -1414,39 +1444,45 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
     const textSize = size === 'large' ? 'text-sm sm:text-base' : 'text-[10px]';
     const gapSize = size === 'large' ? 'gap-1' : 'gap-0.5';
 
-    // Calculate global bounds across ALL positions (all vertical levels)
+    // Check if we have any positions
     const allPositions = Object.values(positions);
     if (allPositions.length === 0) return null;
 
-    const allRows = allPositions.map(p => p.row);
-    const allCols = allPositions.map(p => p.col);
-    const globalMinRow = Math.min(...allRows);
-    const globalMaxRow = Math.max(...allRows);
-    const globalMinCol = Math.min(...allCols);
-    const globalMaxCol = Math.max(...allCols);
-
-    // Build grid arrays to cover the global range
-    const gridRows = [];
-    for (let r = globalMinRow; r <= globalMaxRow; r++) {
-      gridRows.push(r);
-    }
-    const gridCols = [];
-    for (let c = globalMinCol; c <= globalMaxCol; c++) {
-      gridCols.push(c);
-    }
-    const numCols = gridCols.length;
-
-    // Render a grid for a specific vertical level using global bounds
+    // Render a grid for a specific vertical level, calculating bounds per level
     const render2DGrid = (vLevelNum) => {
       // Find objects at this vertical level
       const objectsHere = {};
+      const levelPositions = [];
+
       for (const [stimulus, pos] of Object.entries(positions)) {
         if (pos.vLevel === vLevelNum) {
           const key = `${pos.row},${pos.col}`;
           if (!objectsHere[key]) objectsHere[key] = [];
           objectsHere[key].push(stimulus);
+          levelPositions.push(pos);
         }
       }
+
+      // Calculate bounds for this specific level only
+      if (levelPositions.length === 0) return null;
+
+      const levelRows = levelPositions.map(p => p.row);
+      const levelCols = levelPositions.map(p => p.col);
+      const minRow = Math.min(...levelRows);
+      const maxRow = Math.max(...levelRows);
+      const minCol = Math.min(...levelCols);
+      const maxCol = Math.max(...levelCols);
+
+      // Build grid arrays for this level's range
+      const gridRows = [];
+      for (let r = minRow; r <= maxRow; r++) {
+        gridRows.push(r);
+      }
+      const gridCols = [];
+      for (let c = minCol; c <= maxCol; c++) {
+        gridCols.push(c);
+      }
+      const numCols = gridCols.length;
 
       return (
         <div className={`flex flex-col ${gapSize}`}>
