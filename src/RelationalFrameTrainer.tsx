@@ -597,6 +597,26 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
       if (chosenPair) premises.push({ stimulus1: chosenPair.s1, relation: activeRelations[Math.floor(Math.random() * activeRelations.length)], stimulus2: chosenPair.s2 });
     }
     
+    // Helper function to check if a relation is symmetric
+    const isSymmetricRelation = (relation: string): boolean => {
+      return ['SAME', 'OPPOSITE', 'DIFFERENT'].includes(relation);
+    };
+
+    // Helper function to check if a question matches any premise
+    const questionMatchesPremise = (s1: string, rel: string, s2: string): boolean => {
+      return premises.some(pr => {
+        // Direct match: premise has same stimuli and relation
+        if (pr.stimulus1 === s1 && pr.stimulus2 === s2 && pr.relation === rel) {
+          return true;
+        }
+        // For symmetric relations, also check reverse
+        if (isSymmetricRelation(rel) && pr.stimulus1 === s2 && pr.stimulus2 === s1 && pr.relation === rel) {
+          return true;
+        }
+        return false;
+      });
+    };
+
     // Select question pair ensuring it requires derivation (not directly from a premise)
     // For spatial/3D modes, also ensure the derivedRelation is not AMBIGUOUS
     let startIdx, endIdx, derivedRelation;
@@ -717,6 +737,49 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
           }
         }
       }
+    }
+
+    // CRITICAL: Ensure the question doesn't directly match any premise
+    // This prevents questions like "A is NORTH of B" when there's a premise "A is NORTH of B"
+    // If the question matches a premise, retry by picking a different relation
+    let questionRetries = 0;
+    const maxQuestionRetries = 20;
+    while (questionRetries < maxQuestionRetries && questionMatchesPremise(stimuli[startIdx], questionRelation, stimuli[endIdx])) {
+      // Question matches a premise - pick a different relation
+      const alternativeRelations = activeRelations.filter(r => r !== questionRelation);
+      if (alternativeRelations.length > 0) {
+        const newRelation = alternativeRelations[Math.floor(Math.random() * alternativeRelations.length)];
+
+        // Recalculate the correct answer for the new relation
+        if (newRelation === derivedRelation) {
+          questionRelation = newRelation;
+          correctAnswer = true;
+        } else {
+          questionRelation = newRelation;
+
+          // Determine if this new relation is compatible or not
+          if (getRelationMode(derivedRelation) === 'equality' && getRelationMode(newRelation) === 'equality') {
+            // Apply equality logic
+            if (derivedRelation === 'OPPOSITE' && newRelation === 'DIFFERENT') {
+              correctAnswer = true;
+            } else if (derivedRelation === 'DIFFERENT' && newRelation === 'SAME') {
+              correctAnswer = false;
+            } else if (derivedRelation === 'SAME' && newRelation === 'DIFFERENT') {
+              correctAnswer = false;
+            } else if (derivedRelation === 'DIFFERENT' && newRelation === 'OPPOSITE') {
+              correctAnswer = isSpatialMode ? false : 'ambiguous';
+            } else {
+              correctAnswer = false;
+            }
+          } else {
+            correctAnswer = false;
+          }
+        }
+      } else {
+        // No alternative relations available - this shouldn't happen often
+        break;
+      }
+      questionRetries++;
     }
 
     return { premises, question: { stimulus1: stimuli[startIdx], relation: questionRelation, stimulus2: stimuli[endIdx] }, correctAnswer, derivedRelation: derivedRelation || 'AMBIGUOUS', allPaths: findAllPaths(premises, stimuli[startIdx], stimuli[endIdx]), allStimuli: stimuli };
@@ -1693,8 +1756,8 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
       />
 
       {showTutorial && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-2 sm:p-4">
-          <div className={`max-w-2xl w-full rounded-lg p-4 sm:p-6 shadow-xl max-h-[90vh] overflow-y-auto ${darkMode ? 'bg-slate-800' : 'bg-white'}`}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-2 sm:p-4">
+          <div className={`max-w-2xl w-full rounded-lg p-4 sm:p-6 shadow-2xl max-h-[90vh] overflow-y-auto ${darkMode ? 'bg-slate-800' : 'bg-white'}`}>
             <div className="flex justify-between items-center mb-4">
               <h2 className={`text-xl sm:text-2xl font-bold ${darkMode ? 'text-indigo-300' : 'text-indigo-600'}`}>How to Play</h2>
               <button onClick={() => setShowTutorial(false)} className={`p-2 rounded-lg ${darkMode ? 'hover:bg-slate-700/80' : 'hover:bg-slate-100'}`}>
@@ -1808,8 +1871,8 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
       )}
 
       {showAboutModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-2 sm:p-4">
-          <div className={`max-w-2xl w-full rounded-2xl p-6 sm:p-8 shadow-2xl ${darkMode ? 'bg-slate-800/95 backdrop-blur-sm' : 'bg-white'}`}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-2 sm:p-4">
+          <div className={`max-w-2xl w-full rounded-lg p-6 sm:p-8 shadow-2xl ${darkMode ? 'bg-slate-800' : 'bg-white'}`}>
             <div className="flex justify-between items-center mb-6">
               <h2 className={`text-2xl sm:text-3xl font-bold flex items-center gap-2 ${darkMode ? 'text-indigo-300' : 'text-indigo-600'}`}>
                 <Users className="w-6 h-6 sm:w-8 sm:h-8" />
@@ -1858,8 +1921,8 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
       )}
 
       {showSupportModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-2 sm:p-4">
-          <div className={`max-w-2xl w-full rounded-2xl p-6 sm:p-8 shadow-2xl ${darkMode ? 'bg-slate-800/95 backdrop-blur-sm' : 'bg-white'}`}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-2 sm:p-4">
+          <div className={`max-w-2xl w-full rounded-lg p-6 sm:p-8 shadow-2xl ${darkMode ? 'bg-slate-800' : 'bg-white'}`}>
             <div className="flex justify-between items-center mb-6">
               <h2 className={`text-2xl sm:text-3xl font-bold flex items-center gap-2 ${darkMode ? 'text-pink-400' : 'text-pink-600'}`}>
                 <Heart className="w-6 h-6 sm:w-8 sm:h-8 fill-current" />
@@ -1973,11 +2036,11 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
       )}
 
       {(showHistory || showStats) && (
-        <div className="sm:hidden fixed inset-0 z-40 bg-black/50 backdrop-blur-sm" onClick={() => { setShowHistory(false); setShowStats(false); }} />
+        <div className="sm:hidden fixed inset-0 z-40 bg-black/60" onClick={() => { setShowHistory(false); setShowStats(false); }} />
       )}
 
       <div
-        className={`${darkMode ? 'bg-slate-800/95 backdrop-blur-sm' : 'bg-white'} shadow-xl transition-all duration-300 overflow-hidden ${showHistory ? 'fixed sm:relative inset-y-0 left-0 w-[90vw] sm:w-96 z-50' : 'w-0'}`}
+        className={`${darkMode ? 'bg-slate-800' : 'bg-white'} shadow-xl transition-all duration-300 overflow-hidden ${showHistory ? 'fixed sm:relative inset-y-0 left-0 w-[90vw] sm:w-96 z-50' : 'w-0'}`}
         onMouseLeave={() => setShowHistory(false)}
       >
         {showHistory && (
@@ -2036,7 +2099,7 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
         )}
       </div>
 
-      <div className={`${darkMode ? 'bg-slate-800/95 backdrop-blur-sm' : 'bg-white'} shadow-xl transition-all duration-300 overflow-hidden ${showStats ? 'fixed sm:relative inset-y-0 left-0 w-[90vw] sm:w-96 z-50' : 'w-0'}`}>
+      <div className={`${darkMode ? 'bg-slate-800' : 'bg-white'} shadow-xl transition-all duration-300 overflow-hidden ${showStats ? 'fixed sm:relative inset-y-0 left-0 w-[90vw] sm:w-96 z-50' : 'w-0'}`}>
         {showStats && (
           <div className="h-full flex flex-col p-3 sm:p-4">
             <div className="flex items-center justify-between mb-3 sm:mb-4">
@@ -2217,20 +2280,20 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
                   console.log('Settings button clicked, current state:', showSettings);
                   setShowSettings(prev => !prev);
                 }}
-                className={`flex items-center gap-1 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg transition-colors text-sm sm:text-base ${darkMode ? 'bg-indigo-900/50 hover:bg-indigo-900/70 text-indigo-200' : 'bg-indigo-100 hover:bg-indigo-200 text-slate-900'}`}
+                className={`flex items-center gap-1 px-3 sm:px-4 py-2 rounded-lg transition-colors text-sm sm:text-base ${darkMode ? 'bg-slate-700 hover:bg-slate-600 text-slate-200' : 'bg-white hover:bg-slate-50 text-slate-700 border border-slate-200'}`}
               >
                 <Settings className="w-4 h-4 sm:w-5 sm:h-5" />
                 <span className="hidden sm:inline">Settings</span>
               </button>
-              <button onClick={() => setShowAboutModal(true)} className={`flex items-center gap-1 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg transition-colors text-sm sm:text-base ${darkMode ? 'bg-indigo-900/50 hover:bg-indigo-900/70 text-indigo-200' : 'bg-indigo-100 hover:bg-indigo-200 text-slate-900'}`}>
+              <button onClick={() => setShowAboutModal(true)} className={`flex items-center gap-1 px-3 sm:px-4 py-2 rounded-lg transition-colors text-sm sm:text-base ${darkMode ? 'bg-slate-700 hover:bg-slate-600 text-slate-200' : 'bg-white hover:bg-slate-50 text-slate-700 border border-slate-200'}`}>
                 <Users className="w-4 h-4 sm:w-5 sm:h-5" />
                 <span className="hidden sm:inline">About Us</span>
               </button>
-              <button onClick={() => setShowContactModal(true)} className={`flex items-center gap-1 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg transition-colors text-sm sm:text-base ${darkMode ? 'bg-blue-900/50 hover:bg-blue-900/70 text-blue-200' : 'bg-blue-100 hover:bg-blue-200 text-slate-900'}`}>
+              <button onClick={() => setShowContactModal(true)} className={`flex items-center gap-1 px-3 sm:px-4 py-2 rounded-lg transition-colors text-sm sm:text-base ${darkMode ? 'bg-slate-700 hover:bg-slate-600 text-slate-200' : 'bg-white hover:bg-slate-50 text-slate-700 border border-slate-200'}`}>
                 <Mail className="w-4 h-4 sm:w-5 sm:h-5" />
                 <span className="hidden sm:inline">Contact</span>
               </button>
-              <button onClick={() => setShowSupportModal(true)} className={`flex items-center gap-1 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg transition-colors text-sm sm:text-base ${darkMode ? 'bg-pink-900/50 hover:bg-pink-900/70 text-pink-200' : 'bg-pink-100 hover:bg-pink-200 text-slate-900'}`}>
+              <button onClick={() => setShowSupportModal(true)} className={`flex items-center gap-1 px-3 sm:px-4 py-2 rounded-lg transition-colors text-sm sm:text-base ${darkMode ? 'bg-slate-700 hover:bg-slate-600 text-slate-200' : 'bg-white hover:bg-slate-50 text-slate-700 border border-slate-200'}`}>
                 <Heart className="w-4 h-4 sm:w-5 sm:h-5" />
                 <span className="hidden sm:inline">Support Us</span>
               </button>
@@ -2268,7 +2331,7 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
           </div>
         </div>
 
-        <div className={`shadow-sm p-1 sm:p-2 transition-colors duration-300 ${darkMode ? 'bg-slate-800/95 backdrop-blur-sm/50' : 'bg-white'}`}>
+        <div className={`shadow-sm p-1 sm:p-2 transition-colors ${darkMode ? 'bg-slate-800' : 'bg-white'}`}>
           <div className={`h-2 sm:h-3 rounded-full overflow-hidden ${darkMode ? 'bg-slate-700' : 'bg-slate-200'}`}>
             <div className={`h-full transition-all duration-100 ${isPaused ? (darkMode ? 'bg-yellow-600' : 'bg-yellow-500') : (darkMode ? 'bg-indigo-500' : 'bg-indigo-600')}`} style={{ width: `${(timeLeft / timePerQuestion) * 100}%` }} />
           </div>
@@ -2277,7 +2340,7 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
         <div className="flex-1 overflow-y-auto p-3 sm:p-6">
           <div className="max-w-4xl mx-auto">
             {isPaused && (
-              <div className={`border-2 rounded-xl p-4 sm:p-6 mb-4 sm:mb-6 text-center transition-colors duration-300 ${darkMode ? 'bg-yellow-900/20 border-yellow-500/50 backdrop-blur' : 'bg-yellow-50 border-yellow-300'}`}>
+              <div className={`border-2 rounded-lg p-4 sm:p-6 mb-4 sm:mb-6 text-center ${darkMode ? 'bg-yellow-900/30 border-yellow-500' : 'bg-yellow-50 border-yellow-300'}`}>
                 <Pause className={`w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-2 ${darkMode ? 'text-yellow-400' : 'text-yellow-600'}`} />
                 <h2 className={`text-xl sm:text-2xl font-bold mb-2 ${darkMode ? 'text-yellow-300' : 'text-yellow-800'}`}>Paused</h2>
                 <p className={`text-sm sm:text-base ${darkMode ? 'text-yellow-200' : 'text-yellow-700'}`}>
@@ -2287,7 +2350,7 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
             )}
 
                           {currentTrial && !isPaused && (
-              <div className={`rounded-xl sm:rounded-2xl shadow-xl p-4 sm:p-8 transition-colors duration-300 ${darkMode ? 'bg-slate-800/95 backdrop-blur-sm/90 backdrop-blur' : 'bg-white'}`}>
+              <div className={`rounded-lg shadow-lg p-4 sm:p-8 ${darkMode ? 'bg-slate-800' : 'bg-white'}`}>
                 <h3 className={`text-xs sm:text-sm font-semibold uppercase tracking-wide mb-3 sm:mb-4 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Given:</h3>
                 <div className="space-y-2 sm:space-y-3 mb-6 sm:mb-8">
                   {currentTrial.premises.map((premise, idx) => {
@@ -2395,11 +2458,11 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
       </div>
 
       {showSettings && (
-        <div className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm" onClick={() => setShowSettings(false)} />
+        <div className="fixed inset-0 z-40 bg-black/60" onClick={() => setShowSettings(false)} />
       )}
 
       <div
-        className={`${darkMode ? 'bg-slate-800/95 backdrop-blur-sm' : 'bg-white'} shadow-xl transition-all duration-300 overflow-hidden ${showSettings ? 'fixed inset-y-0 right-0 w-[90vw] sm:w-96 z-50' : 'w-0'}`}
+        className={`${darkMode ? 'bg-slate-800' : 'bg-white'} shadow-xl transition-all duration-300 overflow-hidden ${showSettings ? 'fixed inset-y-0 right-0 w-[90vw] sm:w-96 z-50' : 'w-0'}`}
         onMouseLeave={() => setShowSettings(false)}
       >
         {showSettings && (
@@ -2659,13 +2722,13 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
                         onChange={(e) => setUniversalProgress(prev => ({ ...prev, targetAccuracy: parseInt(e.target.value) }))} 
                         className="w-full accent-indigo-600" 
                       />
-                      <input 
-                        type="number" 
-                        min="1" 
-                        max="100" 
-                        value={universalProgress.targetAccuracy} 
-                        onChange={(e) => setUniversalProgress(prev => ({ ...prev, targetAccuracy: Math.max(1, Math.min(100, parseInt(e.target.value) || 1)) }))} 
-                        className={`w-full mt-2 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors ${darkMode ? 'bg-slate-800/95 backdrop-blur-sm border-slate-600 text-slate-50' : 'bg-white border-slate-300 text-slate-900'}`} 
+                      <input
+                        type="number"
+                        min="1"
+                        max="100"
+                        value={universalProgress.targetAccuracy}
+                        onChange={(e) => setUniversalProgress(prev => ({ ...prev, targetAccuracy: Math.max(1, Math.min(100, parseInt(e.target.value) || 1)) }))}
+                        className={`w-full mt-2 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors ${darkMode ? 'bg-slate-700 border-slate-600 text-slate-50' : 'bg-white border-slate-300 text-slate-900'}`}
                       />
                     </div>
 
@@ -2681,13 +2744,13 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
                         onChange={(e) => setUniversalProgress(prev => ({ ...prev, targetPremiseCount: parseInt(e.target.value) }))} 
                         className="w-full accent-indigo-600" 
                       />
-                      <input 
-                        type="number" 
-                        min="1" 
-                        max="100" 
-                        value={universalProgress.targetPremiseCount} 
-                        onChange={(e) => setUniversalProgress(prev => ({ ...prev, targetPremiseCount: Math.max(1, Math.min(100, parseInt(e.target.value) || 1)) }))} 
-                        className={`w-full mt-2 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors ${darkMode ? 'bg-slate-800/95 backdrop-blur-sm border-slate-600 text-slate-50' : 'bg-white border-slate-300 text-slate-900'}`} 
+                      <input
+                        type="number"
+                        min="1"
+                        max="100"
+                        value={universalProgress.targetPremiseCount}
+                        onChange={(e) => setUniversalProgress(prev => ({ ...prev, targetPremiseCount: Math.max(1, Math.min(100, parseInt(e.target.value) || 1)) }))}
+                        className={`w-full mt-2 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors ${darkMode ? 'bg-slate-700 border-slate-600 text-slate-50' : 'bg-white border-slate-300 text-slate-900'}`}
                       />
                     </div>
 
@@ -2707,7 +2770,7 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
                 {autoProgressMode === 'mode-specific' && (
                   <div className={`p-3 rounded-lg space-y-4 ${darkMode ? 'bg-slate-700' : 'bg-slate-100'}`}>
                     {Object.keys(enabledRelationModes).filter(mode => enabledRelationModes[mode]).map(mode => (
-                      <div key={mode} className={`p-3 rounded-lg ${darkMode ? 'bg-slate-800/95 backdrop-blur-sm' : 'bg-white'}`}>
+                      <div key={mode} className={`p-3 rounded-lg ${darkMode ? 'bg-slate-800' : 'bg-white'}`}>
                         <h4 className={`font-bold text-sm mb-3 capitalize ${darkMode ? 'text-purple-400' : 'text-purple-600'}`}>{mode}</h4>
                         
                         <div className="mb-3">
