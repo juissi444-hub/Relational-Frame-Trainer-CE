@@ -1680,7 +1680,7 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
   }, [filteredStats]);
 
   return (
-    <div className={`min-h-screen flex flex-col transition-colors duration-300 ${darkMode ? 'bg-gradient-to-br from-gray-900 via-slate-900 to-gray-900' : 'bg-gradient-to-br from-slate-50 to-slate-100'}`}>
+    <div className={`min-h-screen flex flex-col ${darkMode ? 'bg-slate-900' : 'bg-slate-50'}`}>
 
       {/* Hover zones for corners - desktop only */}
       <div
@@ -1693,8 +1693,8 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
       />
 
       {showTutorial && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-2 sm:p-4">
-          <div className={`max-w-2xl w-full rounded-2xl p-4 sm:p-6 shadow-2xl max-h-[90vh] overflow-y-auto ${darkMode ? 'bg-slate-800/95 backdrop-blur-sm' : 'bg-white'}`}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-2 sm:p-4">
+          <div className={`max-w-2xl w-full rounded-lg p-4 sm:p-6 shadow-xl max-h-[90vh] overflow-y-auto ${darkMode ? 'bg-slate-800' : 'bg-white'}`}>
             <div className="flex justify-between items-center mb-4">
               <h2 className={`text-xl sm:text-2xl font-bold ${darkMode ? 'text-indigo-300' : 'text-indigo-600'}`}>How to Play</h2>
               <button onClick={() => setShowTutorial(false)} className={`p-2 rounded-lg ${darkMode ? 'hover:bg-slate-700/80' : 'hover:bg-slate-100'}`}>
@@ -1762,8 +1762,8 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
       )}
 
       {showContactModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-2 sm:p-4">
-          <div className={`max-w-2xl w-full rounded-2xl p-6 sm:p-8 shadow-2xl ${darkMode ? 'bg-slate-800/95 backdrop-blur-sm' : 'bg-white'}`}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-2 sm:p-4">
+          <div className={`max-w-2xl w-full rounded-lg p-6 sm:p-8 shadow-xl ${darkMode ? 'bg-slate-800' : 'bg-white'}`}>
             <div className="flex justify-between items-center mb-6">
               <h2 className={`text-2xl sm:text-3xl font-bold flex items-center gap-2 ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>
                 <Mail className="w-6 h-6 sm:w-8 sm:h-8" />
@@ -1907,8 +1907,8 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
       )}
 
       {showExplanationModal && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm p-2 sm:p-4">
-          <div className={`max-w-4xl w-full rounded-2xl p-4 sm:p-6 shadow-2xl max-h-[90vh] overflow-y-auto ${darkMode ? 'bg-slate-800/95 backdrop-blur-sm' : 'bg-white'}`}>
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-2 sm:p-4">
+          <div className={`max-w-4xl w-full rounded-lg p-4 sm:p-6 shadow-xl max-h-[90vh] overflow-y-auto ${darkMode ? 'bg-slate-800' : 'bg-white'}`}>
             <div className="flex justify-between items-center mb-4">
               <h2 className={`text-xl sm:text-2xl font-bold ${darkMode ? 'text-slate-50' : 'text-slate-800'}`}>Spatial Explanation</h2>
               <button onClick={() => setShowExplanationModal(null)} className={`p-2 rounded-lg ${darkMode ? 'hover:bg-slate-700/80' : 'hover:bg-slate-100'}`}>
@@ -2176,34 +2176,34 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
       </div>
 
       <div className="flex-1 flex flex-col min-h-0">
-        <div className={`shadow-md p-2 sm:p-3 transition-colors duration-300 ${darkMode ? 'bg-slate-800/95 backdrop-blur-sm/90 backdrop-blur' : 'bg-white'}`}>
+        <div className={`shadow-sm p-2 sm:p-3 border-b ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'}`}>
           {/* Buttons at top - left and right sides */}
           <div className="flex justify-between items-start gap-2 mb-3">
             {/* Left side buttons */}
             <div className="flex flex-wrap gap-2 justify-start">
-              <button onClick={() => setShowHistory(!showHistory)} className={`flex items-center gap-1 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg transition-colors text-sm sm:text-base ${darkMode ? 'bg-indigo-900/50 hover:bg-indigo-900/70 text-indigo-200' : 'bg-indigo-100 hover:bg-indigo-200 text-slate-900'}`}>
+              <button onClick={() => setShowHistory(!showHistory)} className={`flex items-center gap-1 px-3 sm:px-4 py-2 rounded-lg transition-colors text-sm sm:text-base ${darkMode ? 'bg-slate-700 hover:bg-slate-600 text-slate-200' : 'bg-white hover:bg-slate-50 text-slate-700 border border-slate-200'}`}>
                 <History className="w-4 h-4 sm:w-5 sm:h-5" />
                 <span className="hidden sm:inline">History</span>
               </button>
 
-              <button onClick={() => setShowStats(!showStats)} className={`flex items-center gap-1 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg transition-colors text-sm sm:text-base ${darkMode ? 'bg-purple-900/50 hover:bg-purple-900/70 text-purple-200' : 'bg-purple-100 hover:bg-purple-200 text-slate-900'}`}>
+              <button onClick={() => setShowStats(!showStats)} className={`flex items-center gap-1 px-3 sm:px-4 py-2 rounded-lg transition-colors text-sm sm:text-base ${darkMode ? 'bg-slate-700 hover:bg-slate-600 text-slate-200' : 'bg-white hover:bg-slate-50 text-slate-700 border border-slate-200'}`}>
                 <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5" />
                 <span className="hidden sm:inline">Stats</span>
               </button>
 
-              <button onClick={() => setShowTutorial(true)} className={`flex items-center gap-1 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg transition-colors text-sm sm:text-base ${darkMode ? 'bg-cyan-900/50 hover:bg-cyan-900/70 text-cyan-200' : 'bg-cyan-100 hover:bg-cyan-200 text-slate-900'}`}>
+              <button onClick={() => setShowTutorial(true)} className={`flex items-center gap-1 px-3 sm:px-4 py-2 rounded-lg transition-colors text-sm sm:text-base ${darkMode ? 'bg-slate-700 hover:bg-slate-600 text-slate-200' : 'bg-white hover:bg-slate-50 text-slate-700 border border-slate-200'}`}>
                 <Info className="w-4 h-4 sm:w-5 sm:h-5" />
                 <span className="hidden sm:inline">Help</span>
               </button>
 
               {user ? (
-                <button onClick={onLogout} className={`flex items-center gap-1 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg transition-colors text-sm sm:text-base ${darkMode ? 'bg-red-900/50 hover:bg-red-900/70 text-red-200' : 'bg-red-100 hover:bg-red-200 text-slate-900'}`} title={`Logged in as ${user.username}`}>
+                <button onClick={onLogout} className={`flex items-center gap-1 px-3 sm:px-4 py-2 rounded-lg transition-colors text-sm sm:text-base ${darkMode ? 'bg-slate-700 hover:bg-red-900 text-slate-200 hover:text-red-200' : 'bg-white hover:bg-red-50 text-slate-700 hover:text-red-700 border border-slate-200 hover:border-red-200'}`} title={`Logged in as ${user.username}`}>
                   <User className="w-4 h-4 sm:w-5 sm:h-5" />
                   <span className="hidden sm:inline">{user.username}</span>
                   <LogOut className="w-3 h-3 sm:w-4 sm:h-4 ml-0.5" />
                 </button>
               ) : (
-                <button onClick={onShowLogin} className={`flex items-center gap-1 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg transition-colors text-sm sm:text-base ${darkMode ? 'bg-green-900/50 hover:bg-green-900/70 text-green-200' : 'bg-green-100 hover:bg-green-200 text-slate-900'}`}>
+                <button onClick={onShowLogin} className={`flex items-center gap-1 px-3 sm:px-4 py-2 rounded-lg transition-colors text-sm sm:text-base ${darkMode ? 'bg-indigo-600 hover:bg-indigo-700 text-white' : 'bg-indigo-600 hover:bg-indigo-700 text-white'}`}>
                   <LogIn className="w-4 h-4 sm:w-5 sm:h-5" />
                   <span className="hidden sm:inline">Login</span>
                 </button>
@@ -2318,7 +2318,7 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
                           )}
                         </div>
                         {spoilerPremises && hoveredPremise !== idx && (
-                          <div className={`absolute inset-0 rounded-lg z-10 ${darkMode ? 'bg-gradient-to-r from-purple-600 via-pink-600 to-indigo-600' : 'bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400'}`}></div>
+                          <div className={`absolute inset-0 rounded-lg z-10 backdrop-blur-md ${darkMode ? 'bg-slate-700/90' : 'bg-slate-200/90'}`}></div>
                         )}
                       </div>
                     );
