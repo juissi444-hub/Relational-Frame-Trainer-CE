@@ -358,22 +358,46 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
       else if (p1.v === 'BELOW' && p2.v === 'ABOVE') vResult = 'AT'; // Opposite directions cancel
       else vResult = 'AT';
 
-      // Compose horizontal components
-      // Opposite horizontal directions cancel out to AT
-      // Different non-opposite directions are ambiguous
-      const opposites = {
-        'NORTH': 'SOUTH', 'SOUTH': 'NORTH',
-        'EAST': 'WEST', 'WEST': 'EAST',
-        'NORTHEAST': 'SOUTHWEST', 'SOUTHWEST': 'NORTHEAST',
-        'NORTHWEST': 'SOUTHEAST', 'SOUTHEAST': 'NORTHWEST'
+      // Compose horizontal components using vector addition
+      // This ensures all direction combinations are determinable
+      const getDirectionOffset = (dir) => {
+        const offsets = {
+          'NORTH': [-1, 0],
+          'SOUTH': [1, 0],
+          'EAST': [0, 1],
+          'WEST': [0, -1],
+          'NORTHEAST': [-1, 1],
+          'NORTHWEST': [-1, -1],
+          'SOUTHEAST': [1, 1],
+          'SOUTHWEST': [1, -1],
+          'AT': [0, 0]
+        };
+        return offsets[dir] || [0, 0];
       };
 
-      let hResult;
-      if (p1.h === 'AT') hResult = p2.h;
-      else if (p2.h === 'AT') hResult = p1.h;
-      else if (p1.h === p2.h) hResult = p1.h; // Same direction compounds
-      else if (opposites[p1.h] === p2.h) hResult = 'AT'; // Opposite directions cancel
-      else return 'AMBIGUOUS'; // Different non-opposite directions are ambiguous
+      const offsetToDirection = (rowOffset, colOffset) => {
+        const r = rowOffset === 0 ? 0 : (rowOffset > 0 ? 1 : -1);
+        const c = colOffset === 0 ? 0 : (colOffset > 0 ? 1 : -1);
+
+        if (r === 0 && c === 0) return 'AT'; // Vectors cancel to same position
+        if (r === -1 && c === 0) return 'NORTH';
+        if (r === 1 && c === 0) return 'SOUTH';
+        if (r === 0 && c === 1) return 'EAST';
+        if (r === 0 && c === -1) return 'WEST';
+        if (r === -1 && c === 1) return 'NORTHEAST';
+        if (r === -1 && c === -1) return 'NORTHWEST';
+        if (r === 1 && c === 1) return 'SOUTHEAST';
+        if (r === 1 && c === -1) return 'SOUTHWEST';
+        return 'AT'; // Fallback to AT instead of AMBIGUOUS
+      };
+
+      const [r1, c1] = getDirectionOffset(p1.h);
+      const [r2, c2] = getDirectionOffset(p2.h);
+
+      const totalRow = r1 + r2;
+      const totalCol = c1 + c2;
+
+      const hResult = offsetToDirection(totalRow, totalCol);
 
       return compose3D(vResult, hResult);
     } else {
@@ -397,7 +421,10 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
         const r = rowOffset === 0 ? 0 : (rowOffset > 0 ? 1 : -1);
         const c = colOffset === 0 ? 0 : (colOffset > 0 ? 1 : -1);
 
-        if (r === 0 && c === 0) return 'AMBIGUOUS'; // Vectors cancel out
+        // In spatial reasoning, vectors canceling means same position
+        // This shouldn't happen with valid premises (different stimuli can't be at same position)
+        // Return null to trigger question generation retry logic
+        if (r === 0 && c === 0) return null;
         if (r === -1 && c === 0) return 'NORTH';
         if (r === 1 && c === 0) return 'SOUTH';
         if (r === 0 && c === 1) return 'EAST';
@@ -406,7 +433,8 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
         if (r === -1 && c === -1) return 'NORTHWEST';
         if (r === 1 && c === 1) return 'SOUTHEAST';
         if (r === 1 && c === -1) return 'SOUTHWEST';
-        return 'AMBIGUOUS';
+        // Shouldn't reach here with valid directions
+        return null;
       };
 
       const [r1, c1] = getDirectionOffset(rel1);
@@ -667,7 +695,9 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
             } else if (derivedRelation === 'SAME' && questionRelation === 'DIFFERENT') {
               correctAnswer = false; // SAME means NOT DIFFERENT (mutually exclusive)
             } else if (derivedRelation === 'DIFFERENT' && questionRelation === 'OPPOSITE') {
-              correctAnswer = 'ambiguous'; // DIFFERENT doesn't tell us if it's OPPOSITE or just different
+              // DIFFERENT doesn't tell us if it's OPPOSITE or just different
+              // This only applies to equality mode, never spatial/3D
+              correctAnswer = 'ambiguous';
             } else {
               correctAnswer = false; // All other cases (e.g., SAME vs OPPOSITE, OPPOSITE vs SAME)
             }
