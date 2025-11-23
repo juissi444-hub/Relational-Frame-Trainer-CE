@@ -826,7 +826,11 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
           user_id: progressData.user_id,
           score: progressData.score,
           history_length: progressData.history.length,
+          stats_history_length: progressData.stats_history.length,
           has_current_trial: !!progressData.current_trial,
+          time_left: progressData.time_left,
+          feedback: progressData.feedback,
+          is_paused: progressData.is_paused,
           settings: {
             difficulty: progressData.settings.difficulty,
             timePerQuestion: progressData.settings.timePerQuestion,
@@ -837,17 +841,25 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
         });
 
         // Use upsert to insert or update
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from('user_progress')
           .upsert(progressData, {
             onConflict: 'user_id',
             ignoreDuplicates: false
-          });
+          })
+          .select();
 
         if (error) {
           console.error('❌ Save to Supabase failed:', error);
+          console.error('Error details:', {
+            message: error.message,
+            details: error.details,
+            hint: error.hint,
+            code: error.code
+          });
         } else {
           console.log('✅ Successfully saved to Supabase');
+          console.log('✅ Saved data:', data);
         }
       } else {
         // Save to localStorage if not logged in
@@ -856,7 +868,11 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
         console.log('✅ Successfully saved to localStorage');
       }
     } catch (error) {
-      console.error('❌ Save failed:', error);
+      console.error('❌ Save failed with exception:', error);
+      if (error instanceof Error) {
+        console.error('Error message:', error.message);
+        console.error('Error stack:', error.stack);
+      }
     }
   }, [user, score, history, statsHistory, currentTrial, timeLeft, feedback, isPaused, difficulty, timePerQuestion, networkComplexity, spoilerPremises, darkMode, useRealWords, useNonsenseWords, useRandomLetters, useEmojis, useVoronoi, useMandelbrot, useVibration, letterLength, autoProgressMode, universalProgress, modeSpecificProgress, enabledRelationModes]);
 
@@ -2487,6 +2503,28 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
                   <span className={`text-sm font-medium ${darkMode ? 'text-slate-200' : 'text-slate-700'}`}>{darkMode ? 'Enabled' : 'Disabled'}</span>
                 </button>
               </div>
+
+              {user && (
+                <div>
+                  <label className={`block text-sm font-semibold mb-2 ${darkMode ? 'text-slate-200' : 'text-slate-700'}`}>Database Connection</label>
+                  <button
+                    onClick={async () => {
+                      console.log('🧪 Manual save test triggered');
+                      await saveToStorage();
+                      alert('Check browser console for save results (F12 → Console)');
+                    }}
+                    className={`w-full px-4 py-2 rounded-lg font-medium transition-colors ${darkMode ? 'bg-indigo-600 hover:bg-indigo-700 text-white' : 'bg-indigo-600 hover:bg-indigo-700 text-white'}`}
+                  >
+                    Test Save to Supabase
+                  </button>
+                  <p className={`text-xs mt-2 ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                    Logged in as: {user.username}
+                  </p>
+                  <p className={`text-xs ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                    User ID: {user.id}
+                  </p>
+                </div>
+              )}
 
               {showResetComplete && (
                 <div className={`p-6 rounded-xl text-center border-2 ${darkMode ? 'bg-green-900/30 border-green-500' : 'bg-green-50 border-green-300'}`}>
