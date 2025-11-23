@@ -131,15 +131,20 @@ function App() {
   const handleLogout = async () => {
     try {
       console.log('Logging out...');
+      // Set user to null immediately for instant UI feedback
+      setUser(null);
+
       const { error } = await supabase.auth.signOut();
       if (error) {
         console.error('Logout error:', error);
+        // If logout fails, you might want to restore the user state
+        // but we'll leave it null since the user clicked logout
       } else {
         console.log('Logout successful');
       }
-      // Don't set user here - let onAuthStateChange handle it
     } catch (err) {
       console.error('Logout exception:', err);
+      // Keep user as null even if there's an exception
     }
   };
 
