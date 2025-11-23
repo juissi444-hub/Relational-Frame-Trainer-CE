@@ -570,9 +570,12 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
     }
     
     // Select question pair ensuring it requires derivation (not directly from a premise)
+    // For spatial/3D modes, also ensure the derivedRelation is not AMBIGUOUS
     let startIdx, endIdx, derivedRelation;
     let attempts = 0;
     const maxAttempts = 100;
+    const mode = getRelationMode(activeRelations[0]);
+    const isSpatialMode = mode === 'spatial' || mode === 'space3d';
 
     do {
       startIdx = Math.floor(Math.random() * stimuli.length);
@@ -587,6 +590,14 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
 
       if (!isDirect) {
         derivedRelation = deriveRelationFromGraph(premises, stimuli[startIdx], stimuli[endIdx]);
+
+        // For spatial/3D modes, AMBIGUOUS should never be the correct answer
+        // Keep trying until we get a determinable relationship
+        if (isSpatialMode && (derivedRelation === 'AMBIGUOUS' || derivedRelation === null)) {
+          attempts++;
+          continue;
+        }
+
         break;
       }
 
@@ -602,10 +613,18 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
     }
 
     let questionRelation, correctAnswer;
-    
+
+    // For spatial/3D modes, AMBIGUOUS should never be the correct answer
     if (derivedRelation === 'AMBIGUOUS' || derivedRelation === null) {
-      questionRelation = activeRelations[Math.floor(Math.random() * activeRelations.length)];
-      correctAnswer = 'ambiguous';
+      if (isSpatialMode) {
+        // This should not happen - if it does, something is wrong with the premises
+        // Fall back to asking about the derived relation as false
+        questionRelation = activeRelations[Math.floor(Math.random() * activeRelations.length)];
+        correctAnswer = false;
+      } else {
+        questionRelation = activeRelations[Math.floor(Math.random() * activeRelations.length)];
+        correctAnswer = 'ambiguous';
+      }
     } else {
       const askCompatible = Math.random() < 0.5;
       if (askCompatible) {
@@ -1473,41 +1492,36 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
     const allPositions = Object.values(positions);
     if (allPositions.length === 0) return null;
 
-    // Render a grid for a specific vertical level, calculating bounds per level
+    // Calculate global bounds across ALL positions (all vertical levels)
+    const allRows = allPositions.map(p => p.row);
+    const allCols = allPositions.map(p => p.col);
+    const globalMinRow = Math.min(...allRows);
+    const globalMaxRow = Math.max(...allRows);
+    const globalMinCol = Math.min(...allCols);
+    const globalMaxCol = Math.max(...allCols);
+
+    // Build grid arrays to cover the global range
+    const gridRows = [];
+    for (let r = globalMinRow; r <= globalMaxRow; r++) {
+      gridRows.push(r);
+    }
+    const gridCols = [];
+    for (let c = globalMinCol; c <= globalMaxCol; c++) {
+      gridCols.push(c);
+    }
+    const numCols = gridCols.length;
+
+    // Render a grid for a specific vertical level using global bounds
     const render2DGrid = (vLevelNum) => {
       // Find objects at this vertical level
       const objectsHere = {};
-      const levelPositions = [];
-
       for (const [stimulus, pos] of Object.entries(positions)) {
         if (pos.vLevel === vLevelNum) {
           const key = `${pos.row},${pos.col}`;
           if (!objectsHere[key]) objectsHere[key] = [];
           objectsHere[key].push(stimulus);
-          levelPositions.push(pos);
         }
       }
-
-      // Calculate bounds for this specific level only
-      if (levelPositions.length === 0) return null;
-
-      const levelRows = levelPositions.map(p => p.row);
-      const levelCols = levelPositions.map(p => p.col);
-      const minRow = Math.min(...levelRows);
-      const maxRow = Math.max(...levelRows);
-      const minCol = Math.min(...levelCols);
-      const maxCol = Math.max(...levelCols);
-
-      // Build grid arrays for this level's range
-      const gridRows = [];
-      for (let r = minRow; r <= maxRow; r++) {
-        gridRows.push(r);
-      }
-      const gridCols = [];
-      for (let c = minCol; c <= maxCol; c++) {
-        gridCols.push(c);
-      }
-      const numCols = gridCols.length;
 
       return (
         <div className={`flex flex-col ${gapSize}`}>
@@ -1581,19 +1595,14 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
         <div className="w-full">
           {renderLegend()}
           <div className={`flex flex-col ${levelGap} items-center`}>
-            {verticalLevels.map(vLevel => {
-              const grid = render2DGrid(vLevel);
-              if (!grid) return null; // Skip empty levels
-
-              return (
-                <div key={vLevel} className="w-full">
-                  <div className={`text-center mb-2 font-semibold ${size === 'large' ? 'text-sm' : 'text-xs'} ${darkMode ? 'text-slate-300' : 'text-slate-600'}`}>
-                    {getLevelLabel(vLevel)} Level
-                  </div>
-                  {grid}
+            {verticalLevels.map(vLevel => (
+              <div key={vLevel} className="w-full">
+                <div className={`text-center mb-2 font-semibold ${size === 'large' ? 'text-sm' : 'text-xs'} ${darkMode ? 'text-slate-300' : 'text-slate-600'}`}>
+                  {getLevelLabel(vLevel)} Level
                 </div>
-              );
-            })}
+                {render2DGrid(vLevel)}
+              </div>
+            ))}
           </div>
         </div>
       );
