@@ -539,17 +539,32 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
     }
     const allPaths = findAllPaths(graph, start, end);
     if (allPaths.length === 0) return null;
-    
+
     const derivedRelations = allPaths.map(path => deriveFromPath(path)).filter(r => r !== null);
     if (derivedRelations.length === 0) return null;
-    
+
     const nonAmbiguous = derivedRelations.filter(r => r !== 'AMBIGUOUS');
     if (nonAmbiguous.length === 0) return 'AMBIGUOUS';
-    
+
+    // Check if all paths agree
     const firstRel = nonAmbiguous[0];
     const allAgree = nonAmbiguous.every(rel => rel === firstRel);
-    
-    return allAgree ? firstRel : 'AMBIGUOUS';
+
+    if (allAgree) return firstRel;
+
+    // Special case: OPPOSITE and DIFFERENT don't conflict
+    // OPPOSITE is a more specific form of DIFFERENT
+    // If some paths say OPPOSITE and others say DIFFERENT, return OPPOSITE (more specific)
+    const hasOpposite = nonAmbiguous.some(r => r === 'OPPOSITE');
+    const hasDifferent = nonAmbiguous.some(r => r === 'DIFFERENT');
+    const onlyOppositeDifferent = nonAmbiguous.every(r => r === 'OPPOSITE' || r === 'DIFFERENT');
+
+    if (hasOpposite && hasDifferent && onlyOppositeDifferent) {
+      return 'OPPOSITE'; // Return the more specific relation
+    }
+
+    // If relations truly conflict, return AMBIGUOUS
+    return 'AMBIGUOUS';
   };
 
   const generateTrial = useCallback(() => {
@@ -2196,52 +2211,76 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
                         <div>
                           <h3 className={`text-xs sm:text-sm font-semibold mb-2 sm:mb-3 ${darkMode ? 'text-slate-200' : 'text-slate-700'}`}>Time per Question (Last 20)</h3>
                           <div className={`p-2 sm:p-3 rounded-lg ${darkMode ? 'bg-slate-700' : 'bg-slate-50'}`}>
-                            <div className="flex items-end h-24 sm:h-32 gap-0.5 sm:gap-1">
-                              {statsCalculations.last20.map((stat, idx) => {
-                                const height = (stat.timeUsed / statsCalculations.maxTime) * 100;
-                                return (
-                                  <div key={idx} className="flex-1 flex flex-col items-center">
-                                    <div className={`w-full rounded-t transition-all ${stat.isCorrect ? (darkMode ? 'bg-green-500' : 'bg-green-400') : (darkMode ? 'bg-red-500' : 'bg-red-400')}`} style={{ height: `${height}%` }} title={`${stat.timeUsed.toFixed(1)}s`} />
-                                  </div>
-                                );
-                              })}
-                            </div>
-                            <div className={`text-xs text-center mt-1.5 sm:mt-2 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Questions (most recent →)</div>
+                            {statsCalculations.last20.length > 0 ? (
+                              <>
+                                <div className="flex items-end h-24 sm:h-32 gap-0.5 sm:gap-1">
+                                  {statsCalculations.last20.map((stat, idx) => {
+                                    const height = Math.max(5, (stat.timeUsed / statsCalculations.maxTime) * 100);
+                                    return (
+                                      <div key={idx} className="flex-1 flex flex-col items-center justify-end">
+                                        <div className={`w-full rounded-t transition-all ${stat.isCorrect ? (darkMode ? 'bg-green-500' : 'bg-green-400') : (darkMode ? 'bg-red-500' : 'bg-red-400')}`} style={{ height: `${height}%` }} title={`${stat.timeUsed.toFixed(1)}s - ${stat.isCorrect ? 'Correct' : 'Incorrect'}`} />
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                                <div className={`text-xs text-center mt-1.5 sm:mt-2 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Questions (most recent →)</div>
+                              </>
+                            ) : (
+                              <div className={`text-xs text-center py-8 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                                No data yet. Answer some questions to see your statistics!
+                              </div>
+                            )}
                           </div>
                         </div>
 
                         <div>
                           <h3 className={`text-xs sm:text-sm font-semibold mb-2 sm:mb-3 ${darkMode ? 'text-slate-200' : 'text-slate-700'}`}>Premise Count (Last 20)</h3>
                           <div className={`p-2 sm:p-3 rounded-lg ${darkMode ? 'bg-slate-700' : 'bg-slate-50'}`}>
-                            <div className="flex items-end h-24 sm:h-32 gap-0.5 sm:gap-1">
-                              {statsCalculations.last20.map((stat, idx) => {
-                                const height = (stat.premiseCount / statsCalculations.maxPremises) * 100;
-                                return (
-                                  <div key={idx} className="flex-1 flex flex-col items-center">
-                                    <div className={`w-full rounded-t transition-all ${stat.isCorrect ? (darkMode ? 'bg-purple-500' : 'bg-purple-400') : (darkMode ? 'bg-orange-500' : 'bg-orange-400')}`} style={{ height: `${height}%` }} title={`${stat.premiseCount} premises`} />
-                                  </div>
-                                );
-                              })}
-                            </div>
-                            <div className={`text-xs text-center mt-1.5 sm:mt-2 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Questions (most recent →)</div>
+                            {statsCalculations.last20.length > 0 ? (
+                              <>
+                                <div className="flex items-end h-24 sm:h-32 gap-0.5 sm:gap-1">
+                                  {statsCalculations.last20.map((stat, idx) => {
+                                    const height = Math.max(5, (stat.premiseCount / statsCalculations.maxPremises) * 100);
+                                    return (
+                                      <div key={idx} className="flex-1 flex flex-col items-center justify-end">
+                                        <div className={`w-full rounded-t transition-all ${stat.isCorrect ? (darkMode ? 'bg-purple-500' : 'bg-purple-400') : (darkMode ? 'bg-orange-500' : 'bg-orange-400')}`} style={{ height: `${height}%` }} title={`${stat.premiseCount} premises - ${stat.isCorrect ? 'Correct' : 'Incorrect'}`} />
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                                <div className={`text-xs text-center mt-1.5 sm:mt-2 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Questions (most recent →)</div>
+                              </>
+                            ) : (
+                              <div className={`text-xs text-center py-8 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                                No data yet. Answer some questions to see your statistics!
+                              </div>
+                            )}
                           </div>
                         </div>
 
                         <div>
                           <h3 className={`text-xs sm:text-sm font-semibold mb-2 sm:mb-3 ${darkMode ? 'text-slate-200' : 'text-slate-700'}`}>Time per Premise (Last 20)</h3>
                           <div className={`p-2 sm:p-3 rounded-lg ${darkMode ? 'bg-slate-700' : 'bg-slate-50'}`}>
-                            <div className="flex items-end h-24 sm:h-32 gap-0.5 sm:gap-1">
-                              {statsCalculations.last20.map((stat, idx) => {
-                                const timePerPremise = stat.timeUsed / stat.premiseCount;
-                                const height = (timePerPremise / statsCalculations.maxTimePerPremise) * 100;
-                                return (
-                                  <div key={idx} className="flex-1 flex flex-col items-center">
-                                    <div className={`w-full rounded-t transition-all ${stat.isCorrect ? (darkMode ? 'bg-cyan-500' : 'bg-cyan-400') : (darkMode ? 'bg-yellow-500' : 'bg-yellow-400')}`} style={{ height: `${height}%` }} title={`${timePerPremise.toFixed(2)}s/premise`} />
-                                  </div>
-                                );
-                              })}
-                            </div>
-                            <div className={`text-xs text-center mt-1.5 sm:mt-2 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Questions (most recent →)</div>
+                            {statsCalculations.last20.length > 0 ? (
+                              <>
+                                <div className="flex items-end h-24 sm:h-32 gap-0.5 sm:gap-1">
+                                  {statsCalculations.last20.map((stat, idx) => {
+                                    const timePerPremise = stat.timeUsed / stat.premiseCount;
+                                    const height = Math.max(5, (timePerPremise / statsCalculations.maxTimePerPremise) * 100);
+                                    return (
+                                      <div key={idx} className="flex-1 flex flex-col items-center justify-end">
+                                        <div className={`w-full rounded-t transition-all ${stat.isCorrect ? (darkMode ? 'bg-cyan-500' : 'bg-cyan-400') : (darkMode ? 'bg-yellow-500' : 'bg-yellow-400')}`} style={{ height: `${height}%` }} title={`${timePerPremise.toFixed(2)}s/premise - ${stat.isCorrect ? 'Correct' : 'Incorrect'}`} />
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                                <div className={`text-xs text-center mt-1.5 sm:mt-2 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Questions (most recent →)</div>
+                              </>
+                            ) : (
+                              <div className={`text-xs text-center py-8 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                                No data yet. Answer some questions to see your statistics!
+                              </div>
+                            )}
                           </div>
                         </div>
                       </>
