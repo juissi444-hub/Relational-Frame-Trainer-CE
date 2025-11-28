@@ -539,17 +539,32 @@ export default function RelationalFrameTrainer({ user, onShowLogin, onLogout }: 
     }
     const allPaths = findAllPaths(graph, start, end);
     if (allPaths.length === 0) return null;
-    
+
     const derivedRelations = allPaths.map(path => deriveFromPath(path)).filter(r => r !== null);
     if (derivedRelations.length === 0) return null;
-    
+
     const nonAmbiguous = derivedRelations.filter(r => r !== 'AMBIGUOUS');
     if (nonAmbiguous.length === 0) return 'AMBIGUOUS';
-    
+
+    // Check if all paths agree
     const firstRel = nonAmbiguous[0];
     const allAgree = nonAmbiguous.every(rel => rel === firstRel);
-    
-    return allAgree ? firstRel : 'AMBIGUOUS';
+
+    if (allAgree) return firstRel;
+
+    // Special case: OPPOSITE and DIFFERENT don't conflict
+    // OPPOSITE is a more specific form of DIFFERENT
+    // If some paths say OPPOSITE and others say DIFFERENT, return OPPOSITE (more specific)
+    const hasOpposite = nonAmbiguous.some(r => r === 'OPPOSITE');
+    const hasDifferent = nonAmbiguous.some(r => r === 'DIFFERENT');
+    const onlyOppositeDifferent = nonAmbiguous.every(r => r === 'OPPOSITE' || r === 'DIFFERENT');
+
+    if (hasOpposite && hasDifferent && onlyOppositeDifferent) {
+      return 'OPPOSITE'; // Return the more specific relation
+    }
+
+    // If relations truly conflict, return AMBIGUOUS
+    return 'AMBIGUOUS';
   };
 
   const generateTrial = useCallback(() => {
